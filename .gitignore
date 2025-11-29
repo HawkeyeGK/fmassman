@@ -25,3 +25,6 @@ env/
 debug_output/
 *.log
 # roster_data.json  <-- Uncomment this if you DON'T want to commit the extracted data
+
+## Ignore screenshots of players
+**/players/

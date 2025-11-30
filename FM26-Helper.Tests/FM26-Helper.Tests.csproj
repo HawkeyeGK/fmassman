@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FM26-Helper.Extractor\FM26-Helper.Extractor.csproj" />
+    <ProjectReference Include="..\FM26-Helper.Shared\FM26-Helper.Shared.csproj" />
   </ItemGroup>
 
 </Project>

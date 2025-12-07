@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using FM26_Helper.Shared
+@using FM26_Helper.Web.Models
 @inject RosterRepository Repository
 @inject IConfiguration Configuration
 
@@ -7,29 +8,39 @@
 
 <h1>Player Roster</h1>
 
-@if (players == null)
+@if (rosterItems == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <table class="table">
+    <table class="table table-striped table-hover">
         <thead>
             <tr>
                 <th>Name</th>
                 <th>Age</th>
                 <th>Wage</th>
-                <th>Playing Time</th>
+                <th>Contract</th>
+                <th>Speed</th>
+                <th>DNA</th>
+                <th>Gegenpress</th>
+                <th>Best Role (In)</th>
+                <th>Best Role (Out)</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var player in players)
+            @foreach (var item in rosterItems)
             {
                 <tr>
-                    <td>@player.PlayerName</td>
-                    <td>@player.Snapshot?.Age</td>
-                    <td>@player.Snapshot?.Wage</td>
-                    <td>@player.Snapshot?.PlayingTime</td>
+                    <td>@item.Name</td>
+                    <td>@item.Age</td>
+                    <td>@item.Wage</td>
+                    <td>@item.ContractExpiry</td>
+                    <td>@item.Speed.ToString("F1")</td>
+                    <td>@item.DNA.ToString("F1")</td>
+                    <td>@item.Gegenpress.ToString("F1")</td>
+                    <td>@item.BestInPossessionRole (@item.BestInPossessionScore.ToString("F1")%)</td>
+                    <td>@item.BestOutPossessionRole (@item.BestOutPossessionScore.ToString("F1")%)</td>
                 </tr>
             }
         </tbody>
@@ -37,18 +48,41 @@ else
 }
 
 @code {
-    private List<PlayerImportData>? players;
+    private List<RosterItemViewModel>? rosterItems;
 
     protected override void OnInitialized()
     {
         var path = Configuration["RosterFilePath"];
         if (!string.IsNullOrEmpty(path))
         {
-            players = Repository.Load(path);
+            var players = Repository.Load(path);
+            rosterItems = new List<RosterItemViewModel>();
+
+            foreach (var player in players)
+            {
+                var analysis = PlayerAnalyzer.Analyze(player.Snapshot);
+                var bestIn = analysis.InPossessionFits.OrderByDescending(r => r.Score).FirstOrDefault();
+                var bestOut = analysis.OutPossessionFits.OrderByDescending(r => r.Score).FirstOrDefault();
+
+                rosterItems.Add(new RosterItemViewModel
+                {
+                    Name = player.PlayerName,
+                    Age = player.Snapshot?.Age ?? 0,
+                    Wage = player.Snapshot?.Wage ?? "",
+                    ContractExpiry = player.Snapshot?.ContractExpiry ?? "",
+                    Speed = analysis.Speed,
+                    DNA = analysis.DNA,
+                    Gegenpress = analysis.Gegenpress,
+                    BestInPossessionRole = bestIn?.RoleName ?? "N/A",
+                    BestInPossessionScore = bestIn?.Score ?? 0,
+                    BestOutPossessionRole = bestOut?.RoleName ?? "N/A",
+                    BestOutPossessionScore = bestOut?.Score ?? 0
+                });
+            }
         }
         else
         {
-            players = new List<PlayerImportData>();
+            rosterItems = new List<RosterItemViewModel>();
         }
     }
 }

@@ -33,7 +33,10 @@ namespace FM26_Helper.Extractor
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
             // 2. Discovery
-            string playersDir = Path.Combine(Directory.GetCurrentDirectory(), "players");
+            // Navigate up from bin/Debug/net8.0 to Solution Root, then into players
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string playersDir = Path.GetFullPath(Path.Combine(baseDir, "../../../../../players"));
+
             if (!Directory.Exists(playersDir))
             {
                 Console.WriteLine($"Directory not found: {playersDir}");
@@ -283,7 +286,7 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
             }
 
             // 4. Output
-            string outputFilePath = Path.Combine(Directory.GetCurrentDirectory(), "roster_data.json");
+            string outputFilePath = Path.Combine(playersDir, "roster_data.json");
             string outputJson = JsonConvert.SerializeObject(processedPlayers, Formatting.Indented);
             await File.WriteAllTextAsync(outputFilePath, outputJson);
 

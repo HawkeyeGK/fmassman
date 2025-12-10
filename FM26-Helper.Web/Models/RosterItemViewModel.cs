@@ -3,6 +3,7 @@ namespace FM26_Helper.Web.Models
     public class RosterItemViewModel
     {
         public string Name { get; set; } = string.Empty;
+        public string SortName { get; set; } = string.Empty;
         public int Age { get; set; }
         public string Wage { get; set; } = string.Empty;
         public string ContractExpiry { get; set; } = string.Empty;

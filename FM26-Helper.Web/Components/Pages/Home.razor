@@ -17,7 +17,9 @@ else
 {
     <div class="grid-scroll-container">
         <QuickGrid Items="@rosterItems.AsQueryable()" Class="table table-striped table-hover" Pagination="@pagination">
-            <PropertyColumn Property="@(p => p.Name)" Sortable="true" />
+            <TemplateColumn Title="Name" SortBy="@nameSort">
+                @context.Name
+            </TemplateColumn>
             <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
             <PropertyColumn Property="@(p => p.Wage)" Sortable="true" />
             <PropertyColumn Property="@(p => p.ContractExpiry)" Title="Contract" Sortable="true" />
@@ -53,6 +55,11 @@ else
 @code {
     private List<RosterItemViewModel>? rosterItems;
     private PaginationState pagination = new PaginationState { ItemsPerPage = 50 };
+
+    // define the custom sort rule
+    private static readonly GridSort<RosterItemViewModel> nameSort = 
+        GridSort<RosterItemViewModel>.ByAscending(p => p.SortName);
+
     protected override void OnInitialized()
     {
         var path = Configuration["RosterFilePath"];
@@ -67,9 +74,17 @@ else
                 var bestIn = analysis.InPossessionFits.OrderByDescending(r => r.Score).FirstOrDefault();
                 var bestOut = analysis.OutPossessionFits.OrderByDescending(r => r.Score).FirstOrDefault();
 
+                // Logic: Split by last space to find surname. Handle mononyms (single names) gracefully.
+                var rawName = player.PlayerName.Trim();
+                var lastSpaceIndex = rawName.LastIndexOf(' ');
+                var sortName = (lastSpaceIndex > 0)
+                    ? $"{rawName.Substring(lastSpaceIndex + 1)}, {rawName.Substring(0, lastSpaceIndex)}"
+                    : rawName;
+
                 rosterItems.Add(new RosterItemViewModel
                 {
                     Name = player.PlayerName,
+                    SortName = sortName,
                     Age = player.Snapshot?.Age ?? 0,
                     Wage = player.Snapshot?.Wage ?? "",
                     ContractExpiry = player.Snapshot?.ContractExpiry ?? "",

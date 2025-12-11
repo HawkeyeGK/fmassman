@@ -23,8 +23,16 @@ else
                 </div>
             </TemplateColumn>
             <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Personality)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.PlayingTime)" Title="Playing Time" Sortable="true" />
+            <TemplateColumn Title="Personality" SortBy="@personalitySort">
+                <span style="@GetPersonalityStyle(context.Personality)">
+                    @context.Personality
+                </span>
+            </TemplateColumn>
+            <TemplateColumn Title="Playing Time" SortBy="@playingTimeSort">
+                <span style="@GetPlayingTimeStyle(context.PlayingTime)">
+                    @context.PlayingTime
+                </span>
+            </TemplateColumn>
 
             <PropertyColumn Property="@(p => p.TransferValueLow)" Title="Min Value" Sortable="true" Format="N0" />
             <PropertyColumn Property="@(p => p.TransferValueHigh)" Title="Max Value" Sortable="true" Format="N0" />
@@ -55,6 +63,159 @@ else
     // define the custom sort rule
     private static readonly GridSort<RosterItemViewModel> nameSort = 
         GridSort<RosterItemViewModel>.ByAscending(p => p.SortName);
+
+    // Custom Ranking: Elite -> Strong -> Acceptable -> Avoid -> Bad
+    private static readonly Dictionary<string, int> _personalityRank = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Tier 1: Elite
+        { "Model Citizen", 1 },
+        { "Perfectionist", 2 },
+        { "Resolute", 3 },
+        { "Model Professional", 4 },
+        { "Professional", 5 },
+
+        // Tier 2: Strong
+        { "Fairly Professional", 10 },
+        { "Spirited", 11 },
+        { "Resilient", 12 },
+
+        // Tier 3: Acceptable
+        { "Driven", 20 },
+        { "Very Ambitious", 21 },
+        { "Unsporting", 22 },
+        { "Realist", 23 },
+        { "Iron Willed", 24 },
+        { "Born Leader", 25 },
+        { "Mercenary", 26 },
+        { "Fickle", 27 },
+        { "Ambitious", 28 },
+        { "Leader", 29 },
+        { "Charismatic Leader", 30 },
+        // Promoted from lower tiers:
+        { "Fairly Loyal", 31 },
+        { "Fairly Sporting", 32 },
+        { "Balanced", 33 },
+
+        // Tier 4: Avoid (Passive/Weak Mentality)
+        { "Sporting", 40 },
+        { "Spineless", 41 },
+        { "Low Self Belief", 42 },
+        { "Honest", 43 },
+        { "Light-Hearted", 44 },
+        
+        // SWAPPED: Fairly Ambitious is now ranked higher (better) than Fairly Determined
+        { "Fairly Ambitious", 45 },
+        { "Fairly Determined", 46 },
+        
+        { "Determined", 47 },
+        { "Very Loyal", 48 },
+        { "Loyal", 49 },
+
+        // Tier 5: Bad / Toxic
+        { "Devoted", 60 },
+        { "Low Determination", 61 },
+        { "Easily Discouraged", 62 },
+        { "Temperamental", 66 },
+        { "Unambitious", 67 },
+        { "Jovial", 68 },
+        { "Casual", 69 },
+        { "Slack", 70 }
+    };
+
+    private static readonly GridSort<RosterItemViewModel> personalitySort = 
+        GridSort<RosterItemViewModel>.ByAscending(p => GetPersonalityRank(p.Personality));
+
+    private static int GetPersonalityRank(string personality)
+    {
+        if (_personalityRank.TryGetValue(personality, out var rank))
+        {
+            return rank;
+        }
+        return 50; // Default
+    }
+
+    private static string GetPersonalityStyle(string personality)
+    {
+        var rank = GetPersonalityRank(personality);
+        
+        // Tier 1 (Rank 1-9): Elite -> Bold & Green
+        if (rank < 10) 
+        {
+            return "font-weight: 800; color: #4ade80;"; // Bright Green (readable on dark bg)
+        }
+        
+        // Tier 2 (Rank 10-19): Strong -> Bold only
+        if (rank >= 10 && rank < 20)
+        {
+            return "font-weight: 800; color: #ffffff;";
+        }
+
+        // Tier 4+ (Rank 40+): Avoid/Toxic -> Red
+        if (rank >= 40) 
+        {
+            return "color: #ff6b6b;"; 
+        }
+        
+        // Tier 3 (Rank 20-39): Acceptable -> Default
+        return "";
+    }
+
+    private static string GetPlayingTimeStyle(string playingTime)
+    {
+        if (string.IsNullOrEmpty(playingTime)) return "";
+
+        // Normalize for comparison
+        var pt = playingTime.Trim();
+
+        if (pt.Equals("Star Player", StringComparison.OrdinalIgnoreCase))
+        {
+            return "font-weight: 800; color: #ffd700;"; // Gold
+        }
+
+        if (pt.Equals("Important Player", StringComparison.OrdinalIgnoreCase))
+        {
+            return "font-weight: 800; color: #4ade80;"; // Bright Green
+        }
+
+        if (pt.Equals("Regular Starter", StringComparison.OrdinalIgnoreCase))
+        {
+            return "font-weight: 800; color: #ffffff;"; // Bold White
+        }
+
+        // "On Loan" usually indicates a player loaned OUT or IN depending on context
+        if (pt.Contains("Loan", StringComparison.OrdinalIgnoreCase))
+        {
+            return "color: #ff6b6b;"; // Red (Attention needed)
+        }
+
+        return "";
+    }
+
+    // Define the logical order for Playing Time (Lower number = Higher Status)
+    private static readonly Dictionary<string, int> _playingTimeRank = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Star Player", 1 },
+        { "Important Player", 2 },
+        { "Regular Starter", 3 },
+        { "Squad Player", 4 },
+        { "Impact Sub", 5 },
+        { "Fringe Player", 6 },
+        { "Youngster", 7 },
+        { "Surplus to Requirements", 8 }
+    };
+
+    // Define the sort rule: Look up the rank, default to 99 if not found
+    private static readonly GridSort<RosterItemViewModel> playingTimeSort = 
+        GridSort<RosterItemViewModel>.ByAscending(p => GetPlayingTimeRank(p.PlayingTime));
+
+    private static int GetPlayingTimeRank(string playingTime)
+    {
+        if (_playingTimeRank.TryGetValue(playingTime, out var rank))
+        {
+            return rank;
+        }
+        return 99; // Default for unknown/empty
+    }
 
     protected override void OnInitialized()
     {

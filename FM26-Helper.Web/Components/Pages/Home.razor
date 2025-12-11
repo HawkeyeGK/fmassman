@@ -68,79 +68,12 @@ else
     private static readonly GridSort<RosterItemViewModel> nameSort = 
         GridSort<RosterItemViewModel>.ByAscending(p => p.SortName);
 
-    // Custom Ranking: Elite -> Strong -> Acceptable -> Avoid -> Bad
-    private static readonly Dictionary<string, int> _personalityRank = new(StringComparer.OrdinalIgnoreCase)
-    {
-        // Tier 1: Elite
-        { "Model Citizen", 1 },
-        { "Perfectionist", 2 },
-        { "Resolute", 3 },
-        { "Model Professional", 4 },
-        { "Professional", 5 },
-
-        // Tier 2: Strong
-        { "Fairly Professional", 10 },
-        { "Spirited", 11 },
-        { "Resilient", 12 },
-
-        // Tier 3: Acceptable
-        { "Driven", 20 },
-        { "Very Ambitious", 21 },
-        { "Unsporting", 22 },
-        { "Realist", 23 },
-        { "Iron Willed", 24 },
-        { "Born Leader", 25 },
-        { "Mercenary", 26 },
-        { "Fickle", 27 },
-        { "Ambitious", 28 },
-        { "Leader", 29 },
-        { "Charismatic Leader", 30 },
-        // Promoted from lower tiers:
-        { "Fairly Loyal", 31 },
-        { "Fairly Sporting", 32 },
-        { "Balanced", 33 },
-
-        // Tier 4: Avoid (Passive/Weak Mentality)
-        { "Sporting", 40 },
-        { "Spineless", 41 },
-        { "Low Self Belief", 42 },
-        { "Honest", 43 },
-        { "Light-Hearted", 44 },
-        
-        // SWAPPED: Fairly Ambitious is now ranked higher (better) than Fairly Determined
-        { "Fairly Ambitious", 45 },
-        { "Fairly Determined", 46 },
-        
-        { "Determined", 47 },
-        { "Very Loyal", 48 },
-        { "Loyal", 49 },
-
-        // Tier 5: Bad / Toxic
-        { "Devoted", 60 },
-        { "Low Determination", 61 },
-        { "Easily Discouraged", 62 },
-        { "Temperamental", 66 },
-        { "Unambitious", 67 },
-        { "Jovial", 68 },
-        { "Casual", 69 },
-        { "Slack", 70 }
-    };
-
     private static readonly GridSort<RosterItemViewModel> personalitySort = 
-        GridSort<RosterItemViewModel>.ByAscending(p => GetPersonalityRank(p.Personality));
-
-    private static int GetPersonalityRank(string personality)
-    {
-        if (_personalityRank.TryGetValue(personality, out var rank))
-        {
-            return rank;
-        }
-        return 50; // Default
-    }
+        GridSort<RosterItemViewModel>.ByAscending(p => ScoutingConstants.GetPersonalityRank(p.Personality));
 
     private static string GetPersonalityStyle(string personality)
     {
-        var rank = GetPersonalityRank(personality);
+        var rank = ScoutingConstants.GetPersonalityRank(personality);
         
         // Tier 1 (Rank 1-9): Elite -> Bold & Green
         if (rank < 10) 
@@ -246,22 +179,8 @@ else
         return "";
     }
 
-    // Define the logical order for Playing Time (Lower number = Higher Status)
-    private static readonly Dictionary<string, int> _playingTimeRank = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "Star Player", 1 },
-        { "Important Player", 2 },
-        { "Regular Starter", 3 },
-        { "Squad Player", 4 },
-        { "Impact Sub", 5 },
-        { "Fringe Player", 6 },
-        { "Youngster", 7 },
-        { "Surplus to Requirements", 8 }
-    };
-
-    // Define the sort rule: Look up the rank, default to 99 if not found
     private static readonly GridSort<RosterItemViewModel> playingTimeSort = 
-        GridSort<RosterItemViewModel>.ByAscending(p => GetPlayingTimeRank(p.PlayingTime));
+        GridSort<RosterItemViewModel>.ByAscending(p => ScoutingConstants.GetPlayingTimeRank(p.PlayingTime));
 
     private static int ParseCurrency(string? input)
     {
@@ -273,14 +192,7 @@ else
         return int.TryParse(cleanString, out var value) ? value : 0;
     }
 
-    private static int GetPlayingTimeRank(string playingTime)
-    {
-        if (_playingTimeRank.TryGetValue(playingTime, out var rank))
-        {
-            return rank;
-        }
-        return 99; // Default for unknown/empty
-    }
+
 
     protected override void OnInitialized()
     {

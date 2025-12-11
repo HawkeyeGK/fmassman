@@ -16,7 +16,7 @@
 else
 {
     <div class="grid-scroll-container">
-        <QuickGrid Items="@rosterItems.AsQueryable()" Class="table table-striped table-hover" Pagination="@pagination">
+        <QuickGrid Items="@rosterItems.AsQueryable()" Class="table table-striped table-hover table-sm" Pagination="@pagination">
             <TemplateColumn Title="Name" SortBy="@nameSort">
                 @context.Name
             </TemplateColumn>

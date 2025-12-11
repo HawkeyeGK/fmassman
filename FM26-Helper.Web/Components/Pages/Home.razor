@@ -37,7 +37,11 @@ else
             <PropertyColumn Property="@(p => p.TransferValueLow)" Title="Min Value" Sortable="true" Format="N0" />
             <PropertyColumn Property="@(p => p.TransferValueHigh)" Title="Max Value" Sortable="true" Format="N0" />
             <PropertyColumn Property="@(p => p.Wage)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.ContractExpiry)" Title="Expires" Sortable="true" />
+            <TemplateColumn Title="Expires" Sortable="true" SortBy="@contractSort">
+                <span style="@GetContractStyle(context.ContractExpiry, context.GameDate)">
+                    @context.ContractExpiry
+                </span>
+            </TemplateColumn>
 
             <PropertyColumn Property="@(p => p.Speed)" Title="Spd" Format="F1" Sortable="true" />
             <PropertyColumn Property="@(p => p.DNA)" Title="DNA" Format="F1" Sortable="true" />
@@ -160,6 +164,57 @@ else
         return "";
     }
 
+    // Helper to handle mixed formats (Full dates OR just Years)
+    private static DateTime? ParseSmartDate(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return null;
+
+        // Case 1: Input is just a year (e.g., "2026")
+        if (int.TryParse(input, out var year) && year > 1900 && year < 2100)
+        {
+            // Default to June 30th of that year (standard contract expiry)
+            return new DateTime(year, 6, 30);
+        }
+
+        // Case 2: Input is a full date (e.g., "7/14/2025")
+        if (DateTime.TryParse(input, out var date))
+        {
+            return date;
+        }
+
+        return null;
+    }
+
+    // Helper to parse date for sorting (so "1/1/2025" doesn't come before "30/6/2024")
+    private static DateTime GetContractDate(string dateString)
+    {
+        return ParseSmartDate(dateString) ?? DateTime.MaxValue;
+    }
+
+    // Sort definition referencing the helper
+    private static readonly GridSort<RosterItemViewModel> contractSort = 
+        GridSort<RosterItemViewModel>.ByAscending(p => GetContractDate(p.ContractExpiry));
+
+    private static string GetContractStyle(string contractExpiry, DateTime? gameDate)
+    {
+        if (string.IsNullOrWhiteSpace(contractExpiry) || gameDate == null) return "";
+
+        var contractDate = ParseSmartDate(contractExpiry);
+        
+        if (contractDate.HasValue)
+        {
+            var yearsRemaining = contractDate.Value.Year - gameDate.Value.Year;
+
+            // Expiring this year (Critical)
+            if (yearsRemaining <= 0) return "font-weight: 800; color: #ff6b6b;"; 
+            
+            // Expiring next year (Urgent)
+            if (yearsRemaining == 1) return "font-weight: 800; color: #ffffff;";
+        }
+
+        return "";
+    }
+
     private static string GetPlayingTimeStyle(string playingTime)
     {
         if (string.IsNullOrEmpty(playingTime)) return "";
@@ -245,6 +300,7 @@ else
                     Name = player.PlayerName,
                     SortName = sortName,
                     Age = player.Snapshot?.Age ?? 0,
+                    GameDate = ParseSmartDate(player.Snapshot?.GameDate),
                     Personality = player.Snapshot?.Personality ?? "",
                     PlayingTime = player.Snapshot?.PlayingTime ?? "",
                     TransferValueLow = player.Snapshot?.TransferValueLow ?? 0,

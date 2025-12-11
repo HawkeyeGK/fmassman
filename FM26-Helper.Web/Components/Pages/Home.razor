@@ -34,9 +34,9 @@ else
                 </span>
             </TemplateColumn>
 
-            <PropertyColumn Property="@(p => p.TransferValueLow)" Title="Min Value" Sortable="true" Format="N0" />
-            <PropertyColumn Property="@(p => p.TransferValueHigh)" Title="Max Value" Sortable="true" Format="N0" />
-            <PropertyColumn Property="@(p => p.Wage)" Sortable="true" />
+            <PropertyColumn Property="@(p => p.TransferValueLow)" Title="Min Value" Sortable="true" Format="C0" />
+            <PropertyColumn Property="@(p => p.TransferValueHigh)" Title="Max Value" Sortable="true" Format="C0" />
+            <PropertyColumn Property="@(p => p.Wage)" Sortable="true" Format="C0" />
             <TemplateColumn Title="Expires" Sortable="true" SortBy="@contractSort">
                 <span style="@GetContractStyle(context.ContractExpiry, context.GameDate)">
                     @context.ContractExpiry
@@ -263,6 +263,16 @@ else
     private static readonly GridSort<RosterItemViewModel> playingTimeSort = 
         GridSort<RosterItemViewModel>.ByAscending(p => GetPlayingTimeRank(p.PlayingTime));
 
+    private static int ParseCurrency(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return 0;
+        
+        // Remove everything that isn't a number (or a minus sign)
+        var cleanString = new string(input.Where(c => char.IsDigit(c) || c == '-').ToArray());
+        
+        return int.TryParse(cleanString, out var value) ? value : 0;
+    }
+
     private static int GetPlayingTimeRank(string playingTime)
     {
         if (_playingTimeRank.TryGetValue(playingTime, out var rank))
@@ -305,7 +315,7 @@ else
                     PlayingTime = player.Snapshot?.PlayingTime ?? "",
                     TransferValueLow = player.Snapshot?.TransferValueLow ?? 0,
                     TransferValueHigh = player.Snapshot?.TransferValueHigh ?? 0,
-                    Wage = player.Snapshot?.Wage ?? "",
+                    Wage = ParseCurrency(player.Snapshot?.Wage),
                     ContractExpiry = player.Snapshot?.ContractExpiry ?? "",
 
                     Speed = analysis.Speed,

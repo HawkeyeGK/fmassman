@@ -12,7 +12,7 @@ namespace FM26_Helper.Web.Models
         
         public int TransferValueLow { get; set; }
         public int TransferValueHigh { get; set; }
-        public string Wage { get; set; } = string.Empty;
+        public int Wage { get; set; }
         public string ContractExpiry { get; set; } = string.Empty;
 
         // Tactical Analysis

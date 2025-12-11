@@ -18,32 +18,28 @@ else
     <div class="grid-scroll-container">
         <QuickGrid Items="@rosterItems.AsQueryable()" Class="table table-striped table-hover table-sm" Pagination="@pagination">
             <TemplateColumn Title="Name" SortBy="@nameSort">
-                @context.Name
+                <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.Name">
+                    @context.Name
+                </div>
             </TemplateColumn>
             <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
+            <PropertyColumn Property="@(p => p.Personality)" Sortable="true" />
+            <PropertyColumn Property="@(p => p.PlayingTime)" Title="Playing Time" Sortable="true" />
+
+            <PropertyColumn Property="@(p => p.TransferValueLow)" Title="Min Value" Sortable="true" Format="N0" />
+            <PropertyColumn Property="@(p => p.TransferValueHigh)" Title="Max Value" Sortable="true" Format="N0" />
             <PropertyColumn Property="@(p => p.Wage)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.ContractExpiry)" Title="Contract" Sortable="true" />
-            
-            @* Physical *@
-            <PropertyColumn Property="@(p => p.Pace)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Acceleration)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Stamina)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Strength)" Sortable="true" />
+            <PropertyColumn Property="@(p => p.ContractExpiry)" Title="Expires" Sortable="true" />
 
-            @* Technical *@
-            <PropertyColumn Property="@(p => p.Finishing)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Dribbling)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Passing)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Technique)" Sortable="true" />
+            <PropertyColumn Property="@(p => p.Speed)" Title="Spd" Format="F1" Sortable="true" />
+            <PropertyColumn Property="@(p => p.DNA)" Title="DNA" Format="F1" Sortable="true" />
+            <PropertyColumn Property="@(p => p.Gegenpress)" Title="Press" Format="F1" Sortable="true" />
 
-            @* Mental *@
-            <PropertyColumn Property="@(p => p.Composure)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Decisions)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Vision)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.WorkRate)" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Speed)" Format="F1" Sortable="true" />
-            <PropertyColumn Property="@(p => p.DNA)" Format="F1" Sortable="true" />
-            <PropertyColumn Property="@(p => p.Gegenpress)" Format="F1" Sortable="true" />
+            <PropertyColumn Property="@(p => p.AggressiveDefense)" Title="Agg Def" Format="F1" Sortable="true" />
+            <PropertyColumn Property="@(p => p.CautiousDefense)" Title="Cau Def" Format="F1" Sortable="true" />
+            <PropertyColumn Property="@(p => p.DirectAttack)" Title="Dir Att" Format="F1" Sortable="true" />
+            <PropertyColumn Property="@(p => p.PossessionAttack)" Title="Pos Att" Format="F1" Sortable="true" />
+
             <PropertyColumn Property="@(p => p.BestInPossessionRole)" Title="Best Role (In)" Sortable="true" />
             <PropertyColumn Property="@(p => p.BestOutPossessionRole)" Title="Best Role (Out)" Sortable="true" />
         </QuickGrid>
@@ -88,33 +84,25 @@ else
                     Name = player.PlayerName,
                     SortName = sortName,
                     Age = player.Snapshot?.Age ?? 0,
+                    Personality = player.Snapshot?.Personality ?? "",
+                    PlayingTime = player.Snapshot?.PlayingTime ?? "",
+                    TransferValueLow = player.Snapshot?.TransferValueLow ?? 0,
+                    TransferValueHigh = player.Snapshot?.TransferValueHigh ?? 0,
                     Wage = player.Snapshot?.Wage ?? "",
                     ContractExpiry = player.Snapshot?.ContractExpiry ?? "",
+
                     Speed = analysis.Speed,
                     DNA = analysis.DNA,
                     Gegenpress = analysis.Gegenpress,
+                    AggressiveDefense = analysis.AggressiveDefense,
+                    CautiousDefense = analysis.CautiousDefense,
+                    DirectAttack = analysis.DirectAttack,
+                    PossessionAttack = analysis.PossessionAttack,
+
                     BestInPossessionRole = bestIn?.RoleName ?? "N/A",
                     BestInPossessionScore = bestIn?.Score ?? 0,
                     BestOutPossessionRole = bestOut?.RoleName ?? "N/A",
-                    BestOutPossessionScore = bestOut?.Score ?? 0,
-
-                    // Physical
-                    Pace = player.Snapshot?.Physical?.Pace ?? 0,
-                    Acceleration = player.Snapshot?.Physical?.Acceleration ?? 0,
-                    Stamina = player.Snapshot?.Physical?.Stamina ?? 0,
-                    Strength = player.Snapshot?.Physical?.Strength ?? 0,
-
-                    // Technical
-                    Finishing = player.Snapshot?.Technical?.Finishing ?? 0,
-                    Dribbling = player.Snapshot?.Technical?.Dribbling ?? 0,
-                    Passing = player.Snapshot?.Technical?.Passing ?? 0,
-                    Technique = player.Snapshot?.Technical?.Technique ?? 0,
-
-                    // Mental
-                    Composure = player.Snapshot?.Mental?.Composure ?? 0,
-                    Decisions = player.Snapshot?.Mental?.Decisions ?? 0,
-                    Vision = player.Snapshot?.Mental?.Vision ?? 0,
-                    WorkRate = player.Snapshot?.Mental?.WorkRate ?? 0
+                    BestOutPossessionScore = bestOut?.Score ?? 0
                 });
             }
         }

@@ -134,3 +134,13 @@ h1:focus {
 .grid-scroll-container table.table-hover>tbody>tr:hover>*:first-child {
     background-color: #373b40 !important;
 }
+
+/* --- Spreadsheet Mode: Prevent Wrapping --- */
+.grid-scroll-container table th,
+.grid-scroll-container table td {
+    /* Force text to stay on one line, expanding the column width if necessary */
+    white-space: nowrap;
+
+    /* Optional: Center text vertically for a cleaner look */
+    vertical-align: middle;
+}

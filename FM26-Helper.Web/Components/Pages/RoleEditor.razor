@@ -2,24 +2,26 @@
 @rendermode InteractiveServer
 @using FM26_Helper.Shared
 @using FM26_Helper.Shared.Services
-@inject RoleService RoleService
+@using FM26_Helper.Web.Models
+@inject RoleEditorViewModel vm
 @inject NavigationManager Nav
+@implements IDisposable
 
 <PageTitle>Role Editor</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>Role Editor</h1>
     <div>
-        <button class="btn btn-warning me-2" @onclick="ResetDefaults">
+        <button class="btn btn-warning me-2" @onclick="vm.ResetDefaults">
             <i class="bi bi-arrow-counterclockwise"></i> Reset to Baseline
         </button>
-        <button class="btn btn-primary" @onclick="SaveChanges">
+        <button class="btn btn-primary" @onclick="vm.SaveChanges">
             <i class="bi bi-save"></i> Save Changes
         </button>
     </div>
 </div>
 
-@if (roles == null)
+@if (vm.Roles == null)
 {
     <p>Loading...</p>
 }
@@ -28,10 +30,10 @@ else
     <div class="row">
         <div class="col-md-4">
             <div class="list-group" style="max-height: 70vh; overflow-y: auto;">
-                @foreach (var role in roles.OrderBy(r => r.Category).ThenBy(r => r.Name))
+                @foreach (var role in vm.Roles.OrderBy(r => r.Category).ThenBy(r => r.Name))
                 {
-                    <button class="list-group-item list-group-item-action @(selectedRole == role ? "active" : "")" 
-                            @onclick="() => SelectRole(role)">
+                    <button class="list-group-item list-group-item-action @(vm.SelectedRole == role ? "active" : "")" 
+                            @onclick="() => vm.SelectRole(role)">
                         <strong>@role.Name</strong>
                         <div class="small">@role.Category</div>
                     </button>
@@ -40,11 +42,11 @@ else
         </div>
 
         <div class="col-md-8">
-            @if (selectedRole != null)
+            @if (vm.SelectedRole != null)
             {
                 <div class="card bg-dark text-white border-secondary">
                     <div class="card-header">
-                        Editing: <strong>@selectedRole.Name</strong> (@selectedRole.Category)
+                        Editing: <strong>@vm.SelectedRole.Name</strong> (@vm.SelectedRole.Category)
                     </div>
                     <div class="card-body">
                         <table class="table table-dark table-sm">
@@ -56,17 +58,17 @@ else
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var weight in selectedRole.Weights.OrderBy(w => w.Key))
+                                @foreach (var weight in vm.SelectedRole.Weights.OrderBy(w => w.Key))
                                 {
                                     <tr>
                                         <td>@weight.Key</td>
                                         <td>
                                             <input type="number" class="form-control form-control-sm" 
                                                    value="@weight.Value" 
-                                                   @onchange="@(e => UpdateWeight(weight.Key, e.Value))" />
+                                                   @onchange="@(e => vm.UpdateWeight(weight.Key, e.Value))" />
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-danger" @onclick="() => RemoveWeight(weight.Key)">
+                                            <button class="btn btn-sm btn-danger" @onclick="() => vm.RemoveWeight(weight.Key)">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -76,17 +78,17 @@ else
                         </table>
 
                         <div class="input-group mt-3">
-                            <select class="form-select" @bind="newAttribute">
+                            <select class="form-select" @bind="vm.NewAttribute">
                                 <option value="">-- Select Attribute --</option>
                                 @foreach (var attr in RoleFitCalculator.ValidAttributeNames)
                                 {
-                                    if (!selectedRole.Weights.ContainsKey(attr))
+                                    if (!vm.SelectedRole.Weights.ContainsKey(attr))
                                     {
                                         <option value="@attr">@attr</option>
                                     }
                                 }
                             </select>
-                            <button class="btn btn-success" @onclick="AddAttribute" disabled="@string.IsNullOrEmpty(newAttribute)">
+                            <button class="btn btn-success" @onclick="vm.AddAttribute" disabled="@string.IsNullOrEmpty(vm.NewAttribute)">
                                 Add
                             </button>
                         </div>
@@ -102,98 +104,25 @@ else
 }
 
 <div class="toast-container position-fixed top-0 end-0 p-3 mt-4" style="z-index: 1050">
-    <div class="toast align-items-center text-white bg-success border-0 @(showToast ? "show" : "")" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast align-items-center text-white bg-success border-0 @(vm.ShowToast ? "show" : "")" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
-                <i class="bi bi-check-circle-fill me-2"></i> @toastMessage
+                <i class="bi bi-check-circle-fill me-2"></i> @vm.ToastMessage
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" @onclick="CloseToast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" @onclick="vm.CloseToast" aria-label="Close"></button>
         </div>
     </div>
 </div>
 
 @code {
-    private List<RoleDefinition>? roles;
-    private RoleDefinition? selectedRole;
-    private string newAttribute = "";
-    private bool showToast = false;
-
-    private string toastMessage = "Roles saved successfully!";
-
     protected override void OnInitialized()
     {
-        LoadData();
+        vm.OnChange += StateHasChanged;
+        vm.LoadData();
     }
 
-    private void LoadData()
+    public void Dispose()
     {
-        roles = RoleService.LoadLocalRoles();
-    }
-
-    private void SelectRole(RoleDefinition role)
-    {
-        selectedRole = role;
-        newAttribute = "";
-    }
-
-    private void UpdateWeight(string key, object? value)
-    {
-        if (selectedRole != null && double.TryParse(value?.ToString(), out double val))
-        {
-            selectedRole.Weights[key] = val;
-        }
-    }
-
-    private void RemoveWeight(string key)
-    {
-        selectedRole?.Weights.Remove(key);
-    }
-
-    private void AddAttribute()
-    {
-        if (selectedRole != null && !string.IsNullOrEmpty(newAttribute))
-        {
-            selectedRole.Weights[newAttribute] = 3; // Default weight
-            newAttribute = "";
-        }
-    }
-
-    private async Task SaveChanges()
-    {
-        if (roles != null)
-        {
-            RoleService.SaveRoles(roles);
-            
-            // Show Toast
-            toastMessage = "Roles saved successfully!";
-            showToast = true;
-            StateHasChanged();
-
-            // Auto-hide after 3 seconds
-            await Task.Delay(3000);
-            showToast = false;
-            StateHasChanged();
-        }
-    }
-
-    private void CloseToast()
-    {
-        showToast = false;
-    }
-
-    private async Task ResetDefaults()
-    {
-        RoleService.ResetToBaseline();
-        LoadData(); // Reload UI
-        selectedRole = null;
-        
-        toastMessage = "All roles reset to factory settings!";
-        showToast = true;
-        StateHasChanged();
-
-        // Auto-hide after 3 seconds
-        await Task.Delay(3000);
-        showToast = false;
-        StateHasChanged();
+        vm.OnChange -= StateHasChanged;
     }
 }

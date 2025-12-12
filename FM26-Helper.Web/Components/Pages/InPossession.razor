@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using FM26_Helper.Shared
 @using FM26_Helper.Web.Models
+@using FM26_Helper.Web.Helpers
 @inject RosterRepository Repository
 @inject IConfiguration Configuration
 
@@ -45,7 +46,7 @@ else
                         </td>
                         @foreach (var col in columns)
                         {
-                            <td class="@GetScoreClass(player.GetScore(col.Key)) matrix-cell">
+                            <td class="matrix-cell" style="@(colorScale?.GetColorStyle(player.GetScore(col.Key)) ?? "")">
                                 @player.GetScore(col.Key)
                             </td>
                         }
@@ -58,6 +59,7 @@ else
 
 @code {
     private List<MatrixItem>? matrixItems;
+    private HeatmapColorScale? colorScale;
     private List<MatrixColumn> columns = new();
     
     // Sorting State
@@ -117,6 +119,10 @@ else
         
         // Initial Sort
         matrixItems = items.OrderBy(p => p.Name).ToList();
+
+        // Build Color Scale
+        var allScores = matrixItems.SelectMany(i => i.Scores.Values);
+        colorScale = new HeatmapColorScale(allScores);
     }
 
     private void SortTable(string key)
@@ -160,14 +166,5 @@ else
     {
         if (currentSortKey != key) return "";
         return isAscending ? "▲" : "▼";
-    }
-
-    private string GetScoreClass(double score)
-    {
-        if (score >= 90) return "score-elite";
-        if (score >= 80) return "score-good";
-        if (score >= 70) return "score-decent";
-        if (score >= 60) return "score-ok";
-        return "score-poor";
     }
 }

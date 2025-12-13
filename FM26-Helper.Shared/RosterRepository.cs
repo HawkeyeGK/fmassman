@@ -26,5 +26,19 @@ namespace FM26_Helper.Shared
             string json = JsonSerializer.Serialize(players, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
+
+        public void Delete(string filePath, string playerName)
+        {
+            if (!File.Exists(filePath)) return;
+
+            var players = Load(filePath);
+            var playerToRemove = players.FirstOrDefault(p => p.PlayerName.Equals(playerName, System.StringComparison.OrdinalIgnoreCase));
+
+            if (playerToRemove != null)
+            {
+                players.Remove(playerToRemove);
+                Save(filePath, players);
+            }
+        }
     }
 }

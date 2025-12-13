@@ -3,6 +3,7 @@ using FM26_Helper.Web.Helpers;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Components;
 
 namespace FM26_Helper.Web.Models
 {
@@ -10,6 +11,7 @@ namespace FM26_Helper.Web.Models
     {
         private readonly RosterRepository _rosterRepository;
         private readonly IConfiguration _configuration;
+        private readonly NavigationManager _navigationManager;
 
         public PlayerImportData? Player { get; private set; }
         public PlayerAnalysis? Analysis { get; private set; }
@@ -23,10 +25,11 @@ namespace FM26_Helper.Web.Models
             .OrderByDescending(r => r.Score)
             .FirstOrDefault();
 
-        public PlayerDetailsViewModel(RosterRepository rosterRepository, IConfiguration configuration)
+        public PlayerDetailsViewModel(RosterRepository rosterRepository, IConfiguration configuration, NavigationManager navigationManager)
         {
             _rosterRepository = rosterRepository;
             _configuration = configuration;
+            _navigationManager = navigationManager;
         }
 
 
@@ -130,6 +133,19 @@ namespace FM26_Helper.Web.Models
                         GlobalOutPossessionScale = new HeatmapColorScale(allOutScores.Min(), allOutScores.Max());
                 }
             }
+        }
+
+        public void DeletePlayer()
+        {
+            if (Player == null) return;
+
+            var path = _configuration["RosterFilePath"];
+            if (string.IsNullOrEmpty(path)) return;
+
+            _rosterRepository.Delete(path, Player.PlayerName);
+
+            // Navigate back to home/roster to clear the invalid state
+            _navigationManager.NavigateTo("/", forceLoad: true);
         }
     }
 }

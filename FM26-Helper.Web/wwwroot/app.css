@@ -216,14 +216,20 @@ h1:focus {
 }
 
 /* --- Enhanced Row Hover for Heatmaps --- */
-/* 1. Disable default bootstrap hover gray tint on matrix cells */
-.grid-scroll-container table.table-hover > tbody > tr:hover > td.matrix-cell {
+/* High Specificity Selector to override Bootstrap */
+.grid-scroll-container table.table-hover>tbody>tr:hover>td.matrix-cell {
+    /* 1. Kill the Bootstrap gray overlay (which is an inset box-shadow) */
+    box-shadow: none !important;
     --bs-table-accent-bg: transparent !important;
-    
-    /* 2. Highlight by brightening the existing colors */
-    filter: brightness(1.25);
-    
-    /* 3. Optional: Add a subtle border to frame the row */
-    border-top: 1px solid rgba(255, 255, 255, 0.3);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+
+    /* 2. Brighten the cell content (including the background color) */
+    filter: brightness(1.35);
+
+    /* 3. Add Borders to frame the row */
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+
+    /* 4. Ensure z-index places this above neighbors if needed */
+    position: relative;
+    z-index: 5;
 }

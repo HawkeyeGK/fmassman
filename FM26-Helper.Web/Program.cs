@@ -19,6 +19,7 @@ builder.Services.AddScoped<FM26_Helper.Shared.Services.RoleService>(sp =>
 });
 builder.Services.AddTransient<FM26_Helper.Web.Models.RoleEditorViewModel>();
 builder.Services.AddTransient<FM26_Helper.Web.Models.PlayerDetailsViewModel>();
+builder.Services.AddTransient<FM26_Helper.Web.Models.PlayerEditorViewModel>();
 
 var app = builder.Build();
 

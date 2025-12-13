@@ -27,8 +27,47 @@ namespace FM26_Helper.Web.Models
         public HeatmapColorScale? GlobalInPossessionScale { get; private set; }
         public HeatmapColorScale? GlobalOutPossessionScale { get; private set; }
 
-        public IEnumerable<IGrouping<string, RoleFitResult>>? InPossessionGroups { get; private set; }
-        public IEnumerable<IGrouping<string, RoleFitResult>>? OutPossessionGroups { get; private set; }
+        public List<string> MatrixHeaders { get; private set; } = new();
+        public List<List<RoleFitResult?>> MatrixRows { get; private set; } = new();
+
+        public void BuildMatrix()
+        {
+            if (Analysis == null) return;
+
+            var source = IsInPossessionMode ? Analysis.InPossessionFits : Analysis.OutPossessionFits;
+            if (source == null || !source.Any())
+            {
+                MatrixHeaders.Clear();
+                MatrixRows.Clear();
+                return;
+            }
+
+            // 1. Group by Category (Columns)
+            var groups = source
+                .GroupBy(r => r.Category)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            // 2. Set Headers
+            MatrixHeaders = groups.Select(g => g.Key).ToList();
+
+            // 3. Determine max rows needed
+            int maxRows = groups.Any() ? groups.Max(g => g.Count()) : 0;
+            
+            // 4. Build Rows (Transpose)
+            MatrixRows.Clear();
+            for (int i = 0; i < maxRows; i++)
+            {
+                var row = new List<RoleFitResult?>();
+                foreach (var group in groups)
+                {
+                    // Order roles in group by Score Descending
+                    var role = group.OrderByDescending(r => r.Score).ElementAtOrDefault(i);
+                    row.Add(role);
+                }
+                MatrixRows.Add(row);
+            }
+        }
 
         public void LoadPlayer(string name)
         {
@@ -53,15 +92,8 @@ namespace FM26_Helper.Web.Models
                 {
                     Analysis = PlayerAnalyzer.Analyze(Player.Snapshot);
                     HeaderData = RosterItemViewModel.FromPlayer(Player);
-
-                    // Group fits
-                    InPossessionGroups = Analysis.InPossessionFits
-                        .GroupBy(r => r.Category)
-                        .OrderBy(g => g.Key);
-
-                    OutPossessionGroups = Analysis.OutPossessionFits
-                        .GroupBy(r => r.Category)
-                        .OrderBy(g => g.Key);
+                    
+                    BuildMatrix();
                 }
             }
 

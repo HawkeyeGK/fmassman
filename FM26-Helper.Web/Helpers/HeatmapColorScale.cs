@@ -38,6 +38,19 @@ namespace FM26_Helper.Web.Helpers
             }
         }
 
+        public HeatmapColorScale(double min, double max)
+        {
+            _min = min;
+            _max = max;
+            _range = _max - _min;
+
+            if (_range < 15)
+            {
+                _min = _max - 15;
+                _range = 15;
+            }
+        }
+
         public string GetColorStyle(double score)
         {
             // Normalize score to 0.0 - 1.0

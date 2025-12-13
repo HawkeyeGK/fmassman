@@ -1,5 +1,6 @@
 @page "/player/{Name}"
 @using FM26_Helper.Web.Models
+@rendermode InteractiveServer
 @inject PlayerDetailsViewModel VM
 
 <PageTitle>Player Details: @Name</PageTitle>
@@ -95,14 +96,81 @@ else
         </div>
     </div>
 
-    <div class="alert alert-secondary text-center">
-        Phase 2: Detailed Attributes, Radar Charts, and Growth Tracking coming soon...
+    <!-- Phase 2: Role Matrix -->
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-end">
+             <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-success @(IsInPossessionMode ? "active" : "")" @onclick="() => SetMode(true)">
+                    In Possession
+                </button>
+                <button type="button" class="btn btn-outline-danger @(!IsInPossessionMode ? "active" : "")" @onclick="() => SetMode(false)">
+                    Out Of Possession
+                </button>
+            </div>
+        </div>
     </div>
+
+    @if (IsInPossessionMode)
+    {
+        if (VM.InPossessionGroups != null)
+        {
+             var scale = VM.GlobalInPossessionScale;
+             @foreach(var group in VM.InPossessionGroups)
+             {
+                 <h4 class="mt-4 mb-2 border-bottom border-secondary pb-1 text-info">@group.Key</h4>
+                 <div class="row row-cols-2 row-cols-md-4 g-2">
+                     @foreach(var role in group)
+                     {
+                         <div class="col">
+                             <div class="card text-center h-100" style="@(scale?.GetColorStyle(role.Score) ?? "")">
+                                 <div class="card-body p-2 d-flex flex-column justify-content-center align-items-center">
+                                     <h6 class="card-title mb-1" style="font-size: 0.9rem;">@role.RoleName</h6>
+                                     <h3 class="mb-0 fw-bold">@role.Score.ToString("F1")</h3>
+                                 </div>
+                             </div>
+                         </div>
+                     }
+                 </div>
+             }
+        }
+    }
+    else
+    {
+        if (VM.OutPossessionGroups != null)
+        {
+             var scale = VM.GlobalOutPossessionScale;
+             @foreach(var group in VM.OutPossessionGroups)
+             {
+                 <h4 class="mt-4 mb-2 border-bottom border-secondary pb-1 text-info">@group.Key</h4>
+                  <div class="row row-cols-2 row-cols-md-4 g-2">
+                     @foreach(var role in group)
+                     {
+                         <div class="col">
+                             <div class="card text-center h-100" style="@(scale?.GetColorStyle(role.Score) ?? "")">
+                                 <div class="card-body p-2 d-flex flex-column justify-content-center align-items-center">
+                                     <h6 class="card-title mb-1" style="font-size: 0.9rem;">@role.RoleName</h6>
+                                     <h3 class="mb-0 fw-bold">@role.Score.ToString("F1")</h3>
+                                 </div>
+                             </div>
+                         </div>
+                     }
+                 </div>
+             }
+        }
+    }
 }
 
 @code {
     [Parameter]
     public string Name { get; set; } = string.Empty;
+
+    private bool IsInPossessionMode = true;
+
+    private void SetMode(bool inPossession)
+    {
+        IsInPossessionMode = inPossession;
+        StateHasChanged();
+    }
 
     protected override void OnInitialized()
     {

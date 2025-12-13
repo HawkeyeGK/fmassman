@@ -46,7 +46,7 @@ else
                         </td>
                         @foreach (var col in columns)
                         {
-                            <td class="matrix-cell" style="@(colorScale?.GetColorStyle(player.GetScore(col.Key)) ?? "")">
+                            <td class="matrix-cell" style="@(colorScale?.GetColorStyle(player.GetScore(col.Key)).Replace(";", " !important;") ?? "")">
                                 @player.GetScore(col.Key).ToString("F1")
                             </td>
                         }

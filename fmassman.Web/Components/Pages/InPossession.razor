@@ -1,0 +1,166 @@
+@page "/in-possession"
+@rendermode InteractiveServer
+@using fmassman.Shared
+@using fmassman.Web.Models
+@using fmassman.Web.Helpers
+@inject IRosterRepository Repository
+
+<PageTitle>In Possession Analysis</PageTitle>
+
+<h1>In Possession Analysis</h1>
+
+@if (matrixItems == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="grid-scroll-container">
+        <table class="table table-bordered table-dark table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th class="sticky-col" style="min-width: 200px; background-color: #2c3034; cursor: pointer;" 
+                        @onclick='() => SortTable("Player")'>
+                        Player <span class="text-warning">@GetSortIndicator("Player")</span>
+                    </th>
+                    @foreach (var col in columns)
+                    {
+                        <th class="text-center" style="min-width: 100px; cursor: pointer;" 
+                            @onclick="() => SortTable(col.Key)">
+                            <div>
+                                @col.Name 
+                                <span class="text-warning">@GetSortIndicator(col.Key)</span>
+                            </div>
+                            <div style="font-size: 0.7rem; color: #aaa; font-weight: normal;">@col.Category</div>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var player in matrixItems)
+                {
+                    <tr>
+                        <td class="sticky-col" style="background-color: #2c3034; font-weight: bold;">
+                            <a href="/player/@player.Name" class="text-decoration-none text-info">@player.Name</a>
+                        </td>
+                        @foreach (var col in columns)
+                        {
+                            <td class="matrix-cell" style="@(colorScale?.GetColorStyle(player.GetScore(col.Key)).Replace(";", " !important;") ?? "")">
+                                @player.GetScore(col.Key).ToString("F1")
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<MatrixItem>? matrixItems;
+    private HeatmapColorScale? colorScale;
+    private List<MatrixColumn> columns = new();
+    
+    // Sorting State
+    private string currentSortKey = "Player";
+    private bool isAscending = true;
+
+    private record MatrixColumn(string Key, string Name, string Category);
+
+    private class MatrixItem
+    {
+        public string Name { get; set; } = "";
+        public Dictionary<string, double> Scores { get; set; } = new();
+
+        public double GetScore(string key)
+        {
+            return Scores.TryGetValue(key, out var val) ? val : 0;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        var roster = Repository.Load();
+        if (roster.Count == 0) return;
+
+        // 1. Analyze all players
+        var analyzedPlayers = roster
+            .Where(p => p.Snapshot != null)
+            .Select(p => new { Name = p.PlayerName, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
+            .ToList();
+
+        if (analyzedPlayers.Count == 0) return;
+
+        // 2. Build Columns
+        var template = analyzedPlayers.First().Analysis.InPossessionFits;
+        columns = template
+            .OrderBy(r => ScoutingConstants.GetCategoryRank(r.Category)) 
+            .ThenBy(r => r.RoleName)
+            .Select(r => new MatrixColumn($"{r.Category} - {r.RoleName}", r.RoleName, r.Category))
+            .ToList();
+
+        // 3. Build Rows
+        var items = new List<MatrixItem>();
+        foreach (var item in analyzedPlayers)
+        {
+            var scoreMap = item.Analysis.InPossessionFits
+                .ToDictionary(r => $"{r.Category} - {r.RoleName}", r => r.Score);
+
+            items.Add(new MatrixItem
+            {
+                Name = item.Name,
+                Scores = scoreMap
+            });
+        }
+        
+        // Initial Sort
+        matrixItems = items.OrderBy(p => p.Name).ToList();
+
+        // Build Color Scale
+        var allScores = matrixItems.SelectMany(i => i.Scores.Values);
+        colorScale = new HeatmapColorScale(allScores);
+    }
+
+    private void SortTable(string key)
+    {
+        if (currentSortKey == key)
+        {
+            // Toggle direction
+            isAscending = !isAscending;
+        }
+        else
+        {
+            // New column
+            currentSortKey = key;
+            // If Name -> Ascending (A-Z). If Score -> Descending (High-Low)
+            isAscending = (key == "Player");
+        }
+
+        ApplySort();
+    }
+
+    private void ApplySort()
+    {
+        if (matrixItems == null) return;
+
+        if (currentSortKey == "Player")
+        {
+            matrixItems = isAscending 
+                ? matrixItems.OrderBy(p => p.Name).ToList()
+                : matrixItems.OrderByDescending(p => p.Name).ToList();
+        }
+        else
+        {
+            // For scores, we usually want the sort to break ties alphabetically
+            matrixItems = isAscending
+                ? matrixItems.OrderBy(p => p.GetScore(currentSortKey)).ThenBy(p => p.Name).ToList()
+                : matrixItems.OrderByDescending(p => p.GetScore(currentSortKey)).ThenBy(p => p.Name).ToList();
+        }
+    }
+
+    private string GetSortIndicator(string key)
+    {
+        if (currentSortKey != key) return "";
+        return isAscending ? "▲" : "▼";
+    }
+}

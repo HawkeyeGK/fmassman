@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace fmassman.Shared
 {
@@ -14,38 +15,39 @@ namespace fmassman.Shared
             _filePath = filePath;
         }
 
-        public List<PlayerImportData> Load()
+        public Task<List<PlayerImportData>> LoadAsync()
         {
             if (!File.Exists(_filePath))
             {
-                return new List<PlayerImportData>();
+                return Task.FromResult(new List<PlayerImportData>());
             }
 
             string json = File.ReadAllText(_filePath);
             if (string.IsNullOrWhiteSpace(json))
             {
-                return new List<PlayerImportData>();
+                return Task.FromResult(new List<PlayerImportData>());
             }
-            return JsonSerializer.Deserialize<List<PlayerImportData>>(json) ?? new List<PlayerImportData>();
+            return Task.FromResult(JsonSerializer.Deserialize<List<PlayerImportData>>(json) ?? new List<PlayerImportData>());
         }
 
-        public void Save(List<PlayerImportData> players)
+        public Task SaveAsync(List<PlayerImportData> players)
         {
             string json = JsonSerializer.Serialize(players, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_filePath, json);
+            return Task.CompletedTask;
         }
 
-        public void Delete(string playerName)
+        public async Task DeleteAsync(string playerName)
         {
             if (!File.Exists(_filePath)) return;
 
-            var players = Load();
+            var players = await LoadAsync();
             var playerToRemove = players.FirstOrDefault(p => p.PlayerName.Equals(playerName, System.StringComparison.OrdinalIgnoreCase));
 
             if (playerToRemove != null)
             {
                 players.Remove(playerToRemove);
-                Save(players);
+                await SaveAsync(players);
             }
         }
     }

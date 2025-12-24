@@ -4,8 +4,8 @@ namespace fmassman.Shared
 {
     public interface IRosterRepository
     {
-        List<PlayerImportData> Load();
-        void Save(List<PlayerImportData> players);
-        void Delete(string playerName);
+        Task<List<PlayerImportData>> LoadAsync();
+        Task SaveAsync(List<PlayerImportData> players);
+        Task DeleteAsync(string playerName);
     }
 }

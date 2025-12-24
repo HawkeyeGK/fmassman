@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace fmassman.Shared.Services
 {
@@ -29,25 +30,25 @@ namespace fmassman.Shared.Services
             }
 
             // 2. Load Local into Engine
-            var roles = LoadLocalRoles();
+            var roles = LoadLocalRolesAsync().GetAwaiter().GetResult();
             RoleFitCalculator.SetCache(roles);
         }
 
-        public List<RoleDefinition> LoadLocalRoles()
+        public Task<List<RoleDefinition>> LoadLocalRolesAsync()
         {
-            if (!File.Exists(_localPath)) return new List<RoleDefinition>();
+            if (!File.Exists(_localPath)) return Task.FromResult(new List<RoleDefinition>());
             try
             {
                 var json = File.ReadAllText(_localPath);
-                return JsonSerializer.Deserialize<List<RoleDefinition>>(json) ?? new List<RoleDefinition>();
+                return Task.FromResult(JsonSerializer.Deserialize<List<RoleDefinition>>(json) ?? new List<RoleDefinition>());
             }
             catch
             {
-                return new List<RoleDefinition>();
+                return Task.FromResult(new List<RoleDefinition>());
             }
         }
 
-        public void SaveRoles(List<RoleDefinition> roles)
+        public Task SaveRolesAsync(List<RoleDefinition> roles)
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
             var json = JsonSerializer.Serialize(roles, options);
@@ -55,6 +56,7 @@ namespace fmassman.Shared.Services
             
             // Hot Reload the Engine
             RoleFitCalculator.SetCache(roles);
+            return Task.CompletedTask;
         }
 
         public void ResetToBaseline()
@@ -62,7 +64,7 @@ namespace fmassman.Shared.Services
             if (File.Exists(_baselinePath))
             {
                 File.Copy(_baselinePath, _localPath, overwrite: true);
-                var roles = LoadLocalRoles();
+                var roles = LoadLocalRolesAsync().GetAwaiter().GetResult();
                 RoleFitCalculator.SetCache(roles);
             }
         }

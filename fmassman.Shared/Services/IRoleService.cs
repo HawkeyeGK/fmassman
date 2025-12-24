@@ -6,8 +6,8 @@ namespace fmassman.Shared.Services
     public interface IRoleService
     {
         void Initialize();
-        List<RoleDefinition> LoadLocalRoles();
-        void SaveRoles(List<RoleDefinition> roles);
+        Task<List<RoleDefinition>> LoadLocalRolesAsync();
+        Task SaveRolesAsync(List<RoleDefinition> roles);
         void ResetToBaseline();
     }
 }

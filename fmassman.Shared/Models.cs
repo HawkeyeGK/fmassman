@@ -1,9 +1,11 @@
 using System;
+using Newtonsoft.Json;
 
 namespace fmassman.Shared
 {
     public class PlayerImportData
     {
+        [JsonProperty("id")]
         public string PlayerName { get; set; } = string.Empty;
         public string DateOfBirth { get; set; } = string.Empty;
         public int HeightFeet { get; set; }

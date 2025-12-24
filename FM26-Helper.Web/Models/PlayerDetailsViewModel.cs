@@ -9,8 +9,7 @@ namespace FM26_Helper.Web.Models
 {
     public class PlayerDetailsViewModel
     {
-        private readonly RosterRepository _rosterRepository;
-        private readonly IConfiguration _configuration;
+        private readonly IRosterRepository _rosterRepository;
         private readonly NavigationManager _navigationManager;
 
         public PlayerImportData? Player { get; private set; }
@@ -25,10 +24,9 @@ namespace FM26_Helper.Web.Models
             .OrderByDescending(r => r.Score)
             .FirstOrDefault();
 
-        public PlayerDetailsViewModel(RosterRepository rosterRepository, IConfiguration configuration, NavigationManager navigationManager)
+        public PlayerDetailsViewModel(IRosterRepository rosterRepository, NavigationManager navigationManager)
         {
             _rosterRepository = rosterRepository;
-            _configuration = configuration;
             _navigationManager = navigationManager;
         }
 
@@ -93,13 +91,7 @@ namespace FM26_Helper.Web.Models
                 return;
             }
 
-            var path = _configuration["RosterFilePath"];
-            if (string.IsNullOrEmpty(path))
-            {
-                return;
-            }
-
-            var allPlayers = _rosterRepository.Load(path);
+            var allPlayers = _rosterRepository.Load();
             Player = allPlayers.FirstOrDefault(p => p.PlayerName.Equals(name, System.StringComparison.OrdinalIgnoreCase));
 
             if (Player != null)
@@ -139,10 +131,7 @@ namespace FM26_Helper.Web.Models
         {
             if (Player == null) return;
 
-            var path = _configuration["RosterFilePath"];
-            if (string.IsNullOrEmpty(path)) return;
-
-            _rosterRepository.Delete(path, Player.PlayerName);
+            _rosterRepository.Delete(Player.PlayerName);
 
             // Navigate back to home/roster to clear the invalid state
             _navigationManager.NavigateTo("/", forceLoad: true);

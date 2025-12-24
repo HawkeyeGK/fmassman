@@ -1,19 +1,27 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace FM26_Helper.Shared
 {
-    public class RosterRepository
+    public class RosterRepository : IRosterRepository
     {
-        public List<PlayerImportData> Load(string filePath)
+        private readonly string _filePath;
+
+        public RosterRepository(string filePath)
         {
-            if (!File.Exists(filePath))
+            _filePath = filePath;
+        }
+
+        public List<PlayerImportData> Load()
+        {
+            if (!File.Exists(_filePath))
             {
                 return new List<PlayerImportData>();
             }
 
-            string json = File.ReadAllText(filePath);
+            string json = File.ReadAllText(_filePath);
             if (string.IsNullOrWhiteSpace(json))
             {
                 return new List<PlayerImportData>();
@@ -21,23 +29,23 @@ namespace FM26_Helper.Shared
             return JsonSerializer.Deserialize<List<PlayerImportData>>(json) ?? new List<PlayerImportData>();
         }
 
-        public void Save(string filePath, List<PlayerImportData> players)
+        public void Save(List<PlayerImportData> players)
         {
             string json = JsonSerializer.Serialize(players, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filePath, json);
+            File.WriteAllText(_filePath, json);
         }
 
-        public void Delete(string filePath, string playerName)
+        public void Delete(string playerName)
         {
-            if (!File.Exists(filePath)) return;
+            if (!File.Exists(_filePath)) return;
 
-            var players = Load(filePath);
+            var players = Load();
             var playerToRemove = players.FirstOrDefault(p => p.PlayerName.Equals(playerName, System.StringComparison.OrdinalIgnoreCase));
 
             if (playerToRemove != null)
             {
                 players.Remove(playerToRemove);
-                Save(filePath, players);
+                Save(players);
             }
         }
     }

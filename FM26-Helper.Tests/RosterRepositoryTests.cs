@@ -12,7 +12,7 @@ namespace FM26_Helper.Tests
         {
             // Arrange
             string tempFile = Path.GetTempFileName();
-            var repository = new RosterRepository();
+            var repository = new RosterRepository(tempFile);
             var players = new List<PlayerImportData>
             {
                 new PlayerImportData { PlayerName = "Test Player 1", HeightFeet = 6 },
@@ -22,8 +22,8 @@ namespace FM26_Helper.Tests
             try
             {
                 // Act
-                repository.Save(tempFile, players);
-                var loadedPlayers = repository.Load(tempFile);
+                repository.Save(players);
+                var loadedPlayers = repository.Load();
 
                 // Assert
                 Assert.NotNull(loadedPlayers);
@@ -47,10 +47,10 @@ namespace FM26_Helper.Tests
         {
             // Arrange
             string nonExistentFile = "non_existent_file.json";
-            var repository = new RosterRepository();
+            var repository = new RosterRepository(nonExistentFile);
 
             // Act
-            var result = repository.Load(nonExistentFile);
+            var result = repository.Load();
 
             // Assert
             Assert.NotNull(result);

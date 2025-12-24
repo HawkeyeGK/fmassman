@@ -3,8 +3,7 @@
 @using FM26_Helper.Shared
 @using FM26_Helper.Web.Models
 @using FM26_Helper.Web.Helpers
-@inject RosterRepository Repository
-@inject IConfiguration Configuration
+@inject IRosterRepository Repository
 
 <PageTitle>In Possession Analysis</PageTitle>
 
@@ -81,10 +80,7 @@ else
 
     protected override void OnInitialized()
     {
-        var path = Configuration["RosterFilePath"];
-        if (string.IsNullOrEmpty(path)) return;
-
-        var roster = Repository.Load(path);
+        var roster = Repository.Load();
         if (roster.Count == 0) return;
 
         // 1. Analyze all players

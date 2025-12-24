@@ -21,12 +21,11 @@ public class PlayerEditorViewModelTests
         };
         CreateTestRoster(tempFile, roster);
 
-        var repo = new RosterRepository();
+        var repo = new RosterRepository(tempFile);
         var nav = new TestNavigationManager();
-        var config = new TestConfiguration();
-        config["RosterFilePath"] = tempFile;
+        // Config no longer needed for VM
 
-        var vm = new PlayerEditorViewModel(repo, nav, config);
+        var vm = new PlayerEditorViewModel(repo, nav);
 
         // Act
         vm.Load("Test Player");
@@ -61,12 +60,11 @@ public class PlayerEditorViewModelTests
         };
         CreateTestRoster(tempFile, roster);
 
-        var repo = new RosterRepository();
+        var repo = new RosterRepository(tempFile);
         var nav = new TestNavigationManager();
-        var config = new TestConfiguration();
-        config["RosterFilePath"] = tempFile;
+        // Config no longer needed for VM
 
-        var vm = new PlayerEditorViewModel(repo, nav, config);
+        var vm = new PlayerEditorViewModel(repo, nav);
         vm.Load("Test Player");
 
         // Act

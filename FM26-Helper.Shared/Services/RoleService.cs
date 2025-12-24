@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace FM26_Helper.Shared.Services
 {
-    public class RoleService
+    public class RoleService : IRoleService
     {
         private readonly string _baselinePath; // Factory Settings
         private readonly string _localPath;    // User Edits (Database)

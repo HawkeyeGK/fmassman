@@ -6,8 +6,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<FM26_Helper.Shared.RosterRepository>();
-builder.Services.AddScoped<FM26_Helper.Shared.Services.RoleService>(sp => 
+builder.Services.AddScoped<FM26_Helper.Shared.IRosterRepository>(sp => 
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var rosterPath = config["RosterFilePath"] ?? "roster_data.json";
+    return new FM26_Helper.Shared.RosterRepository(rosterPath);
+});
+
+builder.Services.AddScoped<FM26_Helper.Shared.Services.IRoleService>(sp => 
 {
     var config = sp.GetRequiredService<IConfiguration>();
     // Locate the Baseline in the bin folder (App Domain Base)
@@ -26,7 +32,7 @@ var app = builder.Build();
 // Initialize RoleService to load local data (or baseline) before first request
 using (var scope = app.Services.CreateScope())
 {
-    var roleService = scope.ServiceProvider.GetRequiredService<FM26_Helper.Shared.Services.RoleService>();
+    var roleService = scope.ServiceProvider.GetRequiredService<FM26_Helper.Shared.Services.IRoleService>();
     roleService.Initialize();
 }
 

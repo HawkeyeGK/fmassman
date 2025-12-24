@@ -2,8 +2,7 @@
 @rendermode InteractiveServer
 @using FM26_Helper.Shared
 @using FM26_Helper.Web.Models
-@inject RosterRepository Repository
-@inject IConfiguration Configuration
+@inject IRosterRepository Repository
 
 <PageTitle>Player Roster</PageTitle>
 
@@ -80,15 +79,7 @@ else
 
     protected override void OnInitialized()
     {
-        var path = Configuration["RosterFilePath"];
-        if (!string.IsNullOrEmpty(path))
-        {
-            var players = Repository.Load(path);
-            rosterItems = players.Select(RosterItemViewModel.FromPlayer).ToList();
-        }
-        else
-        {
-            rosterItems = new List<RosterItemViewModel>();
-        }
+        var players = Repository.Load();
+        rosterItems = players.Select(RosterItemViewModel.FromPlayer).ToList();
     }
 }

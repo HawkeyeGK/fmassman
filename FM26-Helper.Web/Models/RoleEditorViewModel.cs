@@ -9,7 +9,7 @@ namespace FM26_Helper.Web.Models
 {
     public class RoleEditorViewModel
     {
-        private readonly RoleService _roleService;
+        private readonly IRoleService _roleService;
 
         public event Action? OnChange;
 
@@ -19,7 +19,7 @@ namespace FM26_Helper.Web.Models
         public bool ShowToast { get; private set; }
         public string ToastMessage { get; private set; } = "";
 
-        public RoleEditorViewModel(RoleService roleService)
+        public RoleEditorViewModel(IRoleService roleService)
         {
             _roleService = roleService;
         }

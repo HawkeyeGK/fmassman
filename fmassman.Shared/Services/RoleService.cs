@@ -34,29 +34,28 @@ namespace fmassman.Shared.Services
             RoleFitCalculator.SetCache(roles);
         }
 
-        public Task<List<RoleDefinition>> LoadLocalRolesAsync()
+        public async Task<List<RoleDefinition>> LoadLocalRolesAsync()
         {
-            if (!File.Exists(_localPath)) return Task.FromResult(new List<RoleDefinition>());
+            if (!File.Exists(_localPath)) return new List<RoleDefinition>();
             try
             {
-                var json = File.ReadAllText(_localPath);
-                return Task.FromResult(JsonSerializer.Deserialize<List<RoleDefinition>>(json) ?? new List<RoleDefinition>());
+                var json = await File.ReadAllTextAsync(_localPath);
+                return JsonSerializer.Deserialize<List<RoleDefinition>>(json) ?? new List<RoleDefinition>();
             }
             catch
             {
-                return Task.FromResult(new List<RoleDefinition>());
+                return new List<RoleDefinition>();
             }
         }
 
-        public Task SaveRolesAsync(List<RoleDefinition> roles)
+        public async Task SaveRolesAsync(List<RoleDefinition> roles)
         {
             var options = new JsonSerializerOptions { WriteIndented = true };
             var json = JsonSerializer.Serialize(roles, options);
-            File.WriteAllText(_localPath, json);
+            await File.WriteAllTextAsync(_localPath, json);
             
             // Hot Reload the Engine
             RoleFitCalculator.SetCache(roles);
-            return Task.CompletedTask;
         }
 
         public async Task ResetToBaselineAsync()

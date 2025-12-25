@@ -23,11 +23,16 @@ if (!string.IsNullOrEmpty(cosmosConn))
         ));
 
     builder.Services.AddScoped<fmassman.Shared.Services.IRoleService>(sp =>
-        new fmassman.Shared.Services.CosmosRoleService(
+    {
+        var config = sp.GetRequiredService<IConfiguration>();
+        var baseline = Path.Combine(AppContext.BaseDirectory, config["RolesBaselinePath"] ?? "roles.json");
+        return new fmassman.Shared.Services.CosmosRoleService(
             sp.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>(),
             "FMAMDB",
-            "Roles"
-        ));
+            "Roles",
+            baseline
+        );
+    });
 }
 else
 {
@@ -60,7 +65,14 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var roleService = scope.ServiceProvider.GetRequiredService<fmassman.Shared.Services.IRoleService>();
-    await roleService.InitializeAsync();
+    try
+    {
+        await roleService.InitializeAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"CRITICAL ERROR: Failed to initialize roles. App may suffer functionality loss. {ex.Message}");
+    }
 }
 
 // Configure the HTTP request pipeline.

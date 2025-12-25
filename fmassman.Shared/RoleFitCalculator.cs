@@ -24,6 +24,7 @@ namespace fmassman.Shared
 
         static RoleFitCalculator()
         {
+            _cachedRoles ??= new List<RoleDefinition>();
             InitializeAttributeMap();
         }
 

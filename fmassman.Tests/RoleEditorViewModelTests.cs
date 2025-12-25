@@ -51,10 +51,10 @@ namespace fmassman.Tests
         }
 
         [Fact]
-        public void LoadData_ShouldPopulateRoles()
+        public async Task LoadData_ShouldPopulateRoles()
         {
             // Act
-            _viewModel.LoadData();
+            await _viewModel.LoadDataAsync();
 
             // Assert
             Assert.NotNull(_viewModel.Roles);
@@ -63,9 +63,9 @@ namespace fmassman.Tests
         }
 
         [Fact]
-        public void SelectRole_ShouldUpdateSelectionAndClearNewAttribute()
+        public async Task SelectRole_ShouldUpdateSelectionAndClearNewAttribute()
         {
-            _viewModel.LoadData();
+            await _viewModel.LoadDataAsync();
             var role = _viewModel.Roles.First();
             _viewModel.NewAttribute = "Pending Input";
 
@@ -78,9 +78,9 @@ namespace fmassman.Tests
         }
 
         [Fact]
-        public void UpdateWeight_ShouldModifyRoleData()
+        public async Task UpdateWeight_ShouldModifyRoleData()
         {
-            _viewModel.LoadData();
+            await _viewModel.LoadDataAsync();
             var role = _viewModel.Roles.First();
             _viewModel.SelectRole(role);
 
@@ -92,9 +92,9 @@ namespace fmassman.Tests
         }
 
         [Fact]
-        public void AddAttribute_ShouldAddToDictionary()
+        public async Task AddAttribute_ShouldAddToDictionary()
         {
-            _viewModel.LoadData();
+            await _viewModel.LoadDataAsync();
             var role = _viewModel.Roles.First();
             _viewModel.SelectRole(role);
             _viewModel.NewAttribute = "Stamina";
@@ -109,9 +109,9 @@ namespace fmassman.Tests
         }
 
         [Fact]
-        public void RemoveWeight_ShouldRemoveFromDictionary()
+        public async Task RemoveWeight_ShouldRemoveFromDictionary()
         {
-            _viewModel.LoadData();
+            await _viewModel.LoadDataAsync();
             var role = _viewModel.Roles.First();
             _viewModel.SelectRole(role);
 

@@ -17,7 +17,7 @@ namespace fmassman.Shared.Services
             _localPath = localPath;
         }
 
-        public void Initialize()
+        public async Task InitializeAsync()
         {
             // 1. Ensure Local Exists
             if (!File.Exists(_localPath))
@@ -30,7 +30,7 @@ namespace fmassman.Shared.Services
             }
 
             // 2. Load Local into Engine
-            var roles = LoadLocalRolesAsync().GetAwaiter().GetResult();
+            var roles = await LoadLocalRolesAsync();
             RoleFitCalculator.SetCache(roles);
         }
 
@@ -59,12 +59,12 @@ namespace fmassman.Shared.Services
             return Task.CompletedTask;
         }
 
-        public void ResetToBaseline()
+        public async Task ResetToBaselineAsync()
         {
             if (File.Exists(_baselinePath))
             {
                 File.Copy(_baselinePath, _localPath, overwrite: true);
-                var roles = LoadLocalRolesAsync().GetAwaiter().GetResult();
+                var roles = await LoadLocalRolesAsync();
                 RoleFitCalculator.SetCache(roles);
             }
         }

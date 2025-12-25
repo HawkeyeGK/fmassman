@@ -77,9 +77,9 @@ else
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var roster = Repository.Load();
+        var roster = await Repository.LoadAsync();
         if (roster.Count == 0) return;
 
         // 1. Analyze all players

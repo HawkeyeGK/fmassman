@@ -13,7 +13,7 @@ else
     <div class="container-fluid">
         <h3>Editing: @VM.Player.PlayerName</h3>
         
-        <EditForm Model="VM.Player" OnValidSubmit="VM.Save" FormName="PlayerEditor">
+        <EditForm Model="VM.Player" OnValidSubmit="VM.SaveAsync" FormName="PlayerEditor">
             <DataAnnotationsValidator />
             
             <div class="d-flex justify-content-end mb-3">
@@ -152,9 +152,9 @@ else
 
     private int _activeTab = 0;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Decode the name to ensure we find the player
-        VM.Load(System.Net.WebUtility.UrlDecode(Name));
+        await VM.LoadAsync(System.Net.WebUtility.UrlDecode(Name));
     }
 }

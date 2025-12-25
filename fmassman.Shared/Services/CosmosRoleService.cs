@@ -14,9 +14,9 @@ namespace fmassman.Shared.Services
             _container = cosmosClient.GetContainer(databaseName, containerName);
         }
 
-        public void Initialize()
+        public async Task InitializeAsync()
         {
-            var roles = LoadLocalRolesAsync().GetAwaiter().GetResult();
+            var roles = await LoadLocalRolesAsync();
             if (roles.Any())
             {
                 RoleFitCalculator.SetCache(roles);
@@ -25,13 +25,9 @@ namespace fmassman.Shared.Services
 
         public async Task<List<RoleDefinition>> LoadLocalRolesAsync()
         {
-            var query = new QueryDefinition("SELECT * FROM c WHERE c.pk = @pk")
-                .WithParameter("@pk", "RoleConfig");
+            var query = new QueryDefinition("SELECT * FROM c");
 
-            var iterator = _container.GetItemQueryIterator<RoleDefinition>(
-                query,
-                requestOptions: new QueryRequestOptions { PartitionKey = new PartitionKey("RoleConfig") }
-            );
+            var iterator = _container.GetItemQueryIterator<RoleDefinition>(query);
 
             var results = new List<RoleDefinition>();
             while (iterator.HasMoreResults)
@@ -46,15 +42,15 @@ namespace fmassman.Shared.Services
         {
             foreach (var role in roles)
             {
-                role.PartitionKey = "RoleConfig"; // Ensure PK is set
-                await _container.UpsertItemAsync(role, new PartitionKey("RoleConfig"));
+                await _container.UpsertItemAsync(role, new PartitionKey(role.Id));
             }
             RoleFitCalculator.SetCache(roles);
         }
 
-        public void ResetToBaseline()
+        public Task ResetToBaselineAsync()
         {
             // Not implemented for Cosmos DB version as it relies on file system baseline operations
+            return Task.CompletedTask;
         }
     }
 }

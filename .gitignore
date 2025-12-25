@@ -29,3 +29,5 @@ debug_output/
 ## Ignore screenshots of players
 **/players/
 **/roster_data.json
+
+fmassman.Web/appsettings.Development.json

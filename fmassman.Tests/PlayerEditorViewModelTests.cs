@@ -11,7 +11,7 @@ namespace fmassman.Tests;
 public class PlayerEditorViewModelTests
 {
     [Fact]
-    public void Load_InitializesNullObjects()
+    public async Task Load_InitializesNullObjects()
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
@@ -28,7 +28,7 @@ public class PlayerEditorViewModelTests
         var vm = new PlayerEditorViewModel(repo, nav);
 
         // Act
-        vm.Load("Test Player");
+        await vm.LoadAsync("Test Player");
 
         // Assert
         Assert.NotNull(vm.Player);
@@ -43,7 +43,7 @@ public class PlayerEditorViewModelTests
     }
 
     [Fact]
-    public void Save_PersistsChanges()
+    public async Task Save_PersistsChanges()
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
@@ -65,11 +65,11 @@ public class PlayerEditorViewModelTests
         // Config no longer needed for VM
 
         var vm = new PlayerEditorViewModel(repo, nav);
-        vm.Load("Test Player");
+        await vm.LoadAsync("Test Player");
 
         // Act
         vm.Player.Snapshot.Mental.Determination = 20;
-        vm.Save();
+        await vm.SaveAsync();
 
         // Assert
         var json = File.ReadAllText(tempFile);

@@ -24,9 +24,9 @@ namespace fmassman.Web.Models
             _roleService = roleService;
         }
 
-        public void LoadData()
+        public async Task LoadDataAsync()
         {
-            Roles = _roleService.LoadLocalRoles();
+            Roles = await _roleService.LoadLocalRolesAsync();
             NotifyStateChanged();
         }
 
@@ -75,7 +75,7 @@ namespace fmassman.Web.Models
         {
             if (Roles != null)
             {
-                _roleService.SaveRoles(Roles);
+                await _roleService.SaveRolesAsync(Roles);
 
                 // Show Toast
                 ToastMessage = "Roles saved successfully!";
@@ -91,8 +91,8 @@ namespace fmassman.Web.Models
 
         public async Task ResetDefaults()
         {
-            _roleService.ResetToBaseline();
-            LoadData(); // Reload UI
+            await _roleService.ResetToBaselineAsync();
+            await LoadDataAsync(); // Reload UI
             SelectedRole = null;
 
             ToastMessage = "All roles reset to factory settings!";

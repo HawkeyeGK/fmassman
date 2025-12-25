@@ -8,7 +8,7 @@ namespace fmassman.Tests
     public class RosterRepositoryTests
     {
         [Fact]
-        public void SaveAndLoad_ShouldPersistData()
+        public async Task SaveAndLoad_ShouldPersistData()
         {
             // Arrange
             string tempFile = Path.GetTempFileName();
@@ -22,8 +22,8 @@ namespace fmassman.Tests
             try
             {
                 // Act
-                repository.Save(players);
-                var loadedPlayers = repository.Load();
+                await repository.SaveAsync(players);
+                var loadedPlayers = await repository.LoadAsync();
 
                 // Assert
                 Assert.NotNull(loadedPlayers);
@@ -43,14 +43,14 @@ namespace fmassman.Tests
         }
 
         [Fact]
-        public void Load_ShouldReturnEmptyList_WhenFileDoesNotExist()
+        public async Task Load_ShouldReturnEmptyList_WhenFileDoesNotExist()
         {
             // Arrange
             string nonExistentFile = "non_existent_file.json";
             var repository = new RosterRepository(nonExistentFile);
 
             // Act
-            var result = repository.Load();
+            var result = await repository.LoadAsync();
 
             // Assert
             Assert.NotNull(result);

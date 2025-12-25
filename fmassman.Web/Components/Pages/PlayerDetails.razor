@@ -190,9 +190,9 @@ else
     private bool IsInPossessionMode = true;
     private bool confirmDelete = false;
 
-    private void ExecuteDelete()
+    private async Task ExecuteDelete()
     {
-        VM.DeletePlayer();
+        await VM.DeletePlayerAsync();
     }
 
     private void SetMode(bool inPossession)
@@ -203,8 +203,8 @@ else
         StateHasChanged();
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        VM.LoadPlayer(Name);
+        await VM.LoadPlayerAsync(Name);
     }
 }

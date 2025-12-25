@@ -77,9 +77,9 @@ else
     private static readonly GridSort<RosterItemViewModel> contractSort = 
         GridSort<RosterItemViewModel>.ByAscending(p => RosterItemViewModel.ParseSmartDate(p.ContractExpiry) ?? DateTime.MaxValue);
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var players = Repository.Load();
+        var players = await Repository.LoadAsync();
         rosterItems = players.Select(RosterItemViewModel.FromPlayer).ToList();
     }
 }

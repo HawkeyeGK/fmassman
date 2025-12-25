@@ -83,7 +83,7 @@ namespace fmassman.Web.Models
             }
         }
 
-        public void LoadPlayer(string name)
+        public async Task LoadPlayerAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -91,7 +91,7 @@ namespace fmassman.Web.Models
                 return;
             }
 
-            var allPlayers = _rosterRepository.Load();
+            var allPlayers = await _rosterRepository.LoadAsync();
             Player = allPlayers.FirstOrDefault(p => p.PlayerName.Equals(name, System.StringComparison.OrdinalIgnoreCase));
 
             if (Player != null)
@@ -127,11 +127,11 @@ namespace fmassman.Web.Models
             }
         }
 
-        public void DeletePlayer()
+        public async Task DeletePlayerAsync()
         {
             if (Player == null) return;
 
-            _rosterRepository.Delete(Player.PlayerName);
+            await _rosterRepository.DeleteAsync(Player.PlayerName);
 
             // Navigate back to home/roster to clear the invalid state
             _navigationManager.NavigateTo("/", forceLoad: true);

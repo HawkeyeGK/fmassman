@@ -20,12 +20,12 @@ public class PlayerEditorViewModel
         _navigationManager = navigationManager;
     }
 
-    public void Load(string name)
+    public async Task LoadAsync(string name)
     {
         IsLoading = true;
         try
         {
-            var players = _rosterRepository.Load();
+            var players = await _rosterRepository.LoadAsync();
             Player = players.FirstOrDefault(p => p.PlayerName.Equals(name, StringComparison.OrdinalIgnoreCase));
 
             // CRITICAL Data Integrity Logic
@@ -53,17 +53,17 @@ public class PlayerEditorViewModel
         }
     }
 
-    public void Save()
+    public async Task SaveAsync()
     {
         if (Player == null) return;
 
-        var currentPlayers = _rosterRepository.Load();
+        var currentPlayers = await _rosterRepository.LoadAsync();
         var index = currentPlayers.FindIndex(p => p.PlayerName.Equals(Player.PlayerName, StringComparison.OrdinalIgnoreCase));
 
         if (index >= 0)
         {
             currentPlayers[index] = Player; // Update the list with our edited object
-            _rosterRepository.Save(currentPlayers);
+            await _rosterRepository.SaveAsync(currentPlayers);
             _navigationManager.NavigateTo($"/player/{Player.PlayerName}");
         }
     }

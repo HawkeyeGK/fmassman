@@ -21,6 +21,12 @@ namespace fmassman.Shared
         {
             _cachedRoles = roles;
         }
+        
+        // Expose roles for UI generation when no players exist
+        public static IEnumerable<RoleDefinition> GetRoles(string phase)
+        {
+            return _cachedRoles.Where(r => r.Phase.Equals(phase, StringComparison.OrdinalIgnoreCase));
+        }
 
         static RoleFitCalculator()
         {

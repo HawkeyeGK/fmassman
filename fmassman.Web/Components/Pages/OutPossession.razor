@@ -9,11 +9,19 @@
 
 <h1>Out of Possession Analysis</h1>
 
-@if (matrixItems == null)
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <h4>Error Loading Analysis</h4>
+        <p>@errorMessage</p>
+    </div>
+}
+
+@if (matrixItems == null && string.IsNullOrEmpty(errorMessage))
 {
     <p><em>Loading...</em></p>
 }
-else
+else if (matrixItems != null)
 {
     <div class="grid-scroll-container">
         <table class="table table-bordered table-dark table-sm table-hover mb-0">
@@ -60,6 +68,7 @@ else
     private List<MatrixItem>? matrixItems;
     private List<MatrixColumn> columns = new();
     private HeatmapColorScale? colorScale;
+    private string errorMessage = string.Empty;
 
     // Sorting State
     private string currentSortKey = "Player";
@@ -79,45 +88,74 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var roster = await Repository.LoadAsync();
-        if (roster.Count == 0) return;
-
-        // 1. Analyze all players
-        var analyzedPlayers = roster
-            .Where(p => p.Snapshot != null)
-            .Select(p => new { Name = p.PlayerName, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
-            .ToList();
-
-        if (analyzedPlayers.Count == 0) return;
-
-        // 2. Build Columns (Using OutPossessionFits)
-        var template = analyzedPlayers.First().Analysis.OutPossessionFits;
-        columns = template
-            .OrderBy(r => ScoutingConstants.GetCategoryRank(r.Category)) 
-            .ThenBy(r => r.RoleName)
-            .Select(r => new MatrixColumn($"{r.Category} - {r.RoleName}", r.RoleName, r.Category))
-            .ToList();
-
-        // 3. Build Rows
-        var items = new List<MatrixItem>();
-        foreach (var item in analyzedPlayers)
+        try
         {
-            var scoreMap = item.Analysis.OutPossessionFits
-                .ToDictionary(r => $"{r.Category} - {r.RoleName}", r => r.Score);
-
-            items.Add(new MatrixItem
+            var roster = await Repository.LoadAsync();
+            if (roster.Count == 0) 
             {
-                Name = item.Name,
-                Scores = scoreMap
-            });
-        }
-        
-        // 4. Initialize Heatmap
-        var allScores = items.SelectMany(i => i.Scores.Values);
-        colorScale = new HeatmapColorScale(allScores);
+                 // Empty Roster: Build columns from cached roles
+                columns = RoleFitCalculator.GetRoles("OutPossession")
+                    .OrderBy(r => ScoutingConstants.GetCategoryRank(r.Category)) 
+                    .ThenBy(r => r.Name)
+                    .Select(r => new MatrixColumn($"{r.Category} - {r.Name}", r.Name, r.Category))
+                    .ToList();
+                    
+                matrixItems = new List<MatrixItem>();
+                return;
+            }
 
-        // Initial Sort
-        matrixItems = items.OrderBy(p => p.Name).ToList();
+            // 1. Analyze all players
+            var analyzedPlayers = roster
+                .Where(p => p.Snapshot != null)
+                .Select(p => new { Name = p.PlayerName, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
+                .ToList();
+
+            if (analyzedPlayers.Count == 0) 
+            {
+                 // Empty Analysis: Build columns from cached roles
+                columns = RoleFitCalculator.GetRoles("OutPossession")
+                    .OrderBy(r => ScoutingConstants.GetCategoryRank(r.Category)) 
+                    .ThenBy(r => r.Name)
+                    .Select(r => new MatrixColumn($"{r.Category} - {r.Name}", r.Name, r.Category))
+                    .ToList();
+                    
+                matrixItems = new List<MatrixItem>();
+                return;
+            }
+
+            // 2. Build Columns (Using OutPossessionFits)
+            var template = analyzedPlayers.First().Analysis.OutPossessionFits;
+            columns = template
+                .OrderBy(r => ScoutingConstants.GetCategoryRank(r.Category)) 
+                .ThenBy(r => r.RoleName)
+                .Select(r => new MatrixColumn($"{r.Category} - {r.RoleName}", r.RoleName, r.Category))
+                .ToList();
+
+            // 3. Build Rows
+            var items = new List<MatrixItem>();
+            foreach (var item in analyzedPlayers)
+            {
+                var scoreMap = item.Analysis.OutPossessionFits
+                    .ToDictionary(r => $"{r.Category} - {r.RoleName}", r => r.Score);
+
+                items.Add(new MatrixItem
+                {
+                    Name = item.Name,
+                    Scores = scoreMap
+                });
+            }
+            
+            // 4. Initialize Heatmap
+            var allScores = items.SelectMany(i => i.Scores.Values);
+            colorScale = new HeatmapColorScale(allScores);
+
+            // Initial Sort
+            matrixItems = items.OrderBy(p => p.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading analysis: {ex.Message}";
+        }
     }
 
     private void SortTable(string key)

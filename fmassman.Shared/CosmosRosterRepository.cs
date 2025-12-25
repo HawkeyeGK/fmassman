@@ -16,14 +16,23 @@ namespace fmassman.Shared
 
         public async Task<List<PlayerImportData>> LoadAsync()
         {
-            var query = _container.GetItemQueryIterator<PlayerImportData>(new QueryDefinition("SELECT * FROM c"));
-            var results = new List<PlayerImportData>();
-            while (query.HasMoreResults)
+            try
             {
-                var response = await query.ReadNextAsync();
-                results.AddRange(response.ToList());
+                var query = _container.GetItemQueryIterator<PlayerImportData>(new QueryDefinition("SELECT * FROM c"));
+                var results = new List<PlayerImportData>();
+                while (query.HasMoreResults)
+                {
+                    var response = await query.ReadNextAsync();
+                    results.AddRange(response.ToList());
+                }
+                return results;
             }
-            return results;
+            catch
+            {
+                // If the container/DB doesn't exist or connection fails, return empty list
+                // This prevents the UI from crashing
+                return new List<PlayerImportData>();
+            }
         }
 
         public async Task SaveAsync(List<PlayerImportData> players)

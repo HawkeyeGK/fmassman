@@ -8,11 +8,19 @@
 
 <h1>Player Roster</h1>
 
-@if (rosterItems == null)
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <h4>Error Loading Roster</h4>
+        <p>@errorMessage</p>
+    </div>
+}
+
+@if (rosterItems == null && string.IsNullOrEmpty(errorMessage))
 {
     <p><em>Loading...</em></p>
 }
-else
+else if (rosterItems != null)
 {
     <div class="grid-scroll-container">
         <QuickGrid Items="@rosterItems.AsQueryable()" Class="table table-striped table-hover table-sm" Pagination="@pagination">
@@ -62,6 +70,7 @@ else
 @code {
     private List<RosterItemViewModel>? rosterItems;
     private PaginationState pagination = new PaginationState { ItemsPerPage = 50 };
+    private string errorMessage = string.Empty;
 
     // define the custom sort rule
     private static readonly GridSort<RosterItemViewModel> nameSort = 
@@ -79,7 +88,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var players = await Repository.LoadAsync();
-        rosterItems = players.Select(RosterItemViewModel.FromPlayer).ToList();
+        try
+        {
+            var players = await Repository.LoadAsync();
+            rosterItems = players.Select(RosterItemViewModel.FromPlayer).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading roster: {ex.Message}";
+        }
     }
 }

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+
 using System.Linq;
 using System.Text.Json;
 
@@ -24,7 +24,6 @@ namespace fmassman.Shared
 
         static RoleFitCalculator()
         {
-            LoadRoles();
             InitializeAttributeMap();
         }
 
@@ -73,23 +72,6 @@ namespace fmassman.Shared
             _attributeMap["Pace"] = p => p.Physical?.Pace ?? 0;
             _attributeMap["Stamina"] = p => p.Physical?.Stamina ?? 0;
             _attributeMap["Strength"] = p => p.Physical?.Strength ?? 0;
-        }
-
-        private static void LoadRoles()
-        {
-            try
-            {
-                var path = Path.Combine(AppContext.BaseDirectory, "roles.json");
-                if (File.Exists(path))
-                {
-                    var json = File.ReadAllText(path);
-                    _cachedRoles = JsonSerializer.Deserialize<List<RoleDefinition>>(json) ?? new List<RoleDefinition>();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading roles: {ex.Message}");
-            }
         }
 
         public static List<RoleFitResult> Calculate(PlayerSnapshot player, string phase)

@@ -31,3 +31,5 @@ debug_output/
 **/roster_data.json
 
 fmassman.Web/appsettings.Development.json
+
+local.settings.json

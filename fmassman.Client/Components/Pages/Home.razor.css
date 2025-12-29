@@ -1,0 +1,4 @@
+/* Home.razor scoped styles - minimal, relies on app.css for grid styling */
+
+/* NOTE: The main grid styling comes from app.css via .grid-scroll-container class */
+/* This file only contains page-specific overrides if needed */

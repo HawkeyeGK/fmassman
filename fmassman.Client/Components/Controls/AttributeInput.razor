@@ -1,0 +1,13 @@
+<div class="mb-2">
+    <label class="form-label small mb-1">@Label</label>
+    <InputNumber @bind-Value="Value" @bind-Value:event="oninput" 
+                 class="form-control form-control-sm" 
+                 min="1" max="20" />
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public System.Linq.Expressions.Expression<Func<int>>? ValueExpression { get; set; }
+}

@@ -31,6 +31,16 @@ var host = new HostBuilder()
             return new CosmosClient(connectionString);
         });
 
+        // Register HttpClientFactory for OpenAI
+        services.AddHttpClient("OpenAI", client =>
+        {
+            var openAiKey = Environment.GetEnvironmentVariable("OpenAiKey");
+            if (!string.IsNullOrEmpty(openAiKey))
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {openAiKey}");
+            }
+        });
+
         // Register Repositories/Services
         services.AddSingleton<IRosterRepository, CosmosRosterRepository>();
 

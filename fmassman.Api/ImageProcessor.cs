@@ -14,7 +14,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
-namespace fmassman.Extractor
+namespace fmassman.Api
 {
     public class ImageProcessor
     {
@@ -30,7 +30,7 @@ namespace fmassman.Extractor
         }
 
         [Function("ProcessPlayerImage")]
-        public async Task Run([BlobTrigger("player-images/{name}", Connection = "BlobStorageConnection")] Stream imageStream, string name)
+        public async Task Run([BlobTrigger("player-images/{name}", Connection = "AzureWebJobsStorage")] Stream imageStream, string name)
         {
             _logger.LogInformation($"Processing blob\n Name: {name} \n Size: {imageStream.Length} Bytes");
 
@@ -45,19 +45,6 @@ namespace fmassman.Extractor
                 if (playerData != null)
                 {
                     // 3. Save to Cosmos DB
-                    // Ensure ID is set for Cosmos
-                    // Assuming PlayerName is unique enough, or we might need a composite key. 
-                    // For now, we follow the existing pattern or use a Guid if needed.
-                    // The prompt returns PlayerName. We can use that as ID or generated one.
-                    // Let's use a composite ID to be safe or just PlayerName if that's the intention.
-                    // Based on previous conversations, "id" property is needed.
-                    
-                    // We need to map it to a format Cosmos accepts securely.
-                    // If PlayerImportData doesn't have an ID, we might need to add one or assume existing one.
-                    // Checking PlayerImportData definition would be good, but assuming standard Cosmos 'id'.
-                    // Let's generate a deterministic ID or just use Name for now.
-                    
-                    // UpsertItemAsync will handle insert or update
                     await _playersContainer.UpsertItemAsync(playerData, new PartitionKey(playerData.PlayerName));
                     _logger.LogInformation($"Successfully upserted player: {playerData.PlayerName}");
                 }
@@ -178,29 +165,26 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
             JObject flatData = JObject.Parse(contentString);
 
             // Manual Mapping: Flat JSON -> Nested Class Structure
-            // Note: We use the current time for FileCreationDate since we don't have the original file metadata easily in blob trigger without extra metadata binding
             DateTime fileCreationDate = DateTime.UtcNow; 
 
             PlayerImportData playerData = new PlayerImportData
             {
-                PlayerName = (string)flatData["PlayerName"],
-                // Ensure id field is populated for Cosmos if it's on the base class or we treat PlayerName as id in repository
-                // We'll trust PlayerImportData structure for now.
-                DateOfBirth = (string)flatData["DateOfBirth"],
+                PlayerName = (string?)flatData["PlayerName"],
+                DateOfBirth = (string?)flatData["DateOfBirth"],
                 HeightFeet = (int?)flatData["HeightFeet"] ?? 0,
                 HeightInches = (int?)flatData["HeightInches"] ?? 0,
                 Snapshot = new PlayerSnapshot
                 {
                     SourceFilename = fileName,
                     FileCreationDate = fileCreationDate,
-                    GameDate = (string)flatData["GameDate"],
-                    PlayingTime = (string)flatData["PlayingTime"],
-                    Personality = (string)flatData["Personality"],
+                    GameDate = (string?)flatData["GameDate"],
+                    PlayingTime = (string?)flatData["PlayingTime"],
+                    Personality = (string?)flatData["Personality"],
                     Age = (int?)flatData["Age"] ?? 0,
                     TransferValueLow = (int?)flatData["TransferValueLow"] ?? 0,
                     TransferValueHigh = (int?)flatData["TransferValueHigh"] ?? 0,
-                    Wage = (string)flatData["Wage"],
-                    ContractExpiry = (string)flatData["ContractExpiry"],
+                    Wage = (string?)flatData["Wage"],
+                    ContractExpiry = (string?)flatData["ContractExpiry"],
                     
                     Technical = new TechnicalAttributes
                     {

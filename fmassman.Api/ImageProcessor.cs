@@ -37,11 +37,15 @@ namespace fmassman.Api
 
             try
             {
-                var imageStream = req.Body;
+                // Copy to MemoryStream to ensure seekability for ImageSharp
+                using var memoryStream = new MemoryStream();
+                await req.Body.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+                
                 string name = "uploaded_image"; // Default name for direct uploads
 
                 // 1. Slice Image using ImageSharp
-                var base64Slices = SliceImage(imageStream);
+                var base64Slices = SliceImage(memoryStream);
 
                 // 2. Extract Data using OpenAI
                 PlayerImportData playerData = await ExtractDataFromSlicesAsync(base64Slices, name);

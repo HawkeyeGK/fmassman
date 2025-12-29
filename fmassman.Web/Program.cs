@@ -14,13 +14,13 @@ var cosmosConn = builder.Configuration.GetConnectionString("CosmosDb");
 if (!string.IsNullOrEmpty(cosmosConn))
 {
     // Cosmos DB Implementation
+    builder.Services.Configure<fmassman.Shared.CosmosSettings>(builder.Configuration.GetSection("CosmosSettings"));
     builder.Services.AddSingleton(new Microsoft.Azure.Cosmos.CosmosClient(cosmosConn));
 
     builder.Services.AddScoped<fmassman.Shared.IRosterRepository>(sp =>
         new fmassman.Shared.CosmosRosterRepository(
             sp.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>(),
-            "FMAMDB",
-            "Players"
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<fmassman.Shared.CosmosSettings>>()
         ));
 
     builder.Services.AddScoped<fmassman.Shared.Services.IRoleService>(sp =>
@@ -29,8 +29,7 @@ if (!string.IsNullOrEmpty(cosmosConn))
         var baseline = Path.Combine(AppContext.BaseDirectory, config["RolesBaselinePath"] ?? "roles.json");
         return new fmassman.Shared.Services.CosmosRoleService(
             sp.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>(),
-            "FMAMDB",
-            "Roles",
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<fmassman.Shared.CosmosSettings>>(),
             baseline
         );
     });

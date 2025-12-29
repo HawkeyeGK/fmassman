@@ -1,4 +1,5 @@
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,30 +10,22 @@ namespace fmassman.Shared
     {
         private readonly Container _container;
 
-        public CosmosRosterRepository(CosmosClient cosmosClient, string databaseName, string containerName)
+        public CosmosRosterRepository(CosmosClient cosmosClient, IOptions<CosmosSettings> options)
         {
-            _container = cosmosClient.GetContainer(databaseName, containerName);
+            var settings = options.Value;
+            _container = cosmosClient.GetContainer(settings.DatabaseName, settings.PlayerContainer);
         }
 
         public async Task<List<PlayerImportData>> LoadAsync()
         {
-            try
+            var query = _container.GetItemQueryIterator<PlayerImportData>(new QueryDefinition("SELECT * FROM c"));
+            var results = new List<PlayerImportData>();
+            while (query.HasMoreResults)
             {
-                var query = _container.GetItemQueryIterator<PlayerImportData>(new QueryDefinition("SELECT * FROM c"));
-                var results = new List<PlayerImportData>();
-                while (query.HasMoreResults)
-                {
-                    var response = await query.ReadNextAsync();
-                    results.AddRange(response.ToList());
-                }
-                return results;
+                var response = await query.ReadNextAsync();
+                results.AddRange(response.ToList());
             }
-            catch
-            {
-                // If the container/DB doesn't exist or connection fails, return empty list
-                // This prevents the UI from crashing
-                return new List<PlayerImportData>();
-            }
+            return results;
         }
 
         public async Task SaveAsync(List<PlayerImportData> players)

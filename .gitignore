@@ -33,3 +33,7 @@ debug_output/
 fmassman.Web/appsettings.Development.json
 
 local.settings.json
+
+# Ignore Deployment Artifacts
+**/publish/
+*.zip

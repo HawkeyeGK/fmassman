@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,9 +13,10 @@ namespace fmassman.Shared.Services
         private readonly Container _container;
         private readonly string _baselineFilePath;
 
-        public CosmosRoleService(CosmosClient cosmosClient, string databaseName, string containerName, string baselineFilePath)
+        public CosmosRoleService(CosmosClient cosmosClient, IOptions<CosmosSettings> options, string baselineFilePath)
         {
-            _container = cosmosClient.GetContainer(databaseName, containerName);
+            var settings = options.Value;
+            _container = cosmosClient.GetContainer(settings.DatabaseName, settings.RoleContainer);
             _baselineFilePath = baselineFilePath;
         }
 
@@ -24,20 +26,13 @@ namespace fmassman.Shared.Services
             
             if (!roles.Any() && File.Exists(_baselineFilePath))
             {
-                try 
+                var json = await File.ReadAllTextAsync(_baselineFilePath);
+                var baselineRoles = JsonSerializer.Deserialize<List<RoleDefinition>>(json);
+                
+                if (baselineRoles != null && baselineRoles.Any())
                 {
-                    var json = await File.ReadAllTextAsync(_baselineFilePath);
-                    var baselineRoles = JsonSerializer.Deserialize<List<RoleDefinition>>(json);
-                    
-                    if (baselineRoles != null && baselineRoles.Any())
-                    {
-                        roles = baselineRoles;
-                        await SaveRolesAsync(roles);
-                    }
-                }
-                catch
-                {
-                    // If seeding fails, we just start with empty - prevent crash
+                    roles = baselineRoles;
+                    await SaveRolesAsync(roles);
                 }
             }
 

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,16 +13,19 @@ namespace fmassman.Shared.Services
     {
         private readonly Container _container;
         private readonly string _baselineFilePath;
+        private readonly ILogger<CosmosRoleService> _logger;
 
-        public CosmosRoleService(CosmosClient cosmosClient, IOptions<CosmosSettings> options, string baselineFilePath)
+        public CosmosRoleService(CosmosClient cosmosClient, IOptions<CosmosSettings> options, string baselineFilePath, ILogger<CosmosRoleService> logger)
         {
             var settings = options.Value;
             _container = cosmosClient.GetContainer(settings.DatabaseName, settings.RoleContainer);
             _baselineFilePath = baselineFilePath;
+            _logger = logger;
         }
 
         public async Task InitializeAsync()
         {
+            _logger.LogInformation("Initializing Role Service...");
             var roles = await LoadLocalRolesAsync();
             
             if (!roles.Any() && File.Exists(_baselineFilePath))
@@ -36,6 +40,7 @@ namespace fmassman.Shared.Services
                 }
             }
 
+            _logger.LogInformation("Loaded {Count} roles from source.", roles.Count);
             if (roles.Any())
             {
                 RoleFitCalculator.SetCache(roles);

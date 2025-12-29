@@ -1,4 +1,5 @@
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 
 namespace fmassman.Web.Extensions;
 
@@ -17,7 +18,8 @@ public static class ServiceCollectionExtensions
             services.AddScoped<fmassman.Shared.IRosterRepository>(sp =>
                 new fmassman.Shared.CosmosRosterRepository(
                     sp.GetRequiredService<CosmosClient>(),
-                    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<fmassman.Shared.CosmosSettings>>()
+                    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<fmassman.Shared.CosmosSettings>>(),
+                    sp.GetRequiredService<ILogger<fmassman.Shared.CosmosRosterRepository>>()
                 ));
 
             services.AddScoped<fmassman.Shared.Services.IRoleService>(sp =>
@@ -27,7 +29,8 @@ public static class ServiceCollectionExtensions
                 return new fmassman.Shared.Services.CosmosRoleService(
                     sp.GetRequiredService<CosmosClient>(),
                     sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<fmassman.Shared.CosmosSettings>>(),
-                    baseline
+                    baseline,
+                    sp.GetRequiredService<ILogger<fmassman.Shared.Services.CosmosRoleService>>()
                 );
             });
         }

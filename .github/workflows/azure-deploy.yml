@@ -27,10 +27,7 @@ jobs:
 
       # 4. Build and Publish (The "Artifact" creation)
       - name: 'Build and Publish'
-        run: |
-          dotnet publish fmassman.Web/fmassman.Web.csproj -c Release -o ./publish
-          # Manually copy the missing shared file (Just like we did locally!)
-          cp fmassman.Shared/roles.json ./publish/roles.json
+        run: dotnet publish fmassman.Web/fmassman.Web.csproj -c Release -o ./publish
 
       # 5. Deploy to Azure Web App
       - name: 'Run Azure Web App Deploy'

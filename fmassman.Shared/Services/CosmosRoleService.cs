@@ -30,14 +30,9 @@ namespace fmassman.Shared.Services
             
             if (!roles.Any() && File.Exists(_baselineFilePath))
             {
-                var json = await File.ReadAllTextAsync(_baselineFilePath);
-                var baselineRoles = JsonSerializer.Deserialize<List<RoleDefinition>>(json);
-                
-                if (baselineRoles != null && baselineRoles.Any())
-                {
-                    roles = baselineRoles;
-                    await SaveRolesAsync(roles);
-                }
+                _logger.LogInformation("Database is empty, seeding from baseline...");
+                await ResetToBaselineAsync();
+                roles = await LoadLocalRolesAsync();
             }
 
             _logger.LogInformation("Loaded {Count} roles from source.", roles.Count);
@@ -71,10 +66,45 @@ namespace fmassman.Shared.Services
             RoleFitCalculator.SetCache(roles);
         }
 
-        public Task ResetToBaselineAsync()
+        public async Task ResetToBaselineAsync()
         {
-            // Not implemented for Cosmos DB version as it relies on file system baseline operations
-            return Task.CompletedTask;
+            _logger.LogInformation("Starting reset to baseline...");
+
+            // Step 1: Clear existing data
+            var existingRoles = await LoadLocalRolesAsync();
+            if (existingRoles.Any())
+            {
+                var deleteTasks = existingRoles.Select(role =>
+                    _container.DeleteItemAsync<RoleDefinition>(role.Id, new PartitionKey(role.Id)));
+                await Task.WhenAll(deleteTasks);
+                _logger.LogInformation("Deleted {Count} existing roles.", existingRoles.Count);
+            }
+
+            // Step 2: Load baseline from file
+            if (!File.Exists(_baselineFilePath))
+            {
+                _logger.LogWarning("Baseline file not found at {Path}", _baselineFilePath);
+                return;
+            }
+
+            var json = await File.ReadAllTextAsync(_baselineFilePath);
+            var baselineRoles = JsonSerializer.Deserialize<List<RoleDefinition>>(json);
+
+            if (baselineRoles == null || !baselineRoles.Any())
+            {
+                _logger.LogWarning("Baseline file was empty or could not be deserialized.");
+                return;
+            }
+
+            // Step 3: Seed baseline roles
+            foreach (var role in baselineRoles)
+            {
+                await _container.UpsertItemAsync(role, new PartitionKey(role.Id));
+            }
+            _logger.LogInformation("Restored {Count} baseline roles.", baselineRoles.Count);
+
+            // Step 4: Refresh cache
+            RoleFitCalculator.SetCache(baselineRoles);
         }
     }
 }

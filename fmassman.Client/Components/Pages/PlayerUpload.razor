@@ -51,13 +51,10 @@
             // Basic validation check for extension if needed, though 'accept' attribute helps on client side.
             // Server side will also validate usually.
 
-            using var content = new MultipartFormDataContent();
-            var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
+            using var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
 
-            content.Add(fileContent, "file", file.Name);
-
-            var response = await Http.PostAsync("api/UploadPlayerImage", content);
+            var response = await Http.PostAsync("api/UploadPlayerImage", fileContent);
 
             if (response.IsSuccessStatusCode)
             {

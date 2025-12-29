@@ -15,7 +15,7 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:7071") });
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 builder.Services.AddScoped<IRosterRepository, ApiRosterService>();
 builder.Services.AddScoped<IRoleService, ApiRoleService>();

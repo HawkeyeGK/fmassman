@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fmassman.Shared", "fmassman
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fmassman.Web", "fmassman.Web\fmassman.Web.csproj", "{F008B820-FBB0-4E2B-BA2D-31D7438FBAEC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fmassman.Client", "fmassman.Client\fmassman.Client.csproj", "{7495DD65-58DB-4495-BD59-2479271B907A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fmassman.Api", "fmassman.Api\fmassman.Api.csproj", "{6C9B22E3-54BF-48DA-A2A1-9A3D555E7366}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,13 @@ Global
 		{F008B820-FBB0-4E2B-BA2D-31D7438FBAEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F008B820-FBB0-4E2B-BA2D-31D7438FBAEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F008B820-FBB0-4E2B-BA2D-31D7438FBAEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7495DD65-58DB-4495-BD59-2479271B907A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7495DD65-58DB-4495-BD59-2479271B907A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7495DD65-58DB-4495-BD59-2479271B907A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7495DD65-58DB-4495-BD59-2479271B907A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C9B22E3-54BF-48DA-A2A1-9A3D555E7366}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C9B22E3-54BF-48DA-A2A1-9A3D555E7366}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C9B22E3-54BF-48DA-A2A1-9A3D555E7366}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C9B22E3-54BF-48DA-A2A1-9A3D555E7366}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,82 @@
+@page "/upload"
+@inject HttpClient Http
+@using System.Net.Http.Headers
+
+<PageTitle>Scout Player</PageTitle>
+
+<h3>Scout Player</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label for="formFile" class="form-label">Select Player Image/Screenshot (.png, .jpg, .jpeg)</label>
+            <InputFile OnChange="@LoadFiles" accept=".png,.jpg,.jpeg" class="form-control" id="formFile" />
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center mt-3">
+        <div class="spinner-border text-primary me-2" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span>Processing...</span>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3" role="alert">
+        @statusMessage
+    </div>
+}
+
+@code {
+    private bool isLoading = false;
+    private string? statusMessage;
+    private bool isError = false;
+    private long maxFileSize = 1024 * 1024 * 10; // 10MB
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        statusMessage = null;
+        isError = false;
+
+        try
+        {
+            var file = e.File;
+            
+            // Basic validation check for extension if needed, though 'accept' attribute helps on client side.
+            // Server side will also validate usually.
+
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+
+            content.Add(fileContent, "file", file.Name);
+
+            var response = await Http.PostAsync("api/UploadPlayerImage", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                statusMessage = "Player image uploaded and processed successfully!";
+            }
+            else
+            {
+                isError = true;
+                statusMessage = $"Upload failed: {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            statusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

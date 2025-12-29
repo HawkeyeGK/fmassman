@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using fmassman.Shared;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -29,13 +30,16 @@ namespace fmassman.Api
             _playersContainer = cosmosClient.GetContainer("FMAMDB", "Players");
         }
 
-        [Function("ProcessPlayerImage")]
-        public async Task Run([BlobTrigger("player-images/{name}", Connection = "AzureWebJobsStorage")] Stream imageStream, string name)
+        [Function("UploadPlayerImage")]
+        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
         {
-            _logger.LogInformation($"Processing blob\n Name: {name} \n Size: {imageStream.Length} Bytes");
+            _logger.LogInformation("Processing image upload request.");
 
             try
             {
+                var imageStream = req.Body;
+                string name = "uploaded_image"; // Default name for direct uploads
+
                 // 1. Slice Image using ImageSharp
                 var base64Slices = SliceImage(imageStream);
 
@@ -47,12 +51,18 @@ namespace fmassman.Api
                     // 3. Save to Cosmos DB
                     await _playersContainer.UpsertItemAsync(playerData, new PartitionKey(playerData.PlayerName));
                     _logger.LogInformation($"Successfully upserted player: {playerData.PlayerName}");
+                    
+                    return req.CreateResponse(System.Net.HttpStatusCode.OK);
                 }
+                
+                return req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error processing image {name}");
-                throw; // Rethrow to mark function as failed (and potentially retry)
+                _logger.LogError(ex, "Error processing image upload");
+                var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
+                await errorResponse.WriteStringAsync(ex.Message);
+                return errorResponse;
             }
         }
 

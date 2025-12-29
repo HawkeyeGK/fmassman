@@ -65,7 +65,7 @@ namespace fmassman.Api
             {
                 _logger.LogError(ex, "Error processing image upload");
                 var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(ex.Message);
+                await errorResponse.WriteStringAsync($"{ex.GetType().Name}: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}");
                 return errorResponse;
             }
         }

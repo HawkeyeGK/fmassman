@@ -30,11 +30,14 @@ namespace fmassman.Shared
 
         public async Task SaveAsync(List<PlayerImportData> players)
         {
+            // Use parallel upserts - with AllowBulkExecution = true on CosmosClient,
+            // the SDK will automatically batch these concurrent tasks efficiently
+            var concurrentTasks = new List<Task>();
             foreach (var player in players)
             {
-                // Ensure id is set if it's null (though it maps to PlayerName)
-                await _container.UpsertItemAsync(player, new PartitionKey(player.PlayerName));
+                concurrentTasks.Add(_container.UpsertItemAsync(player, new PartitionKey(player.PlayerName)));
             }
+            await Task.WhenAll(concurrentTasks);
         }
 
         public async Task DeleteAsync(string playerName)

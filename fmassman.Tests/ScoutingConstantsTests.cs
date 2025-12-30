@@ -31,5 +31,34 @@ namespace fmassman.Tests
         {
             Assert.Equal(99, ScoutingConstants.GetPlayingTimeRank("Water Boy"));
         }
+
+        [Fact]
+        public void GetCategoryRank_ReturnsCorrectIndex_ForKnownCategory()
+        {
+            Assert.Equal(0, ScoutingConstants.GetCategoryRank("Center Back"));
+            Assert.Equal(4, ScoutingConstants.GetCategoryRank("Central Midfield"));
+            Assert.Equal(8, ScoutingConstants.GetCategoryRank("Striker"));
+        }
+
+        [Fact]
+        public void GetCategoryRank_ReturnsDefault_ForUnknownCategory()
+        {
+            Assert.Equal(99, ScoutingConstants.GetCategoryRank("Goalkeeper"));
+            Assert.Equal(99, ScoutingConstants.GetCategoryRank(""));
+        }
+
+        [Fact]
+        public void GetPersonalityRank_IsCaseInsensitive()
+        {
+            Assert.Equal(1, ScoutingConstants.GetPersonalityRank("model citizen"));
+            Assert.Equal(1, ScoutingConstants.GetPersonalityRank("MODEL CITIZEN"));
+        }
+
+        [Fact]
+        public void GetPlayingTimeRank_IsCaseInsensitive()
+        {
+            Assert.Equal(1, ScoutingConstants.GetPlayingTimeRank("star player"));
+            Assert.Equal(1, ScoutingConstants.GetPlayingTimeRank("STAR PLAYER"));
+        }
     }
 }

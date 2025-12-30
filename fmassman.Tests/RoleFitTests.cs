@@ -1,11 +1,36 @@
 using fmassman.Shared;
 using Xunit;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace fmassman.Tests
 {
     public class RoleFitTests
     {
+        public RoleFitTests()
+        {
+            // Seed the static calculator with test roles before running tests
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
+
+        private List<RoleDefinition> GetTestRoles()
+        {
+            return new List<RoleDefinition>
+            {
+                new RoleDefinition
+                {
+                    Name = "Test Role",
+                    Category = "Test Category",
+                    Phase = "InPossession", // Matches the test string
+                    Weights = new Dictionary<string, double>
+                    {
+                        { "Finishing", 1.0 },
+                        { "Pace", 1.0 },
+                        { "Technique", 1.0 }
+                    }
+                }
+            };
+        }
         [Fact]
         public void Calculate_ShouldReturn100_WhenAllAttributesAre20()
         {
@@ -75,6 +100,49 @@ namespace fmassman.Tests
                     Corners = value, FreeKickTaking = value, LongThrows = value, PenaltyTaking = value
                 }
             };
+        }
+
+        [Fact]
+        public void Calculate_ReturnsEmptyList_WhenPlayerIsNull()
+        {
+            var results = RoleFitCalculator.Calculate(null, "InPossession");
+            Assert.Empty(results);
+        }
+
+        [Fact]
+        public void GetRoles_FiltersCorrectlyByPhase()
+        {
+            // Add an OutPossession role to the cache
+            var roles = new List<RoleDefinition>
+            {
+                new RoleDefinition { Name = "InRole", Phase = "InPossession", Category = "Test", Weights = new Dictionary<string, double> { { "Pace", 1.0 } } },
+                new RoleDefinition { Name = "OutRole", Phase = "OutPossession", Category = "Test", Weights = new Dictionary<string, double> { { "Tackling", 1.0 } } }
+            };
+            RoleFitCalculator.SetCache(roles);
+
+            var inRoles = RoleFitCalculator.GetRoles("InPossession");
+            var outRoles = RoleFitCalculator.GetRoles("OutPossession");
+
+            Assert.Single(inRoles);
+            Assert.Equal("InRole", inRoles.First().Name);
+            Assert.Single(outRoles);
+            Assert.Equal("OutRole", outRoles.First().Name);
+
+            // Restore original test roles
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
+
+        [Fact]
+        public void Calculate_ReturnsZeroScore_WhenAllAttributesAreZero()
+        {
+            var player = CreatePlayerWithStats(0);
+            var results = RoleFitCalculator.Calculate(player, "InPossession");
+
+            Assert.NotEmpty(results);
+            foreach (var result in results)
+            {
+                Assert.Equal(0.0, result.Score);
+            }
         }
     }
 }

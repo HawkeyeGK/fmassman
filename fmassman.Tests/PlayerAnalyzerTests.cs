@@ -71,5 +71,129 @@ namespace fmassman.Tests
             Assert.NotNull(result);
             Assert.Equal(0, result.Speed);
         }
+        [Fact]
+        public void Analyze_CalculatesDNA()
+        {
+            // Arrange
+            var player = new PlayerSnapshot
+            {
+                Mental = new MentalAttributes
+                {
+                    Bravery = 10, Composure = 10, Concentration = 10, Determination = 10, Teamwork = 10
+                }
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(player);
+
+            // Assert
+            // 5 * 10 = 50. Max = 5 * 20 = 100. 50/100 = 50%.
+            Assert.Equal(50.0, result.DNA);
+        }
+
+        [Fact]
+        public void Analyze_CalculatesDirectAttack()
+        {
+            // Arrange
+            var player = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes { Crossing = 10, Heading = 10 },
+                Mental = new MentalAttributes { Aggression = 10, Bravery = 10, WorkRate = 10 },
+                Physical = new PhysicalAttributes 
+                { 
+                    Acceleration = 10, Agility = 10, Balance = 10, JumpingReach = 10, 
+                    Pace = 10, Stamina = 10, Strength = 10 
+                }
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(player);
+
+            // Assert
+            Assert.Equal(50.0, result.DirectAttack);
+        }
+
+        [Fact]
+        public void Analyze_CalculatesPossessionAttack()
+        {
+            // Arrange
+            var player = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes { FirstTouch = 10, Passing = 10, Technique = 10 },
+                Mental = new MentalAttributes 
+                { 
+                    Anticipation = 10, Composure = 10, Decisions = 10, Flair = 10, 
+                    OffTheBall = 10, Teamwork = 10, Vision = 10 
+                }
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(player);
+
+            // Assert
+            Assert.Equal(50.0, result.PossessionAttack);
+        }
+
+        [Fact]
+        public void Analyze_CalculatesAggressiveDefense()
+        {
+            // Arrange: Tackling, Aggression, Bravery, WorkRate, Acceleration, Stamina
+            var player = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes { Tackling = 10 },
+                Mental = new MentalAttributes { Aggression = 10, Bravery = 10, WorkRate = 10 },
+                Physical = new PhysicalAttributes { Acceleration = 10, Stamina = 10 }
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(player);
+
+            // Assert: 6 attrs * 10 = 60. Max = 6 * 20 = 120. 60/120 = 50%
+            Assert.Equal(50.0, result.AggressiveDefense);
+        }
+
+        [Fact]
+        public void Analyze_CalculatesCautiousDefense()
+        {
+            // Arrange: Positioning, Concentration, Anticipation, Decisions
+            var player = new PlayerSnapshot
+            {
+                Mental = new MentalAttributes 
+                { 
+                    Positioning = 10, Concentration = 10, Anticipation = 10, Decisions = 10 
+                }
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(player);
+
+            // Assert: 4 attrs * 10 = 40. Max = 4 * 20 = 80. 40/80 = 50%
+            Assert.Equal(50.0, result.CautiousDefense);
+        }
+
+        [Fact]
+        public void Analyze_ReturnsZero_WhenAllAttributesAreZero()
+        {
+            // Arrange
+            var player = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes(),
+                Mental = new MentalAttributes(),
+                Physical = new PhysicalAttributes(),
+                SetPieces = new SetPieceAttributes()
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(player);
+
+            // Assert - all metrics should be 0, not NaN or negative
+            Assert.Equal(0.0, result.Speed);
+            Assert.Equal(0.0, result.DNA);
+            Assert.Equal(0.0, result.AggressiveDefense);
+            Assert.Equal(0.0, result.CautiousDefense);
+            Assert.Equal(0.0, result.DirectAttack);
+            Assert.Equal(0.0, result.PossessionAttack);
+            Assert.Equal(0.0, result.Gegenpress);
+        }
     }
 }

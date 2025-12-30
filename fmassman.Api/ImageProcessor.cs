@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
+using fmassman.Shared.Helpers;
 
 namespace fmassman.Api
 {
@@ -29,50 +30,7 @@ namespace fmassman.Api
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
-        // Helper to safely get a string value from JsonNode (handles both string and number types)
-        private static string? GetSafeString(JsonNode? node)
-        {
-            if (node == null) return null;
-            
-            // Try to get the underlying JsonElement to check its type
-            if (node is JsonValue jsonValue)
-            {
-                try
-                {
-                    // First try to get as string directly
-                    return jsonValue.GetValue<string>();
-                }
-                catch (InvalidOperationException)
-                {
-                    // If it's not a string, convert to string representation
-                    return node.ToJsonString().Trim('"');
-                }
-            }
-            
-            return node.ToString();
-        }
-
-        // Helper to safely get an int value from JsonNode (handles both int and string types)
-        private static int GetSafeInt(JsonNode? node, int defaultValue = 0)
-        {
-            if (node == null) return defaultValue;
-            
-            if (node is JsonValue jsonValue)
-            {
-                try
-                {
-                    return jsonValue.GetValue<int>();
-                }
-                catch (InvalidOperationException)
-                {
-                    // Try parsing as string
-                    var str = node.ToString();
-                    return int.TryParse(str, out var result) ? result : defaultValue;
-                }
-            }
-            
-            return defaultValue;
-        }
+        // Helper methods moved to fmassman.Shared.Helpers.SafeJsonParser
 
         public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, IRosterRepository repository, BlobServiceClient blobServiceClient)
         {
@@ -251,71 +209,71 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
 
             PlayerImportData playerData = new PlayerImportData
             {
-                PlayerName = GetSafeString(flatData["PlayerName"]),
-                DateOfBirth = GetSafeString(flatData["DateOfBirth"]),
-                HeightFeet = GetSafeInt(flatData["HeightFeet"]),
-                HeightInches = GetSafeInt(flatData["HeightInches"]),
+                PlayerName = SafeJsonParser.GetSafeString(flatData["PlayerName"]),
+                DateOfBirth = SafeJsonParser.GetSafeString(flatData["DateOfBirth"]),
+                HeightFeet = SafeJsonParser.GetSafeInt(flatData["HeightFeet"]),
+                HeightInches = SafeJsonParser.GetSafeInt(flatData["HeightInches"]),
                 Snapshot = new PlayerSnapshot
                 {
                     SourceFilename = fileName,
                     RawImageBlobUrl = rawImageBlobUrl,
                     FileCreationDate = fileCreationDate,
-                    GameDate = GetSafeString(flatData["GameDate"]),
-                    PlayingTime = GetSafeString(flatData["PlayingTime"]),
-                    Personality = GetSafeString(flatData["Personality"]),
-                    Age = GetSafeInt(flatData["Age"]),
-                    TransferValueLow = GetSafeInt(flatData["TransferValueLow"]),
-                    TransferValueHigh = GetSafeInt(flatData["TransferValueHigh"]),
-                    Wage = GetSafeString(flatData["Wage"]),
-                    ContractExpiry = GetSafeString(flatData["ContractExpiry"]),
+                    GameDate = SafeJsonParser.GetSafeString(flatData["GameDate"]),
+                    PlayingTime = SafeJsonParser.GetSafeString(flatData["PlayingTime"]),
+                    Personality = SafeJsonParser.GetSafeString(flatData["Personality"]),
+                    Age = SafeJsonParser.GetSafeInt(flatData["Age"]),
+                    TransferValueLow = SafeJsonParser.GetSafeInt(flatData["TransferValueLow"]),
+                    TransferValueHigh = SafeJsonParser.GetSafeInt(flatData["TransferValueHigh"]),
+                    Wage = SafeJsonParser.GetSafeString(flatData["Wage"]),
+                    ContractExpiry = SafeJsonParser.GetSafeString(flatData["ContractExpiry"]),
                     
                     Technical = new TechnicalAttributes
                     {
-                        Crossing = GetSafeInt(flatData["Crossing"]),
-                        Dribbling = GetSafeInt(flatData["Dribbling"]),
-                        Finishing = GetSafeInt(flatData["Finishing"]),
-                        FirstTouch = GetSafeInt(flatData["FirstTouch"]),
-                        Heading = GetSafeInt(flatData["Heading"]),
-                        LongShots = GetSafeInt(flatData["LongShots"]),
-                        Marking = GetSafeInt(flatData["Marking"]),
-                        Passing = GetSafeInt(flatData["Passing"]),
-                        Tackling = GetSafeInt(flatData["Tackling"]),
-                        Technique = GetSafeInt(flatData["Technique"])
+                        Crossing = SafeJsonParser.GetSafeInt(flatData["Crossing"]),
+                        Dribbling = SafeJsonParser.GetSafeInt(flatData["Dribbling"]),
+                        Finishing = SafeJsonParser.GetSafeInt(flatData["Finishing"]),
+                        FirstTouch = SafeJsonParser.GetSafeInt(flatData["FirstTouch"]),
+                        Heading = SafeJsonParser.GetSafeInt(flatData["Heading"]),
+                        LongShots = SafeJsonParser.GetSafeInt(flatData["LongShots"]),
+                        Marking = SafeJsonParser.GetSafeInt(flatData["Marking"]),
+                        Passing = SafeJsonParser.GetSafeInt(flatData["Passing"]),
+                        Tackling = SafeJsonParser.GetSafeInt(flatData["Tackling"]),
+                        Technique = SafeJsonParser.GetSafeInt(flatData["Technique"])
                     },
                     SetPieces = new SetPieceAttributes
                     {
-                        Corners = GetSafeInt(flatData["Corners"]),
-                        FreeKickTaking = GetSafeInt(flatData["FreeKickTaking"]),
-                        LongThrows = GetSafeInt(flatData["LongThrows"]),
-                        PenaltyTaking = GetSafeInt(flatData["PenaltyTaking"])
+                        Corners = SafeJsonParser.GetSafeInt(flatData["Corners"]),
+                        FreeKickTaking = SafeJsonParser.GetSafeInt(flatData["FreeKickTaking"]),
+                        LongThrows = SafeJsonParser.GetSafeInt(flatData["LongThrows"]),
+                        PenaltyTaking = SafeJsonParser.GetSafeInt(flatData["PenaltyTaking"])
                     },
                     Mental = new MentalAttributes
                     {
-                        Aggression = GetSafeInt(flatData["Aggression"]),
-                        Anticipation = GetSafeInt(flatData["Anticipation"]),
-                        Bravery = GetSafeInt(flatData["Bravery"]),
-                        Composure = GetSafeInt(flatData["Composure"]),
-                        Concentration = GetSafeInt(flatData["Concentration"]),
-                        Decisions = GetSafeInt(flatData["Decisions"]),
-                        Determination = GetSafeInt(flatData["Determination"]),
-                        Flair = GetSafeInt(flatData["Flair"]),
-                        Leadership = GetSafeInt(flatData["Leadership"]),
-                        OffTheBall = GetSafeInt(flatData["OffTheBall"]),
-                        Positioning = GetSafeInt(flatData["Positioning"]),
-                        Teamwork = GetSafeInt(flatData["Teamwork"]),
-                        Vision = GetSafeInt(flatData["Vision"]),
-                        WorkRate = GetSafeInt(flatData["WorkRate"])
+                        Aggression = SafeJsonParser.GetSafeInt(flatData["Aggression"]),
+                        Anticipation = SafeJsonParser.GetSafeInt(flatData["Anticipation"]),
+                        Bravery = SafeJsonParser.GetSafeInt(flatData["Bravery"]),
+                        Composure = SafeJsonParser.GetSafeInt(flatData["Composure"]),
+                        Concentration = SafeJsonParser.GetSafeInt(flatData["Concentration"]),
+                        Decisions = SafeJsonParser.GetSafeInt(flatData["Decisions"]),
+                        Determination = SafeJsonParser.GetSafeInt(flatData["Determination"]),
+                        Flair = SafeJsonParser.GetSafeInt(flatData["Flair"]),
+                        Leadership = SafeJsonParser.GetSafeInt(flatData["Leadership"]),
+                        OffTheBall = SafeJsonParser.GetSafeInt(flatData["OffTheBall"]),
+                        Positioning = SafeJsonParser.GetSafeInt(flatData["Positioning"]),
+                        Teamwork = SafeJsonParser.GetSafeInt(flatData["Teamwork"]),
+                        Vision = SafeJsonParser.GetSafeInt(flatData["Vision"]),
+                        WorkRate = SafeJsonParser.GetSafeInt(flatData["WorkRate"])
                     },
                     Physical = new PhysicalAttributes
                     {
-                        Acceleration = GetSafeInt(flatData["Acceleration"]),
-                        Agility = GetSafeInt(flatData["Agility"]),
-                        Balance = GetSafeInt(flatData["Balance"]),
-                        JumpingReach = GetSafeInt(flatData["JumpingReach"]),
-                        NaturalFitness = GetSafeInt(flatData["NaturalFitness"]),
-                        Pace = GetSafeInt(flatData["Pace"]),
-                        Stamina = GetSafeInt(flatData["Stamina"]),
-                        Strength = GetSafeInt(flatData["Strength"])
+                        Acceleration = SafeJsonParser.GetSafeInt(flatData["Acceleration"]),
+                        Agility = SafeJsonParser.GetSafeInt(flatData["Agility"]),
+                        Balance = SafeJsonParser.GetSafeInt(flatData["Balance"]),
+                        JumpingReach = SafeJsonParser.GetSafeInt(flatData["JumpingReach"]),
+                        NaturalFitness = SafeJsonParser.GetSafeInt(flatData["NaturalFitness"]),
+                        Pace = SafeJsonParser.GetSafeInt(flatData["Pace"]),
+                        Stamina = SafeJsonParser.GetSafeInt(flatData["Stamina"]),
+                        Strength = SafeJsonParser.GetSafeInt(flatData["Strength"])
                     }
                 }
             };

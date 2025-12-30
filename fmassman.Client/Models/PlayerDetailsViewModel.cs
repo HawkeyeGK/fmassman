@@ -15,6 +15,7 @@ namespace fmassman.Client.Models
         public PlayerImportData? Player { get; private set; }
         public PlayerAnalysis? Analysis { get; private set; }
         public RosterItemViewModel? HeaderData { get; private set; }
+        public bool IsLoading { get; private set; }
 
         public RoleFitResult? BestInPossession => Analysis?.InPossessionFits
             .OrderByDescending(r => r.Score)
@@ -85,45 +86,53 @@ namespace fmassman.Client.Models
 
         public async Task LoadPlayerAsync(string name)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            IsLoading = true;
+            try
             {
-                Player = null;
-                return;
-            }
-
-            var allPlayers = await _rosterRepository.LoadAsync();
-            Player = allPlayers.FirstOrDefault(p => p.PlayerName.Equals(name, System.StringComparison.OrdinalIgnoreCase));
-
-            if (Player != null)
-            {
-                if (Player.Snapshot != null)
+                if (string.IsNullOrWhiteSpace(name))
                 {
-                    Analysis = PlayerAnalyzer.Analyze(Player.Snapshot);
-                    HeaderData = RosterItemViewModel.FromPlayer(Player);
-                    
-                    BuildMatrix();
+                    Player = null;
+                    return;
+                }
+
+                var allPlayers = await _rosterRepository.LoadAsync();
+                Player = allPlayers.FirstOrDefault(p => p.PlayerName.Equals(name, System.StringComparison.OrdinalIgnoreCase));
+
+                if (Player != null)
+                {
+                    if (Player.Snapshot != null)
+                    {
+                        Analysis = PlayerAnalyzer.Analyze(Player.Snapshot);
+                        HeaderData = RosterItemViewModel.FromPlayer(Player);
+                        
+                        BuildMatrix();
+                    }
+                }
+
+                // Calculate Global Scales if we have any players
+                if (allPlayers.Any())
+                {
+                    var globalAnalyses = allPlayers
+                        .Where(p => p.Snapshot != null)
+                        .Select(p => PlayerAnalyzer.Analyze(p.Snapshot!))
+                        .ToList();
+
+                    if (globalAnalyses.Any())
+                    {
+                        var allInScores = globalAnalyses.SelectMany(a => a.InPossessionFits).Select(r => r.Score);
+                        var allOutScores = globalAnalyses.SelectMany(a => a.OutPossessionFits).Select(r => r.Score);
+
+                        if (allInScores.Any())
+                            GlobalInPossessionScale = new HeatmapColorScale(allInScores.Min(), allInScores.Max());
+                        
+                        if (allOutScores.Any())
+                            GlobalOutPossessionScale = new HeatmapColorScale(allOutScores.Min(), allOutScores.Max());
+                    }
                 }
             }
-
-            // Calculate Global Scales if we have any players
-            if (allPlayers.Any())
+            finally
             {
-                var globalAnalyses = allPlayers
-                    .Where(p => p.Snapshot != null)
-                    .Select(p => PlayerAnalyzer.Analyze(p.Snapshot!))
-                    .ToList();
-
-                if (globalAnalyses.Any())
-                {
-                    var allInScores = globalAnalyses.SelectMany(a => a.InPossessionFits).Select(r => r.Score);
-                    var allOutScores = globalAnalyses.SelectMany(a => a.OutPossessionFits).Select(r => r.Score);
-
-                    if (allInScores.Any())
-                        GlobalInPossessionScale = new HeatmapColorScale(allInScores.Min(), allInScores.Max());
-                    
-                    if (allOutScores.Any())
-                        GlobalOutPossessionScale = new HeatmapColorScale(allOutScores.Min(), allOutScores.Max());
-                }
+                IsLoading = false;
             }
         }
 

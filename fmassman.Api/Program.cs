@@ -2,6 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Azure.Cosmos;
+using Azure.Storage.Blobs;
 using fmassman.Shared;
 using fmassman.Shared.Services;
 using Microsoft.Extensions.Configuration;
@@ -29,6 +30,17 @@ var host = new HostBuilder()
                 throw new InvalidOperationException("CosmosDb connection string is missing.");
             }
             return new CosmosClient(connectionString);
+        });
+
+        // Register BlobServiceClient
+        services.AddSingleton<BlobServiceClient>(sp =>
+        {
+            var connectionString = configuration.GetValue<string>("BlobStorage");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("BlobStorage connection string is missing from configuration.");
+            }
+            return new BlobServiceClient(connectionString);
         });
 
         // Register HttpClientFactory for OpenAI

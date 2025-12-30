@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
 using fmassman.Shared;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
@@ -22,6 +23,8 @@ namespace fmassman.Api
         private readonly ILogger<ImageProcessor> _logger;
         private readonly HttpClient _httpClient;
         private readonly Container _playersContainer;
+        private readonly BlobServiceClient _blobServiceClient;
+        private const string RawUploadsContainer = "raw-uploads";
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -72,11 +75,12 @@ namespace fmassman.Api
             return defaultValue;
         }
 
-        public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, CosmosClient cosmosClient)
+        public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, CosmosClient cosmosClient, BlobServiceClient blobServiceClient)
         {
             _logger = logger;
             _httpClient = httpClientFactory.CreateClient("OpenAI");
             _playersContainer = cosmosClient.GetContainer("FMAMDB", "Players");
+            _blobServiceClient = blobServiceClient;
         }
 
         [Function("UploadPlayerImage")]
@@ -90,18 +94,29 @@ namespace fmassman.Api
                 using var memoryStream = new MemoryStream();
                 await req.Body.CopyToAsync(memoryStream);
                 memoryStream.Position = 0;
-                
-                string name = "uploaded_image"; // Default name for direct uploads
 
-                // 1. Slice Image using ImageSharp
+                // 1. Upload raw image to Blob Storage for data lineage
+                var containerClient = _blobServiceClient.GetBlobContainerClient(RawUploadsContainer);
+                await containerClient.CreateIfNotExistsAsync();
+                
+                string blobName = $"{Guid.NewGuid()}.jpg";
+                var blobClient = containerClient.GetBlobClient(blobName);
+                await blobClient.UploadAsync(memoryStream, overwrite: true);
+                string rawImageBlobUrl = blobClient.Uri.ToString();
+                _logger.LogInformation("Uploaded raw image to blob: {BlobUrl}", rawImageBlobUrl);
+                
+                // Critical: Reset stream position for ImageSharp
+                memoryStream.Position = 0;
+
+                // 2. Slice Image using ImageSharp
                 var base64Slices = SliceImage(memoryStream);
 
-                // 2. Extract Data using OpenAI
-                PlayerImportData playerData = await ExtractDataFromSlicesAsync(base64Slices, name);
+                // 3. Extract Data using OpenAI
+                PlayerImportData playerData = await ExtractDataFromSlicesAsync(base64Slices, blobName, rawImageBlobUrl);
 
                 if (playerData != null)
                 {
-                    // 3. Save to Cosmos DB
+                    // 4. Save to Cosmos DB
                     await _playersContainer.UpsertItemAsync(playerData, new PartitionKey(playerData.PlayerName));
                     _logger.LogInformation($"Successfully upserted player: {playerData.PlayerName}");
                     
@@ -153,7 +168,7 @@ namespace fmassman.Api
             return base64Slices;
         }
 
-        private async Task<PlayerImportData> ExtractDataFromSlicesAsync(List<string> base64Slices, string fileName)
+        private async Task<PlayerImportData> ExtractDataFromSlicesAsync(List<string> base64Slices, string fileName, string rawImageBlobUrl)
         {
             string systemPrompt = @"
 You are a data extraction assistant for Football Manager 26.
@@ -244,6 +259,7 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
                 Snapshot = new PlayerSnapshot
                 {
                     SourceFilename = fileName,
+                    RawImageBlobUrl = rawImageBlobUrl,
                     FileCreationDate = fileCreationDate,
                     GameDate = GetSafeString(flatData["GameDate"]),
                     PlayingTime = GetSafeString(flatData["PlayingTime"]),

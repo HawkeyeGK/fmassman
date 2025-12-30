@@ -16,6 +16,7 @@ namespace fmassman.Shared
     public class PlayerSnapshot
     {
         public string SourceFilename { get; set; } = string.Empty;
+        public string? RawImageBlobUrl { get; set; }
         public DateTime FileCreationDate { get; set; }
         public string GameDate { get; set; } = string.Empty;
         public string Personality { get; set; } = string.Empty;

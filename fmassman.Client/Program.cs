@@ -6,6 +6,8 @@ using fmassman.Shared;
 using fmassman.Shared.Services;
 using fmassman.Client.Services;
 using fmassman.Client.Models;
+using Microsoft.AspNetCore.Components.Authorization;
+using fmassman.Client.Security;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -23,6 +25,9 @@ builder.Services.AddScoped<IRoleService, ApiRoleService>();
 builder.Services.AddTransient<RoleEditorViewModel>();
 builder.Services.AddTransient<PlayerDetailsViewModel>();
 builder.Services.AddTransient<PlayerEditorViewModel>();
+
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, SwaAuthenticationStateProvider>();
 
 var host = builder.Build();
 

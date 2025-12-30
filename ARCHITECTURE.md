@@ -9,7 +9,7 @@ FM26-Helper is a .NET 8 tool suite designed to analyze Football Manager 2026 pla
 **Purpose:** The Core Logic and Data Models.
 * **Models:** `PlayerImportData` (Identity), `PlayerSnapshot` (Attributes).
 * **Services:**
-    * `RosterRepository`: Handles reading/writing `roster_data.json`.
+    * `CosmosRosterRepository`: Handles data persistence via Azure Cosmos DB.
     * `PlayerAnalyzer`: The main entry point for calculations. Returns `PlayerAnalysis`.
     * `RoleFitCalculator`: Reads `roles.json` and calculates 0-100% suitability scores based on weighted attributes (Primary 3x, Secondary 2x).
 * **Data:** `roles.json` (Source of truth for Role definitions).

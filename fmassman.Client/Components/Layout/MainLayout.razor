@@ -13,15 +13,15 @@
                 </article>
             </main>
 
-            <footer class="border-top footer text-muted mt-auto" style="background-color: #f8f9fa;">
+            <footer class="border-top footer mt-auto bg-dark">
                 <div class="container-fluid text-center py-2">
                     <AuthorizeView>
                         <Authorized>
-                            <span class="small me-2">Logged in as: <strong>@context.User.Identity?.Name</strong></span>
-                            <a href="/.auth/logout" class="text-decoration-none small text-secondary"><span class="bi bi-box-arrow-right"></span> Logout</a>
+                            <span class="small me-2 text-light">Logged in as: <strong>@context.User.Identity?.Name</strong></span>
+                            <a href="/.auth/logout" class="text-decoration-none small text-warning"><span class="bi bi-box-arrow-right"></span> Logout</a>
                         </Authorized>
                         <NotAuthorized>
-                            <a href="/.auth/login/aad" class="text-decoration-none small text-secondary"><span class="bi bi-person"></span> Log In</a>
+                            <a href="/.auth/login/aad" class="text-decoration-none small text-info"><span class="bi bi-person"></span> Log In</a>
                         </NotAuthorized>
                     </AuthorizeView>
                 </div>

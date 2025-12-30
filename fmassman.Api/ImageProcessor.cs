@@ -77,7 +77,9 @@ namespace fmassman.Api
                     await _repository.UpsertAsync(playerData);
                     _logger.LogInformation($"Successfully upserted player: {playerData.PlayerName}");
                     
-                    return req.CreateResponse(System.Net.HttpStatusCode.OK);
+                    var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+                    await response.WriteAsJsonAsync(playerData);
+                    return response;
                 }
                 
                 return req.CreateResponse(System.Net.HttpStatusCode.BadRequest);

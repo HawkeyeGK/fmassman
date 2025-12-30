@@ -1,6 +1,7 @@
 @page "/upload"
 @inject HttpClient Http
 @using System.Net.Http.Headers
+@using fmassman.Shared
 
 <PageTitle>Scout Player</PageTitle>
 
@@ -25,16 +26,34 @@
     </div>
 }
 
-@if (!string.IsNullOrEmpty(statusMessage))
+@if (!string.IsNullOrEmpty(statusMessage) || !string.IsNullOrEmpty(_createdPlayerName))
 {
     <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3" role="alert">
-        @statusMessage
+        @if (!string.IsNullOrEmpty(_createdPlayerName))
+        {
+            <div class="mt-2">
+                <strong>Success!</strong> Player <em>@_createdPlayerName</em> has been imported.
+                <div class="mt-1">
+                    <a href="/player/@_createdPlayerName" class="btn btn-sm btn-success me-2">
+                        <i class="bi bi-eye"></i> View Profile
+                    </a>
+                    <a href="/player/@_createdPlayerName/edit" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <span>@statusMessage</span>
+        }
     </div>
 }
 
 @code {
     private bool isLoading = false;
     private string? statusMessage;
+    private string? _createdPlayerName;
     private bool isError = false;
     private long maxFileSize = 1024 * 1024 * 10; // 10MB
 
@@ -42,6 +61,7 @@
     {
         isLoading = true;
         statusMessage = null;
+        _createdPlayerName = null;
         isError = false;
 
         try
@@ -58,6 +78,8 @@
 
             if (response.IsSuccessStatusCode)
             {
+                var result = await response.Content.ReadFromJsonAsync<PlayerImportData>();
+                _createdPlayerName = result?.PlayerName;
                 statusMessage = "Player image uploaded and processed successfully!";
             }
             else

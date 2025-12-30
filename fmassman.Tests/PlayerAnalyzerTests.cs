@@ -58,7 +58,7 @@ namespace fmassman.Tests
         [Fact]
         public void Analyze_HandlesNullSnapshot()
         {
-            var result = PlayerAnalyzer.Analyze(null);
+            var result = PlayerAnalyzer.Analyze(null!);
             Assert.NotNull(result);
             Assert.Equal(0, result.Speed);
         }

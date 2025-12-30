@@ -105,7 +105,7 @@ namespace fmassman.Tests
         [Fact]
         public void Calculate_ReturnsEmptyList_WhenPlayerIsNull()
         {
-            var results = RoleFitCalculator.Calculate(null, "InPossession");
+            var results = RoleFitCalculator.Calculate(null!, "InPossession");
             Assert.Empty(results);
         }
 

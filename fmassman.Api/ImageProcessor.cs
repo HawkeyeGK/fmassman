@@ -211,8 +211,8 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
 
             PlayerImportData playerData = new PlayerImportData
             {
-                PlayerName = SafeJsonParser.GetSafeString(flatData["PlayerName"]),
-                DateOfBirth = SafeJsonParser.GetSafeString(flatData["DateOfBirth"]),
+                PlayerName = SafeJsonParser.GetSafeString(flatData["PlayerName"]) ?? string.Empty,
+                DateOfBirth = SafeJsonParser.GetSafeString(flatData["DateOfBirth"]) ?? string.Empty,
                 HeightFeet = SafeJsonParser.GetSafeInt(flatData["HeightFeet"]),
                 HeightInches = SafeJsonParser.GetSafeInt(flatData["HeightInches"]),
                 Snapshot = new PlayerSnapshot
@@ -220,14 +220,14 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
                     SourceFilename = fileName,
                     RawImageBlobUrl = rawImageBlobUrl,
                     FileCreationDate = fileCreationDate,
-                    GameDate = SafeJsonParser.GetSafeString(flatData["GameDate"]),
-                    PlayingTime = SafeJsonParser.GetSafeString(flatData["PlayingTime"]),
-                    Personality = SafeJsonParser.GetSafeString(flatData["Personality"]),
+                    GameDate = SafeJsonParser.GetSafeString(flatData["GameDate"]) ?? string.Empty,
+                    PlayingTime = SafeJsonParser.GetSafeString(flatData["PlayingTime"]) ?? string.Empty,
+                    Personality = SafeJsonParser.GetSafeString(flatData["Personality"]) ?? string.Empty,
                     Age = SafeJsonParser.GetSafeInt(flatData["Age"]),
                     TransferValueLow = SafeJsonParser.GetSafeInt(flatData["TransferValueLow"]),
                     TransferValueHigh = SafeJsonParser.GetSafeInt(flatData["TransferValueHigh"]),
-                    Wage = SafeJsonParser.GetSafeString(flatData["Wage"]),
-                    ContractExpiry = SafeJsonParser.GetSafeString(flatData["ContractExpiry"]),
+                    Wage = SafeJsonParser.GetSafeString(flatData["Wage"]) ?? string.Empty,
+                    ContractExpiry = SafeJsonParser.GetSafeString(flatData["ContractExpiry"]) ?? string.Empty,
                     
                     Technical = new TechnicalAttributes
                     {

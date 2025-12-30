@@ -50,5 +50,17 @@ namespace fmassman.Shared
                 await SaveAsync(players);
             }
         }
+
+        public async Task UpsertAsync(PlayerImportData player)
+        {
+            var players = await LoadAsync();
+            var existing = players.FirstOrDefault(p => p.PlayerName.Equals(player.PlayerName, System.StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                players.Remove(existing);
+            }
+            players.Add(player);
+            await SaveAsync(players);
+        }
     }
 }

@@ -63,5 +63,10 @@ namespace fmassman.Shared
                 // Ignore if not found
             }
         }
+
+        public async Task UpsertAsync(PlayerImportData player)
+        {
+            await _container.UpsertItemAsync(player, new PartitionKey(player.PlayerName));
+        }
     }
 }

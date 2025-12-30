@@ -26,5 +26,10 @@ namespace fmassman.Client.Services
         {
             await _http.DeleteAsync($"api/roster/{playerName}");
         }
+
+        public async Task UpsertAsync(PlayerImportData player)
+        {
+            await SaveAsync(new List<PlayerImportData> { player });
+        }
     }
 }

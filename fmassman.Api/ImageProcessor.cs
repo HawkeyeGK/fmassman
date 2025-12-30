@@ -8,7 +8,6 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using fmassman.Shared;
-using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -22,7 +21,7 @@ namespace fmassman.Api
     {
         private readonly ILogger<ImageProcessor> _logger;
         private readonly HttpClient _httpClient;
-        private readonly Container _playersContainer;
+        private readonly IRosterRepository _repository;
         private readonly BlobServiceClient _blobServiceClient;
         private const string RawUploadsContainer = "raw-uploads";
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -75,11 +74,11 @@ namespace fmassman.Api
             return defaultValue;
         }
 
-        public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, CosmosClient cosmosClient, BlobServiceClient blobServiceClient)
+        public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, IRosterRepository repository, BlobServiceClient blobServiceClient)
         {
             _logger = logger;
             _httpClient = httpClientFactory.CreateClient("OpenAI");
-            _playersContainer = cosmosClient.GetContainer("FMAMDB", "Players");
+            _repository = repository;
             _blobServiceClient = blobServiceClient;
         }
 
@@ -116,8 +115,8 @@ namespace fmassman.Api
 
                 if (playerData != null)
                 {
-                    // 4. Save to Cosmos DB
-                    await _playersContainer.UpsertItemAsync(playerData, new PartitionKey(playerData.PlayerName));
+                    // 4. Save to Cosmos DB via repository
+                    await _repository.UpsertAsync(playerData);
                     _logger.LogInformation($"Successfully upserted player: {playerData.PlayerName}");
                     
                     return req.CreateResponse(System.Net.HttpStatusCode.OK);

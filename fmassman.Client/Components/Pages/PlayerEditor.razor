@@ -17,128 +17,154 @@ else
             <DataAnnotationsValidator />
             
             <div class="d-flex justify-content-end mb-3">
+                @if (!string.IsNullOrEmpty(VM.Player.Snapshot?.RawImageBlobUrl))
+                {
+                    <button type="button" class="btn btn-outline-info me-2" @onclick="ToggleImagePanel">
+                        <i class="bi @(_isImagePanelVisible ? "bi-image-alt" : "bi-image")"></i>
+                        @(_isImagePanelVisible ? "Hide Source Image" : "View Source Image")
+                    </button>
+                }
                 <button type="submit" class="btn btn-primary">Save Changes</button>
                 <a href="/player/@Name" class="btn btn-outline-secondary ms-2">Cancel</a>
             </div>
 
-            <ul class="nav nav-tabs mb-3">
-                <li class="nav-item">
-                    <a class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0" style="cursor: pointer">Profile</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1" style="cursor: pointer">Technical</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(_activeTab == 2 ? "active" : "")" @onclick="() => _activeTab = 2" style="cursor: pointer">Mental</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(_activeTab == 3 ? "active" : "")" @onclick="() => _activeTab = 3" style="cursor: pointer">Physical</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(_activeTab == 4 ? "active" : "")" @onclick="() => _activeTab = 4" style="cursor: pointer">Set Pieces</a>
-                </li>
-            </ul>
+            <div class="row">
+                <div class="@(_isImagePanelVisible ? "col-md-6" : "col-12")">
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0" style="cursor: pointer">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1" style="cursor: pointer">Technical</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 2 ? "active" : "")" @onclick="() => _activeTab = 2" style="cursor: pointer">Mental</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 3 ? "active" : "")" @onclick="() => _activeTab = 3" style="cursor: pointer">Physical</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 4 ? "active" : "")" @onclick="() => _activeTab = 4" style="cursor: pointer">Set Pieces</a>
+                        </li>
+                    </ul>
 
-            <div class="tab-content">
-                @if (_activeTab == 0)
+                    <div class="tab-content">
+                        @if (_activeTab == 0)
+                        {
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Height (ft)</label>
+                                        <InputNumber @bind-Value="VM.Player.HeightFeet" class="form-control" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Height (in)</label>
+                                        <InputNumber @bind-Value="VM.Player.HeightInches" class="form-control" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Age</label>
+                                        <InputNumber @bind-Value="VM.Player.Snapshot!.Age" class="form-control" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Contract Expiry</label>
+                                        <InputText @bind-Value="VM.Player.Snapshot!.ContractExpiry" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">My Wage</label>
+                                        <InputText @bind-Value="VM.Player.Snapshot!.Wage" class="form-control" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Personality</label>
+                                        <InputText @bind-Value="VM.Player.Snapshot!.Personality" class="form-control" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Transfer Value Low</label>
+                                        <InputNumber @bind-Value="VM.Player.Snapshot!.TransferValueLow" class="form-control" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Transfer Value High</label>
+                                        <InputNumber @bind-Value="VM.Player.Snapshot!.TransferValueHigh" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (_activeTab == 1 && VM.Player.Snapshot?.Technical != null)
+                        {
+                            <div class="row row-cols-2 row-cols-md-4 g-3">
+                                <AttributeInput Label="Crossing" @bind-Value="VM.Player.Snapshot.Technical.Crossing" />
+                                <AttributeInput Label="Dribbling" @bind-Value="VM.Player.Snapshot.Technical.Dribbling" />
+                                <AttributeInput Label="Finishing" @bind-Value="VM.Player.Snapshot.Technical.Finishing" />
+                                <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Technical.FirstTouch" />
+                                <AttributeInput Label="Heading" @bind-Value="VM.Player.Snapshot.Technical.Heading" />
+                                <AttributeInput Label="Long Shots" @bind-Value="VM.Player.Snapshot.Technical.LongShots" />
+                                <AttributeInput Label="Marking" @bind-Value="VM.Player.Snapshot.Technical.Marking" />
+                                <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Technical.Passing" />
+                                <AttributeInput Label="Tackling" @bind-Value="VM.Player.Snapshot.Technical.Tackling" />
+                                <AttributeInput Label="Technique" @bind-Value="VM.Player.Snapshot.Technical.Technique" />
+                            </div>
+                        }
+
+                        @if (_activeTab == 2 && VM.Player.Snapshot?.Mental != null)
+                        {
+                            <div class="row row-cols-2 row-cols-md-4 g-3">
+                                <AttributeInput Label="Aggression" @bind-Value="VM.Player.Snapshot.Mental.Aggression" />
+                                <AttributeInput Label="Anticipation" @bind-Value="VM.Player.Snapshot.Mental.Anticipation" />
+                                <AttributeInput Label="Bravery" @bind-Value="VM.Player.Snapshot.Mental.Bravery" />
+                                <AttributeInput Label="Composure" @bind-Value="VM.Player.Snapshot.Mental.Composure" />
+                                <AttributeInput Label="Concentration" @bind-Value="VM.Player.Snapshot.Mental.Concentration" />
+                                <AttributeInput Label="Decisions" @bind-Value="VM.Player.Snapshot.Mental.Decisions" />
+                                <AttributeInput Label="Determination" @bind-Value="VM.Player.Snapshot.Mental.Determination" />
+                                <AttributeInput Label="Flair" @bind-Value="VM.Player.Snapshot.Mental.Flair" />
+                                <AttributeInput Label="Leadership" @bind-Value="VM.Player.Snapshot.Mental.Leadership" />
+                                <AttributeInput Label="Off The Ball" @bind-Value="VM.Player.Snapshot.Mental.OffTheBall" />
+                                <AttributeInput Label="Positioning" @bind-Value="VM.Player.Snapshot.Mental.Positioning" />
+                                <AttributeInput Label="Teamwork" @bind-Value="VM.Player.Snapshot.Mental.Teamwork" />
+                                <AttributeInput Label="Vision" @bind-Value="VM.Player.Snapshot.Mental.Vision" />
+                                <AttributeInput Label="Work Rate" @bind-Value="VM.Player.Snapshot.Mental.WorkRate" />
+                            </div>
+                        }
+
+                        @if (_activeTab == 3 && VM.Player.Snapshot?.Physical != null)
+                        {
+                            <div class="row row-cols-2 row-cols-md-4 g-3">
+                                <AttributeInput Label="Acceleration" @bind-Value="VM.Player.Snapshot.Physical.Acceleration" />
+                                <AttributeInput Label="Agility" @bind-Value="VM.Player.Snapshot.Physical.Agility" />
+                                <AttributeInput Label="Balance" @bind-Value="VM.Player.Snapshot.Physical.Balance" />
+                                <AttributeInput Label="Jumping Reach" @bind-Value="VM.Player.Snapshot.Physical.JumpingReach" />
+                                <AttributeInput Label="Natural Fitness" @bind-Value="VM.Player.Snapshot.Physical.NaturalFitness" />
+                                <AttributeInput Label="Pace" @bind-Value="VM.Player.Snapshot.Physical.Pace" />
+                                <AttributeInput Label="Stamina" @bind-Value="VM.Player.Snapshot.Physical.Stamina" />
+                                <AttributeInput Label="Strength" @bind-Value="VM.Player.Snapshot.Physical.Strength" />
+                            </div>
+                        }
+
+                        @if (_activeTab == 4 && VM.Player.Snapshot?.SetPieces != null)
+                        {
+                            <div class="row row-cols-2 row-cols-md-4 g-3">
+                                <AttributeInput Label="Corners" @bind-Value="VM.Player.Snapshot.SetPieces.Corners" />
+                                <AttributeInput Label="Free Kick Taking" @bind-Value="VM.Player.Snapshot.SetPieces.FreeKickTaking" />
+                                <AttributeInput Label="Long Throws" @bind-Value="VM.Player.Snapshot.SetPieces.LongThrows" />
+                                <AttributeInput Label="Penalty Taking" @bind-Value="VM.Player.Snapshot.SetPieces.PenaltyTaking" />
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (_isImagePanelVisible && !string.IsNullOrEmpty(VM.Player.Snapshot?.RawImageBlobUrl))
                 {
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Height (ft)</label>
-                                <InputNumber @bind-Value="VM.Player.HeightFeet" class="form-control" />
+                    <div class="col-md-6">
+                        <div class="card" style="position: sticky; top: 1rem;">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Source Image</h5>
+                                <button type="button" class="btn-close" @onclick="ToggleImagePanel" aria-label="Close"></button>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Height (in)</label>
-                                <InputNumber @bind-Value="VM.Player.HeightInches" class="form-control" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Age</label>
-                                <InputNumber @bind-Value="VM.Player.Snapshot!.Age" class="form-control" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Contract Expiry</label>
-                                <InputText @bind-Value="VM.Player.Snapshot!.ContractExpiry" class="form-control" />
+                            <div class="card-body text-center p-2">
+                                <img src="@VM.Player.Snapshot.RawImageBlobUrl" class="img-fluid rounded" style="max-height: 85vh; object-fit: contain;" alt="Source Image" />
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">My Wage</label>
-                                <InputText @bind-Value="VM.Player.Snapshot!.Wage" class="form-control" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Personality</label>
-                                <InputText @bind-Value="VM.Player.Snapshot!.Personality" class="form-control" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Transfer Value Low</label>
-                                <InputNumber @bind-Value="VM.Player.Snapshot!.TransferValueLow" class="form-control" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Transfer Value High</label>
-                                <InputNumber @bind-Value="VM.Player.Snapshot!.TransferValueHigh" class="form-control" />
-                            </div>
-                        </div>
-                    </div>
-                }
-                
-                @if (_activeTab == 1 && VM.Player.Snapshot?.Technical != null)
-                {
-                    <div class="row row-cols-2 row-cols-md-4 g-3">
-                        <AttributeInput Label="Crossing" @bind-Value="VM.Player.Snapshot.Technical.Crossing" />
-                        <AttributeInput Label="Dribbling" @bind-Value="VM.Player.Snapshot.Technical.Dribbling" />
-                        <AttributeInput Label="Finishing" @bind-Value="VM.Player.Snapshot.Technical.Finishing" />
-                        <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Technical.FirstTouch" />
-                        <AttributeInput Label="Heading" @bind-Value="VM.Player.Snapshot.Technical.Heading" />
-                        <AttributeInput Label="Long Shots" @bind-Value="VM.Player.Snapshot.Technical.LongShots" />
-                        <AttributeInput Label="Marking" @bind-Value="VM.Player.Snapshot.Technical.Marking" />
-                        <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Technical.Passing" />
-                        <AttributeInput Label="Tackling" @bind-Value="VM.Player.Snapshot.Technical.Tackling" />
-                        <AttributeInput Label="Technique" @bind-Value="VM.Player.Snapshot.Technical.Technique" />
-                    </div>
-                }
-
-                @if (_activeTab == 2 && VM.Player.Snapshot?.Mental != null)
-                {
-                    <div class="row row-cols-2 row-cols-md-4 g-3">
-                        <AttributeInput Label="Aggression" @bind-Value="VM.Player.Snapshot.Mental.Aggression" />
-                        <AttributeInput Label="Anticipation" @bind-Value="VM.Player.Snapshot.Mental.Anticipation" />
-                        <AttributeInput Label="Bravery" @bind-Value="VM.Player.Snapshot.Mental.Bravery" />
-                        <AttributeInput Label="Composure" @bind-Value="VM.Player.Snapshot.Mental.Composure" />
-                        <AttributeInput Label="Concentration" @bind-Value="VM.Player.Snapshot.Mental.Concentration" />
-                        <AttributeInput Label="Decisions" @bind-Value="VM.Player.Snapshot.Mental.Decisions" />
-                        <AttributeInput Label="Determination" @bind-Value="VM.Player.Snapshot.Mental.Determination" />
-                        <AttributeInput Label="Flair" @bind-Value="VM.Player.Snapshot.Mental.Flair" />
-                        <AttributeInput Label="Leadership" @bind-Value="VM.Player.Snapshot.Mental.Leadership" />
-                        <AttributeInput Label="Off The Ball" @bind-Value="VM.Player.Snapshot.Mental.OffTheBall" />
-                        <AttributeInput Label="Positioning" @bind-Value="VM.Player.Snapshot.Mental.Positioning" />
-                        <AttributeInput Label="Teamwork" @bind-Value="VM.Player.Snapshot.Mental.Teamwork" />
-                        <AttributeInput Label="Vision" @bind-Value="VM.Player.Snapshot.Mental.Vision" />
-                        <AttributeInput Label="Work Rate" @bind-Value="VM.Player.Snapshot.Mental.WorkRate" />
-                    </div>
-                }
-
-                @if (_activeTab == 3 && VM.Player.Snapshot?.Physical != null)
-                {
-                    <div class="row row-cols-2 row-cols-md-4 g-3">
-                        <AttributeInput Label="Acceleration" @bind-Value="VM.Player.Snapshot.Physical.Acceleration" />
-                        <AttributeInput Label="Agility" @bind-Value="VM.Player.Snapshot.Physical.Agility" />
-                        <AttributeInput Label="Balance" @bind-Value="VM.Player.Snapshot.Physical.Balance" />
-                        <AttributeInput Label="Jumping Reach" @bind-Value="VM.Player.Snapshot.Physical.JumpingReach" />
-                        <AttributeInput Label="Natural Fitness" @bind-Value="VM.Player.Snapshot.Physical.NaturalFitness" />
-                        <AttributeInput Label="Pace" @bind-Value="VM.Player.Snapshot.Physical.Pace" />
-                        <AttributeInput Label="Stamina" @bind-Value="VM.Player.Snapshot.Physical.Stamina" />
-                        <AttributeInput Label="Strength" @bind-Value="VM.Player.Snapshot.Physical.Strength" />
-                    </div>
-                }
-
-                @if (_activeTab == 4 && VM.Player.Snapshot?.SetPieces != null)
-                {
-                    <div class="row row-cols-2 row-cols-md-4 g-3">
-                        <AttributeInput Label="Corners" @bind-Value="VM.Player.Snapshot.SetPieces.Corners" />
-                        <AttributeInput Label="Free Kick Taking" @bind-Value="VM.Player.Snapshot.SetPieces.FreeKickTaking" />
-                        <AttributeInput Label="Long Throws" @bind-Value="VM.Player.Snapshot.SetPieces.LongThrows" />
-                        <AttributeInput Label="Penalty Taking" @bind-Value="VM.Player.Snapshot.SetPieces.PenaltyTaking" />
                     </div>
                 }
             </div>
@@ -151,6 +177,12 @@ else
     public string Name { get; set; } = string.Empty;
 
     private int _activeTab = 0;
+    private bool _isImagePanelVisible = false;
+
+    private void ToggleImagePanel()
+    {
+        _isImagePanelVisible = !_isImagePanelVisible;
+    }
 
     protected override async Task OnInitializedAsync()
     {

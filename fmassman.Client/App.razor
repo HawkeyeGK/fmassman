@@ -14,15 +14,9 @@
             </Router>
         </Authorized>
         <NotAuthorized>
-            <div class="d-flex align-items-center justify-content-center vh-100 bg-dark">
-                <div class="card text-center bg-light text-dark shadow-lg" style="width: 24rem;">
-                    <div class="card-body">
-                        <h2 class="card-title fw-bold mb-4">FM AssMan</h2>
-                        <h4 class="card-text mb-4">Authorized Access Only</h4>
-                        <p class="card-text text-muted mb-4">Please log in to access the application.</p>
-                        <a href="login" class="btn btn-primary btn-lg w-100">Log In with Microsoft</a>
-                    </div>
-                </div>
+            <div class="d-flex flex-column align-items-center justify-content-center vh-100 bg-dark">
+                <img src="FMAssManTitleLogo.png" alt="FM AssMan" class="img-fluid mb-5" style="max-height: 70vh; max-width: 90vw;" />
+                <a href="login" class="btn btn-primary btn-lg px-5">Log In with Microsoft</a>
             </div>
         </NotAuthorized>
     </AuthorizeView>

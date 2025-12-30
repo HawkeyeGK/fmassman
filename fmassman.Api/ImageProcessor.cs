@@ -27,6 +27,51 @@ namespace fmassman.Api
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
+        // Helper to safely get a string value from JsonNode (handles both string and number types)
+        private static string? GetSafeString(JsonNode? node)
+        {
+            if (node == null) return null;
+            
+            // Try to get the underlying JsonElement to check its type
+            if (node is JsonValue jsonValue)
+            {
+                try
+                {
+                    // First try to get as string directly
+                    return jsonValue.GetValue<string>();
+                }
+                catch (InvalidOperationException)
+                {
+                    // If it's not a string, convert to string representation
+                    return node.ToJsonString().Trim('"');
+                }
+            }
+            
+            return node.ToString();
+        }
+
+        // Helper to safely get an int value from JsonNode (handles both int and string types)
+        private static int GetSafeInt(JsonNode? node, int defaultValue = 0)
+        {
+            if (node == null) return defaultValue;
+            
+            if (node is JsonValue jsonValue)
+            {
+                try
+                {
+                    return jsonValue.GetValue<int>();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Try parsing as string
+                    var str = node.ToString();
+                    return int.TryParse(str, out var result) ? result : defaultValue;
+                }
+            }
+            
+            return defaultValue;
+        }
+
         public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, CosmosClient cosmosClient)
         {
             _logger = logger;
@@ -192,70 +237,70 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
 
             PlayerImportData playerData = new PlayerImportData
             {
-                PlayerName = flatData["PlayerName"]?.GetValue<string>(),
-                DateOfBirth = flatData["DateOfBirth"]?.GetValue<string>(),
-                HeightFeet = flatData["HeightFeet"]?.GetValue<int>() ?? 0,
-                HeightInches = flatData["HeightInches"]?.GetValue<int>() ?? 0,
+                PlayerName = GetSafeString(flatData["PlayerName"]),
+                DateOfBirth = GetSafeString(flatData["DateOfBirth"]),
+                HeightFeet = GetSafeInt(flatData["HeightFeet"]),
+                HeightInches = GetSafeInt(flatData["HeightInches"]),
                 Snapshot = new PlayerSnapshot
                 {
                     SourceFilename = fileName,
                     FileCreationDate = fileCreationDate,
-                    GameDate = flatData["GameDate"]?.GetValue<string>(),
-                    PlayingTime = flatData["PlayingTime"]?.GetValue<string>(),
-                    Personality = flatData["Personality"]?.GetValue<string>(),
-                    Age = flatData["Age"]?.GetValue<int>() ?? 0,
-                    TransferValueLow = flatData["TransferValueLow"]?.GetValue<int>() ?? 0,
-                    TransferValueHigh = flatData["TransferValueHigh"]?.GetValue<int>() ?? 0,
-                    Wage = flatData["Wage"]?.GetValue<string>(),
-                    ContractExpiry = flatData["ContractExpiry"]?.GetValue<string>(),
+                    GameDate = GetSafeString(flatData["GameDate"]),
+                    PlayingTime = GetSafeString(flatData["PlayingTime"]),
+                    Personality = GetSafeString(flatData["Personality"]),
+                    Age = GetSafeInt(flatData["Age"]),
+                    TransferValueLow = GetSafeInt(flatData["TransferValueLow"]),
+                    TransferValueHigh = GetSafeInt(flatData["TransferValueHigh"]),
+                    Wage = GetSafeString(flatData["Wage"]),
+                    ContractExpiry = GetSafeString(flatData["ContractExpiry"]),
                     
                     Technical = new TechnicalAttributes
                     {
-                        Crossing = flatData["Crossing"]?.GetValue<int>() ?? 0,
-                        Dribbling = flatData["Dribbling"]?.GetValue<int>() ?? 0,
-                        Finishing = flatData["Finishing"]?.GetValue<int>() ?? 0,
-                        FirstTouch = flatData["FirstTouch"]?.GetValue<int>() ?? 0,
-                        Heading = flatData["Heading"]?.GetValue<int>() ?? 0,
-                        LongShots = flatData["LongShots"]?.GetValue<int>() ?? 0,
-                        Marking = flatData["Marking"]?.GetValue<int>() ?? 0,
-                        Passing = flatData["Passing"]?.GetValue<int>() ?? 0,
-                        Tackling = flatData["Tackling"]?.GetValue<int>() ?? 0,
-                        Technique = flatData["Technique"]?.GetValue<int>() ?? 0
+                        Crossing = GetSafeInt(flatData["Crossing"]),
+                        Dribbling = GetSafeInt(flatData["Dribbling"]),
+                        Finishing = GetSafeInt(flatData["Finishing"]),
+                        FirstTouch = GetSafeInt(flatData["FirstTouch"]),
+                        Heading = GetSafeInt(flatData["Heading"]),
+                        LongShots = GetSafeInt(flatData["LongShots"]),
+                        Marking = GetSafeInt(flatData["Marking"]),
+                        Passing = GetSafeInt(flatData["Passing"]),
+                        Tackling = GetSafeInt(flatData["Tackling"]),
+                        Technique = GetSafeInt(flatData["Technique"])
                     },
                     SetPieces = new SetPieceAttributes
                     {
-                        Corners = flatData["Corners"]?.GetValue<int>() ?? 0,
-                        FreeKickTaking = flatData["FreeKickTaking"]?.GetValue<int>() ?? 0,
-                        LongThrows = flatData["LongThrows"]?.GetValue<int>() ?? 0,
-                        PenaltyTaking = flatData["PenaltyTaking"]?.GetValue<int>() ?? 0
+                        Corners = GetSafeInt(flatData["Corners"]),
+                        FreeKickTaking = GetSafeInt(flatData["FreeKickTaking"]),
+                        LongThrows = GetSafeInt(flatData["LongThrows"]),
+                        PenaltyTaking = GetSafeInt(flatData["PenaltyTaking"])
                     },
                     Mental = new MentalAttributes
                     {
-                        Aggression = flatData["Aggression"]?.GetValue<int>() ?? 0,
-                        Anticipation = flatData["Anticipation"]?.GetValue<int>() ?? 0,
-                        Bravery = flatData["Bravery"]?.GetValue<int>() ?? 0,
-                        Composure = flatData["Composure"]?.GetValue<int>() ?? 0,
-                        Concentration = flatData["Concentration"]?.GetValue<int>() ?? 0,
-                        Decisions = flatData["Decisions"]?.GetValue<int>() ?? 0,
-                        Determination = flatData["Determination"]?.GetValue<int>() ?? 0,
-                        Flair = flatData["Flair"]?.GetValue<int>() ?? 0,
-                        Leadership = flatData["Leadership"]?.GetValue<int>() ?? 0,
-                        OffTheBall = flatData["OffTheBall"]?.GetValue<int>() ?? 0,
-                        Positioning = flatData["Positioning"]?.GetValue<int>() ?? 0,
-                        Teamwork = flatData["Teamwork"]?.GetValue<int>() ?? 0,
-                        Vision = flatData["Vision"]?.GetValue<int>() ?? 0,
-                        WorkRate = flatData["WorkRate"]?.GetValue<int>() ?? 0
+                        Aggression = GetSafeInt(flatData["Aggression"]),
+                        Anticipation = GetSafeInt(flatData["Anticipation"]),
+                        Bravery = GetSafeInt(flatData["Bravery"]),
+                        Composure = GetSafeInt(flatData["Composure"]),
+                        Concentration = GetSafeInt(flatData["Concentration"]),
+                        Decisions = GetSafeInt(flatData["Decisions"]),
+                        Determination = GetSafeInt(flatData["Determination"]),
+                        Flair = GetSafeInt(flatData["Flair"]),
+                        Leadership = GetSafeInt(flatData["Leadership"]),
+                        OffTheBall = GetSafeInt(flatData["OffTheBall"]),
+                        Positioning = GetSafeInt(flatData["Positioning"]),
+                        Teamwork = GetSafeInt(flatData["Teamwork"]),
+                        Vision = GetSafeInt(flatData["Vision"]),
+                        WorkRate = GetSafeInt(flatData["WorkRate"])
                     },
                     Physical = new PhysicalAttributes
                     {
-                        Acceleration = flatData["Acceleration"]?.GetValue<int>() ?? 0,
-                        Agility = flatData["Agility"]?.GetValue<int>() ?? 0,
-                        Balance = flatData["Balance"]?.GetValue<int>() ?? 0,
-                        JumpingReach = flatData["JumpingReach"]?.GetValue<int>() ?? 0,
-                        NaturalFitness = flatData["NaturalFitness"]?.GetValue<int>() ?? 0,
-                        Pace = flatData["Pace"]?.GetValue<int>() ?? 0,
-                        Stamina = flatData["Stamina"]?.GetValue<int>() ?? 0,
-                        Strength = flatData["Strength"]?.GetValue<int>() ?? 0
+                        Acceleration = GetSafeInt(flatData["Acceleration"]),
+                        Agility = GetSafeInt(flatData["Agility"]),
+                        Balance = GetSafeInt(flatData["Balance"]),
+                        JumpingReach = GetSafeInt(flatData["JumpingReach"]),
+                        NaturalFitness = GetSafeInt(flatData["NaturalFitness"]),
+                        Pace = GetSafeInt(flatData["Pace"]),
+                        Stamina = GetSafeInt(flatData["Stamina"]),
+                        Strength = GetSafeInt(flatData["Strength"])
                     }
                 }
             };

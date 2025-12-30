@@ -1,6 +1,7 @@
 using fmassman.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using System.Net.Http.Json;
 
 namespace fmassman.Client.Models;
 
@@ -8,16 +9,19 @@ public class PlayerEditorViewModel
 {
     private readonly IRosterRepository _rosterRepository;
     private readonly NavigationManager _navigationManager;
+    private readonly HttpClient _httpClient;
 
     public PlayerImportData? Player { get; private set; }
     public bool IsLoading { get; private set; }
 
     public PlayerEditorViewModel(
         IRosterRepository rosterRepository,
-        NavigationManager navigationManager)
+        NavigationManager navigationManager,
+        HttpClient httpClient)
     {
         _rosterRepository = rosterRepository;
         _navigationManager = navigationManager;
+        _httpClient = httpClient;
     }
 
     public async Task LoadAsync(string name)
@@ -65,6 +69,20 @@ public class PlayerEditorViewModel
             currentPlayers[index] = Player; // Update the list with our edited object
             await _rosterRepository.SaveAsync(currentPlayers);
             _navigationManager.NavigateTo($"/player/{Player.PlayerName}");
+        }
+    }
+
+    public async Task<string?> GetImageSasAsync(string fileName)
+    {
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<System.Text.Json.Nodes.JsonNode>($"api/images/sas/{fileName}");
+            return response?["sasUrl"]?.ToString();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching SAS token: {ex.Message}");
+            return null;
         }
     }
 }

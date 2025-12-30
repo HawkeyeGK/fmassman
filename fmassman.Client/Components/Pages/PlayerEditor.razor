@@ -29,7 +29,7 @@ else
             </div>
 
             <div class="row">
-                <div class="@(_isImagePanelVisible ? "col-md-6" : "col-12")">
+                <div class="@(_isImagePanelVisible ? "col-md-4" : "col-12")">
                     <ul class="nav nav-tabs mb-3">
                         <li class="nav-item">
                             <a class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0" style="cursor: pointer">Profile</a>
@@ -155,7 +155,7 @@ else
 
                 @if (_isImagePanelVisible && (!string.IsNullOrEmpty(VM.Player.Snapshot?.RawImageBlobUrl) || !string.IsNullOrEmpty(_signedImageUrl)))
                 {
-                    <div class="col-md-6">
+                    <div class="col-md-8">
                         <div class="card" style="position: sticky; top: 1rem;">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Source Image</h5>

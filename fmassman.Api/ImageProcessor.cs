@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using fmassman.Shared;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
@@ -22,6 +22,10 @@ namespace fmassman.Api
         private readonly ILogger<ImageProcessor> _logger;
         private readonly HttpClient _httpClient;
         private readonly Container _playersContainer;
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
 
         public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, CosmosClient cosmosClient)
         {
@@ -63,7 +67,7 @@ namespace fmassman.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing image upload");
+                _logger.LogError(ex, "Error processing image upload: {Message}", ex.Message);
                 var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
                 await errorResponse.WriteStringAsync($"{ex.GetType().Name}: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}");
                 return errorResponse;
@@ -158,7 +162,7 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
                 response_format = new { type = "json_object" }
             };
 
-            var content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+            var content = new StringContent(JsonSerializer.Serialize(requestBody, _jsonSerializerOptions), Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content);
 
             if (!response.IsSuccessStatusCode)
@@ -168,85 +172,90 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
             }
 
             var responseString = await response.Content.ReadAsStringAsync();
-            var jsonResponse = JObject.Parse(responseString);
-            string contentString = jsonResponse["choices"]?[0]?["message"]?["content"]?.ToString();
+            var jsonResponse = JsonNode.Parse(responseString);
+            string? contentString = jsonResponse?["choices"]?[0]?["message"]?["content"]?.GetValue<string>();
 
             if (string.IsNullOrEmpty(contentString))
             {
                  throw new Exception("Empty response content from OpenAI.");
             }
 
-            JObject flatData = JObject.Parse(contentString);
+            JsonNode? flatData = JsonNode.Parse(contentString);
+
+            if (flatData == null)
+            {
+                throw new Exception("Failed to parse OpenAI response content as JSON.");
+            }
 
             // Manual Mapping: Flat JSON -> Nested Class Structure
             DateTime fileCreationDate = DateTime.UtcNow; 
 
             PlayerImportData playerData = new PlayerImportData
             {
-                PlayerName = (string?)flatData["PlayerName"],
-                DateOfBirth = (string?)flatData["DateOfBirth"],
-                HeightFeet = (int?)flatData["HeightFeet"] ?? 0,
-                HeightInches = (int?)flatData["HeightInches"] ?? 0,
+                PlayerName = flatData["PlayerName"]?.GetValue<string>(),
+                DateOfBirth = flatData["DateOfBirth"]?.GetValue<string>(),
+                HeightFeet = flatData["HeightFeet"]?.GetValue<int>() ?? 0,
+                HeightInches = flatData["HeightInches"]?.GetValue<int>() ?? 0,
                 Snapshot = new PlayerSnapshot
                 {
                     SourceFilename = fileName,
                     FileCreationDate = fileCreationDate,
-                    GameDate = (string?)flatData["GameDate"],
-                    PlayingTime = (string?)flatData["PlayingTime"],
-                    Personality = (string?)flatData["Personality"],
-                    Age = (int?)flatData["Age"] ?? 0,
-                    TransferValueLow = (int?)flatData["TransferValueLow"] ?? 0,
-                    TransferValueHigh = (int?)flatData["TransferValueHigh"] ?? 0,
-                    Wage = (string?)flatData["Wage"],
-                    ContractExpiry = (string?)flatData["ContractExpiry"],
+                    GameDate = flatData["GameDate"]?.GetValue<string>(),
+                    PlayingTime = flatData["PlayingTime"]?.GetValue<string>(),
+                    Personality = flatData["Personality"]?.GetValue<string>(),
+                    Age = flatData["Age"]?.GetValue<int>() ?? 0,
+                    TransferValueLow = flatData["TransferValueLow"]?.GetValue<int>() ?? 0,
+                    TransferValueHigh = flatData["TransferValueHigh"]?.GetValue<int>() ?? 0,
+                    Wage = flatData["Wage"]?.GetValue<string>(),
+                    ContractExpiry = flatData["ContractExpiry"]?.GetValue<string>(),
                     
                     Technical = new TechnicalAttributes
                     {
-                        Crossing = (int?)flatData["Crossing"] ?? 0,
-                        Dribbling = (int?)flatData["Dribbling"] ?? 0,
-                        Finishing = (int?)flatData["Finishing"] ?? 0,
-                        FirstTouch = (int?)flatData["FirstTouch"] ?? 0,
-                        Heading = (int?)flatData["Heading"] ?? 0,
-                        LongShots = (int?)flatData["LongShots"] ?? 0,
-                        Marking = (int?)flatData["Marking"] ?? 0,
-                        Passing = (int?)flatData["Passing"] ?? 0,
-                        Tackling = (int?)flatData["Tackling"] ?? 0,
-                        Technique = (int?)flatData["Technique"] ?? 0
+                        Crossing = flatData["Crossing"]?.GetValue<int>() ?? 0,
+                        Dribbling = flatData["Dribbling"]?.GetValue<int>() ?? 0,
+                        Finishing = flatData["Finishing"]?.GetValue<int>() ?? 0,
+                        FirstTouch = flatData["FirstTouch"]?.GetValue<int>() ?? 0,
+                        Heading = flatData["Heading"]?.GetValue<int>() ?? 0,
+                        LongShots = flatData["LongShots"]?.GetValue<int>() ?? 0,
+                        Marking = flatData["Marking"]?.GetValue<int>() ?? 0,
+                        Passing = flatData["Passing"]?.GetValue<int>() ?? 0,
+                        Tackling = flatData["Tackling"]?.GetValue<int>() ?? 0,
+                        Technique = flatData["Technique"]?.GetValue<int>() ?? 0
                     },
                     SetPieces = new SetPieceAttributes
                     {
-                        Corners = (int?)flatData["Corners"] ?? 0,
-                        FreeKickTaking = (int?)flatData["FreeKickTaking"] ?? 0,
-                        LongThrows = (int?)flatData["LongThrows"] ?? 0,
-                        PenaltyTaking = (int?)flatData["PenaltyTaking"] ?? 0
+                        Corners = flatData["Corners"]?.GetValue<int>() ?? 0,
+                        FreeKickTaking = flatData["FreeKickTaking"]?.GetValue<int>() ?? 0,
+                        LongThrows = flatData["LongThrows"]?.GetValue<int>() ?? 0,
+                        PenaltyTaking = flatData["PenaltyTaking"]?.GetValue<int>() ?? 0
                     },
                     Mental = new MentalAttributes
                     {
-                        Aggression = (int?)flatData["Aggression"] ?? 0,
-                        Anticipation = (int?)flatData["Anticipation"] ?? 0,
-                        Bravery = (int?)flatData["Bravery"] ?? 0,
-                        Composure = (int?)flatData["Composure"] ?? 0,
-                        Concentration = (int?)flatData["Concentration"] ?? 0,
-                        Decisions = (int?)flatData["Decisions"] ?? 0,
-                        Determination = (int?)flatData["Determination"] ?? 0,
-                        Flair = (int?)flatData["Flair"] ?? 0,
-                        Leadership = (int?)flatData["Leadership"] ?? 0,
-                        OffTheBall = (int?)flatData["OffTheBall"] ?? 0,
-                        Positioning = (int?)flatData["Positioning"] ?? 0,
-                        Teamwork = (int?)flatData["Teamwork"] ?? 0,
-                        Vision = (int?)flatData["Vision"] ?? 0,
-                        WorkRate = (int?)flatData["WorkRate"] ?? 0
+                        Aggression = flatData["Aggression"]?.GetValue<int>() ?? 0,
+                        Anticipation = flatData["Anticipation"]?.GetValue<int>() ?? 0,
+                        Bravery = flatData["Bravery"]?.GetValue<int>() ?? 0,
+                        Composure = flatData["Composure"]?.GetValue<int>() ?? 0,
+                        Concentration = flatData["Concentration"]?.GetValue<int>() ?? 0,
+                        Decisions = flatData["Decisions"]?.GetValue<int>() ?? 0,
+                        Determination = flatData["Determination"]?.GetValue<int>() ?? 0,
+                        Flair = flatData["Flair"]?.GetValue<int>() ?? 0,
+                        Leadership = flatData["Leadership"]?.GetValue<int>() ?? 0,
+                        OffTheBall = flatData["OffTheBall"]?.GetValue<int>() ?? 0,
+                        Positioning = flatData["Positioning"]?.GetValue<int>() ?? 0,
+                        Teamwork = flatData["Teamwork"]?.GetValue<int>() ?? 0,
+                        Vision = flatData["Vision"]?.GetValue<int>() ?? 0,
+                        WorkRate = flatData["WorkRate"]?.GetValue<int>() ?? 0
                     },
                     Physical = new PhysicalAttributes
                     {
-                        Acceleration = (int?)flatData["Acceleration"] ?? 0,
-                        Agility = (int?)flatData["Agility"] ?? 0,
-                        Balance = (int?)flatData["Balance"] ?? 0,
-                        JumpingReach = (int?)flatData["JumpingReach"] ?? 0,
-                        NaturalFitness = (int?)flatData["NaturalFitness"] ?? 0,
-                        Pace = (int?)flatData["Pace"] ?? 0,
-                        Stamina = (int?)flatData["Stamina"] ?? 0,
-                        Strength = (int?)flatData["Strength"] ?? 0
+                        Acceleration = flatData["Acceleration"]?.GetValue<int>() ?? 0,
+                        Agility = flatData["Agility"]?.GetValue<int>() ?? 0,
+                        Balance = flatData["Balance"]?.GetValue<int>() ?? 0,
+                        JumpingReach = flatData["JumpingReach"]?.GetValue<int>() ?? 0,
+                        NaturalFitness = flatData["NaturalFitness"]?.GetValue<int>() ?? 0,
+                        Pace = flatData["Pace"]?.GetValue<int>() ?? 0,
+                        Stamina = flatData["Stamina"]?.GetValue<int>() ?? 0,
+                        Strength = flatData["Strength"]?.GetValue<int>() ?? 0
                     }
                 }
             };

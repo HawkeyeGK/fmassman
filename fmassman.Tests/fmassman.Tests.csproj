@@ -22,9 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fmassman.Extractor\fmassman.Extractor.csproj" />
     <ProjectReference Include="..\fmassman.Shared\fmassman.Shared.csproj" />
-    <ProjectReference Include="..\fmassman.Web\fmassman.Web.csproj" />
   </ItemGroup>
 
 </Project>

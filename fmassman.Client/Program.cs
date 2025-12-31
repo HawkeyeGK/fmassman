@@ -19,7 +19,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-builder.Services.AddScoped<IRosterRepository, ApiRosterService>();
+builder.Services.AddScoped<ApiRosterService>();
+builder.Services.AddScoped<IRosterRepository>(sp => sp.GetRequiredService<ApiRosterService>());
 builder.Services.AddScoped<IRoleService, ApiRoleService>();
 
 builder.Services.AddTransient<RoleEditorViewModel>();

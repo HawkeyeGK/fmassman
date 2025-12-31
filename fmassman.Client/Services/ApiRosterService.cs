@@ -31,5 +31,21 @@ namespace fmassman.Client.Services
         {
             await SaveAsync(new List<PlayerImportData> { player });
         }
+
+        public async Task<PlayerImportData?> UploadPlayerImage(MultipartFormDataContent content, bool isGoalkeeper)
+        {
+            var response = await _http.PostAsync($"api/UploadPlayerImage?gk={isGoalkeeper}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<PlayerImportData>();
+            }
+            
+            // If it failed, throw or return null. 
+            // The calling component can handle exceptions or null checks, 
+            // but for now let's throw to bubble up the error text like the component did previously.
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Upload failed ({response.StatusCode}): {errorBody}");
+        }
     }
 }

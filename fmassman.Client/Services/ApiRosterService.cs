@@ -8,11 +8,13 @@ namespace fmassman.Client.Services
     {
         private readonly HttpClient _http;
         
-        // Case-insensitive deserialization to handle API returning camelCase 
-        // while C# models use PascalCase
+        // JSON options for consistent serialization/deserialization:
+        // - PropertyNameCaseInsensitive: true = accept camelCase OR PascalCase on read
+        // - PropertyNamingPolicy: null = serialize with PascalCase (C# property names)
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = null // Use property names as-is (PascalCase)
         };
 
         public ApiRosterService(HttpClient http)
@@ -34,7 +36,7 @@ namespace fmassman.Client.Services
             LastSaveError = null;
             LastSaveStatusCode = null;
             
-            var response = await _http.PostAsJsonAsync("api/roster", players);
+            var response = await _http.PostAsJsonAsync("api/roster", players, _jsonOptions);
             LastSaveStatusCode = (int)response.StatusCode;
             
             if (!response.IsSuccessStatusCode)

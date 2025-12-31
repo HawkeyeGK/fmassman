@@ -1,6 +1,8 @@
 <div class="mb-2">
     <label class="form-label small mb-1">@Label</label>
-    <InputNumber @bind-Value="Value" @bind-Value:event="oninput" 
+    <InputNumber Value="@Value" 
+                 ValueChanged="@OnValueChanged" 
+                 ValueExpression="@ValueExpression"
                  class="form-control form-control-sm" 
                  min="1" max="20" />
 </div>
@@ -10,4 +12,15 @@
     [Parameter] public int Value { get; set; }
     [Parameter] public EventCallback<int> ValueChanged { get; set; }
     [Parameter] public System.Linq.Expressions.Expression<Func<int>>? ValueExpression { get; set; }
+
+    private async Task OnValueChanged(int newValue)
+    {
+        // Update local (if needed for display consistency, though usually parent update triggers re-render)
+        Value = newValue;
+        // Notify Parent
+        if (ValueChanged.HasDelegate)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+        }
+    }
 }

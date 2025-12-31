@@ -1812,5 +1812,130 @@
       "Pace": 2,
       "Strength": 3
     }
+  },
+  {
+    "Id": "inpossession-goalkeeper-goalkeeper",
+    "Name": "Goalkeeper",
+    "Category": "Goalkeeper",
+    "Phase": "InPossession",
+    "Weights": {
+      "AerialReach": 3,
+      "CommandOfArea": 3,
+      "Communication": 3,
+      "Handling": 3,
+      "Kicking": 2,
+      "OneOnOnes": 2,
+      "Reflexes": 3,
+      "Throwing": 2,
+      "Anticipation": 2,
+      "Concentration": 3,
+      "Decisions": 2,
+      "Positioning": 3,
+      "Agility": 3
+    }
+  },
+  {
+    "Id": "inpossession-goalkeeper-no-nonsense-goalkeeper",
+    "Name": "No-Nonsense Goalkeeper",
+    "Category": "Goalkeeper",
+    "Phase": "InPossession",
+    "Weights": {
+      "AerialReach": 3,
+      "CommandOfArea": 3,
+      "Communication": 3,
+      "Handling": 3,
+      "OneOnOnes": 2,
+      "Reflexes": 3,
+      "Anticipation": 2,
+      "Concentration": 3,
+      "Decisions": 2,
+      "Positioning": 3,
+      "Agility": 3
+    }
+  },
+  {
+    "Id": "inpossession-goalkeeper-ball-playing-goalkeeper",
+    "Name": "Ball-Playing Goalkeeper",
+    "Category": "Goalkeeper",
+    "Phase": "InPossession",
+    "Weights": {
+      "AerialReach": 3,
+      "CommandOfArea": 3,
+      "Communication": 3,
+      "Eccentricity": 2,
+      "Handling": 3,
+      "Kicking": 3,
+      "OneOnOnes": 2,
+      "Passing": 2,
+      "Reflexes": 3,
+      "Throwing": 2,
+      "Anticipation": 2,
+      "Composure": 2,
+      "Concentration": 3,
+      "Decisions": 2,
+      "Positioning": 3,
+      "Agility": 3
+    }
+  },
+  {
+    "Id": "outpossession-goalkeeper-goalkeeper",
+    "Name": "Goalkeeper",
+    "Category": "Goalkeeper",
+    "Phase": "OutPossession",
+    "Weights": {
+      "AerialReach": 3,
+      "CommandOfArea": 3,
+      "Communication": 3,
+      "Handling": 3,
+      "OneOnOnes": 2,
+      "Reflexes": 3,
+      "RushingOut": 2,
+      "Anticipation": 2,
+      "Concentration": 3,
+      "Decisions": 2,
+      "Positioning": 3,
+      "Agility": 3
+    }
+  },
+  {
+    "Id": "outpossession-goalkeeper-sweeper-keeper",
+    "Name": "Sweeper Keeper",
+    "Category": "Goalkeeper",
+    "Phase": "OutPossession",
+    "Weights": {
+      "AerialReach": 3,
+      "CommandOfArea": 3,
+      "Communication": 3,
+      "Eccentricity": 2,
+      "Handling": 3,
+      "OneOnOnes": 3,
+      "Reflexes": 3,
+      "RushingOut": 3,
+      "Anticipation": 3,
+      "Concentration": 2,
+      "Decisions": 3,
+      "Positioning": 2,
+      "Acceleration": 2,
+      "Agility": 3
+    }
+  },
+  {
+    "Id": "outpossession-goalkeeper-line-holding-keeper",
+    "Name": "Line-Holding Keeper",
+    "Category": "Goalkeeper",
+    "Phase": "OutPossession",
+    "Weights": {
+      "AerialReach": 3,
+      "CommandOfArea": 3,
+      "Communication": 3,
+      "Handling": 3,
+      "OneOnOnes": 2,
+      "Reflexes": 3,
+      "Anticipation": 2,
+      "Concentration": 3,
+      "Decisions": 2,
+      "Positioning": 3,
+      "Agility": 3
+    }
   }
 ]

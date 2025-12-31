@@ -141,10 +141,37 @@ public class PlayerEditorViewModel
             }
             
             currentPlayers[index] = Player; // Update the list with our edited object
-            DebugLog.Add("[SAVE] Replaced player in list, calling SaveAsync...");
+            DebugLog.Add("[SAVE] Replaced player in list");
             
+            // DEBUG: Serialize the player object to see what we're actually sending
+            try
+            {
+                var playerJson = JsonSerializer.Serialize(Player.Snapshot?.Goalkeeping, new JsonSerializerOptions { WriteIndented = false });
+                DebugLog.Add($"[SAVE] GK JSON being sent: {playerJson}");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Add($"[SAVE] Failed to serialize GK: {ex.Message}");
+            }
+            
+            DebugLog.Add("[SAVE] Calling SaveAsync...");
             await _rosterRepository.SaveAsync(currentPlayers);
             DebugLog.Add("[SAVE] SaveAsync completed!");
+            
+            // DEBUG: Immediately reload to verify what's in the DB
+            DebugLog.Add("[SAVE] Verifying save by reloading...");
+            var verifyPlayers = await _rosterRepository.LoadAsync();
+            var verifyPlayer = verifyPlayers.FirstOrDefault(p => p.PlayerName.Equals(Player.PlayerName, StringComparison.OrdinalIgnoreCase));
+            if (verifyPlayer?.Snapshot?.Goalkeeping != null)
+            {
+                var gk = verifyPlayer.Snapshot.Goalkeeping;
+                DebugLog.Add($"[SAVE] VERIFY: GK Handling={gk.Handling}, Reflexes={gk.Reflexes}, AerialReach={gk.AerialReach}");
+            }
+            else
+            {
+                DebugLog.Add("[SAVE] VERIFY: Goalkeeping is NULL after save!");
+            }
+            
             DebugLog.Add("[SAVE] DEBUG MODE: Navigation paused. Check trace log above.");
             
             // DEBUG: Don't navigate - let the user see the trace log

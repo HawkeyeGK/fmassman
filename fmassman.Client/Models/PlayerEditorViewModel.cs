@@ -155,8 +155,17 @@ public class PlayerEditorViewModel
             }
             
             DebugLog.Add("[SAVE] Calling SaveAsync...");
-            await _rosterRepository.SaveAsync(currentPlayers);
-            DebugLog.Add("[SAVE] SaveAsync completed!");
+            try
+            {
+                await _rosterRepository.SaveAsync(currentPlayers);
+                DebugLog.Add("[SAVE] SaveAsync completed successfully!");
+            }
+            catch (Exception ex)
+            {
+                DebugLog.Add($"[SAVE] *** ERROR: {ex.Message}");
+                SaveCompleted = true; // Still show the debug panel
+                return; // Exit early to see the error
+            }
             
             // DEBUG: Immediately reload to verify what's in the DB
             DebugLog.Add("[SAVE] Verifying save by reloading...");

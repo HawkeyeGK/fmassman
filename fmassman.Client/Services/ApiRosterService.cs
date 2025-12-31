@@ -25,9 +25,24 @@ namespace fmassman.Client.Services
             return await _http.GetFromJsonAsync<List<PlayerImportData>>("api/roster", _jsonOptions) ?? new List<PlayerImportData>();
         }
 
+        // DEBUG: Expose last save response info
+        public string? LastSaveError { get; private set; }
+        public int? LastSaveStatusCode { get; private set; }
+        
         public async Task SaveAsync(List<PlayerImportData> players)
         {
-            await _http.PostAsJsonAsync("api/roster", players);
+            LastSaveError = null;
+            LastSaveStatusCode = null;
+            
+            var response = await _http.PostAsJsonAsync("api/roster", players);
+            LastSaveStatusCode = (int)response.StatusCode;
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                LastSaveError = $"Save failed ({response.StatusCode}): {errorBody}";
+                throw new HttpRequestException(LastSaveError);
+            }
         }
 
         public async Task DeleteAsync(string playerName)

@@ -18,13 +18,13 @@
     </div>
 }
 
-@if (gkItems == null && string.IsNullOrEmpty(errorMessage))
+@if (matrixItems == null && string.IsNullOrEmpty(errorMessage))
 {
     <p><em>Loading...</em></p>
 }
-else if (gkItems != null)
+else if (matrixItems != null)
 {
-    @if (gkItems.Count == 0)
+    @if (matrixItems.Count == 0)
     {
         <div class="alert alert-info">No Goalkeepers found in the roster.</div>
     }
@@ -34,34 +34,36 @@ else if (gkItems != null)
             <table class="table table-bordered table-dark table-sm table-hover mb-0">
                 <thead>
                     <tr>
-                        <th class="sticky-col" style="min-width: 200px; background-color: #2c3034;">Name</th>
-                        <th class="text-center">Age</th>
-                        <th class="text-center" style="min-width: 250px;">Best Role</th>
-                        <th class="text-center">Reflexes</th>
-                        <th class="text-center">Handling</th>
-                        <th class="text-center">Aerial Reach</th>
-                        <th class="text-center">Cmd Area</th>
-                        <th class="text-center">1v1s</th>
-                        <th class="text-center">Kicking</th>
+                        <th class="sticky-col" style="min-width: 200px; background-color: #2c3034; cursor: pointer;" 
+                            @onclick='() => SortTable("Player")'>
+                            Player <span class="text-warning">@GetSortIndicator("Player")</span>
+                        </th>
+                        @foreach (var col in columns)
+                        {
+                            <th class="text-center" style="min-width: 120px; cursor: pointer;" 
+                                @onclick="() => SortTable(col.Key)">
+                                <div>
+                                    @col.Name 
+                                    <span class="text-warning">@GetSortIndicator(col.Key)</span>
+                                </div>
+                                <div style="font-size: 0.7rem; color: #aaa; font-weight: normal;">@col.Phase</div>
+                            </th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var player in gkItems.OrderByDescending(p => p.BestRoleScore))
+                    @foreach (var player in matrixItems)
                     {
                         <tr>
                             <td class="sticky-col" style="background-color: #2c3034; font-weight: bold;">
                                 <a href="/player/@player.Name" class="text-decoration-none text-info">@player.Name</a>
                             </td>
-                            <td class="text-center">@player.Age</td>
-                            <td class="text-center">
-                                @player.BestRoleName - <span class="text-warning">@player.BestRoleScore.ToString("F1")</span>
-                            </td>
-                            <td class="text-center matrix-cell" style="@GetColorStyle(player.Reflexes)">@player.Reflexes</td>
-                            <td class="text-center matrix-cell" style="@GetColorStyle(player.Handling)">@player.Handling</td>
-                            <td class="text-center matrix-cell" style="@GetColorStyle(player.AerialReach)">@player.AerialReach</td>
-                            <td class="text-center matrix-cell" style="@GetColorStyle(player.CommandOfArea)">@player.CommandOfArea</td>
-                            <td class="text-center matrix-cell" style="@GetColorStyle(player.OneOnOnes)">@player.OneOnOnes</td>
-                            <td class="text-center matrix-cell" style="@GetColorStyle(player.Kicking)">@player.Kicking</td>
+                            @foreach (var col in columns)
+                            {
+                                <td class="matrix-cell" style="@GetColorStyle(player.GetScore(col.Key))">
+                                    @player.GetScore(col.Key).ToString("F1")
+                                </td>
+                            }
                         </tr>
                     }
                 </tbody>
@@ -71,24 +73,26 @@ else if (gkItems != null)
 }
 
 @code {
-    private List<GkItem>? gkItems;
+    private List<MatrixItem>? matrixItems;
+    private List<MatrixColumn> columns = new();
     private HeatmapColorScale? colorScale;
     private string errorMessage = string.Empty;
 
-    private class GkItem
+    // Sorting State
+    private string currentSortKey = "Player";
+    private bool isAscending = true;
+
+    private record MatrixColumn(string Key, string Name, string Phase);
+
+    private class MatrixItem
     {
         public string Name { get; set; } = "";
-        public int Age { get; set; }
-        public string BestRoleName { get; set; } = "";
-        public double BestRoleScore { get; set; }
-        
-        // Key Attributes
-        public int Reflexes { get; set; }
-        public int Handling { get; set; }
-        public int AerialReach { get; set; }
-        public int CommandOfArea { get; set; }
-        public int OneOnOnes { get; set; }
-        public int Kicking { get; set; }
+        public Dictionary<string, double> Scores { get; set; } = new();
+
+        public double GetScore(string key)
+        {
+            return Scores.TryGetValue(key, out var val) ? val : 0;
+        }
     }
 
     protected override async Task OnInitializedAsync()
@@ -104,43 +108,85 @@ else if (gkItems != null)
                 .Where(p => p.Snapshot != null && p.Snapshot.Goalkeeping != null)
                 .ToList();
 
-            gkItems = new List<GkItem>();
+            if (goalkeepers.Count == 0)
+            {
+                matrixItems = new List<MatrixItem>();
+                return;
+            }
 
+            // Analyze all players
+            // We use a temporary structure to hold analysis to avoid re-running it for column gen
+            var analyzedPlayers = new List<(string Name, PlayerAnalysis Analysis)>();
+            
             foreach (var p in goalkeepers)
             {
-                var analysis = PlayerAnalyzer.Analyze(p.Snapshot!);
-                
-                string roleName = "Unknown";
-                double roleScore = 0;
-                
-                var allFits = analysis.InPossessionFits.Concat(analysis.OutPossessionFits);
-                var topRole = allFits.OrderByDescending(r => r.Score).FirstOrDefault();
-                if (topRole != null)
-                {
-                    roleName = topRole.RoleName;
-                    roleScore = topRole.Score;
-                }
+                analyzedPlayers.Add((p.PlayerName, PlayerAnalyzer.Analyze(p.Snapshot!)));
+            }
+            
+            // Generate Columns from the first player (assuming uniform roles)
+            // or we could aggregate unique roles from all if dynamic.
+            // RoleFitCalculator produces consistent output, so taking the first one is safe.
+            var templateAnalysis = analyzedPlayers.First().Analysis;
+            
+            columns = new List<MatrixColumn>();
+            
+            // Source 1: In Possession
+            foreach (var fit in templateAnalysis.InPossessionFits)
+            {
+                columns.Add(new MatrixColumn($"In Poss_{fit.RoleName}", fit.RoleName, "In Poss"));
+            }
+            
+            // Source 2: Out Possession
+            foreach (var fit in templateAnalysis.OutPossessionFits)
+            {
+                columns.Add(new MatrixColumn($"Out Poss_{fit.RoleName}", fit.RoleName, "Out Poss"));
+            }
+            
+            // Sort Columns: Phase (In then Out), then RoleName
+            // "In Poss" comes before "Out Poss" alphabetically, so simple OrderBy Phase works.
+            columns = columns
+                .OrderBy(c => c.Phase)
+                .ThenBy(c => c.Name)
+                .ToList();
 
-                var gk = p.Snapshot!.Goalkeeping!;
+            // Build Rows
+            matrixItems = new List<MatrixItem>();
+            foreach (var item in analyzedPlayers)
+            {
+                var scores = new Dictionary<string, double>();
                 
-                gkItems.Add(new GkItem
+                foreach (var fit in item.Analysis.InPossessionFits)
                 {
-                    Name = p.PlayerName,
-                    Age = p.Snapshot!.Age,
-                    BestRoleName = roleName,
-                    BestRoleScore = roleScore,
-                    Reflexes = gk.Reflexes,
-                    Handling = gk.Handling,
-                    AerialReach = gk.AerialReach,
-                    CommandOfArea = gk.CommandOfArea,
-                    OneOnOnes = gk.OneOnOnes,
-                    Kicking = gk.Kicking
+                    scores[$"In Poss_{fit.RoleName}"] = fit.Score;
+                }
+                
+                foreach (var fit in item.Analysis.OutPossessionFits)
+                {
+                    scores[$"Out Poss_{fit.RoleName}"] = fit.Score;
+                }
+                
+                matrixItems.Add(new MatrixItem
+                {
+                    Name = item.Name,
+                    Scores = scores
                 });
             }
 
-            // Create color scale based on 1-20 attribute range
-            var scores = new List<double> { 1, 20 };
-            colorScale = new HeatmapColorScale(scores);
+            // Initial Sort
+            ApplySort();
+
+            // Create color scale
+            // Flatten all scores to find min/max (or just use 1-100 logic? Protocol said use HeatmapColorScale same as InPossession)
+            // InPossession page uses min/max from actual data.
+            var allScores = matrixItems.SelectMany(m => m.Scores.Values);
+            if (allScores.Any())
+            {
+                colorScale = new HeatmapColorScale(allScores);
+            }
+            else
+            {
+                 colorScale = new HeatmapColorScale(new[] { 0.0, 100.0 });
+            }
         }
         catch (Exception ex)
         {
@@ -148,9 +194,50 @@ else if (gkItems != null)
         }
     }
 
-    private string GetColorStyle(int value)
+    private void SortTable(string key)
+    {
+        if (currentSortKey == key)
+        {
+            isAscending = !isAscending;
+        }
+        else
+        {
+            currentSortKey = key;
+            isAscending = (key == "Player"); // Default Asc for Name, Desc for others (toggled below)
+            if (key != "Player") isAscending = false; // Actually let's be explicit: Scores default to Descending
+        }
+
+        ApplySort();
+    }
+
+    private void ApplySort()
+    {
+        if (matrixItems == null) return;
+
+        if (currentSortKey == "Player")
+        {
+            matrixItems = isAscending 
+                ? matrixItems.OrderBy(p => p.Name).ToList()
+                : matrixItems.OrderByDescending(p => p.Name).ToList();
+        }
+        else
+        {
+            // Sort by score
+            matrixItems = isAscending
+                ? matrixItems.OrderBy(p => p.GetScore(currentSortKey)).ThenBy(p => p.Name).ToList()
+                : matrixItems.OrderByDescending(p => p.GetScore(currentSortKey)).ThenBy(p => p.Name).ToList();
+        }
+    }
+
+    private string GetSortIndicator(string key)
+    {
+        if (currentSortKey != key) return "";
+        return isAscending ? "▲" : "▼";
+    }
+
+    private string GetColorStyle(double value)
     {
         if (colorScale == null) return "";
-        return colorScale.GetColorStyle((double)value).Replace(";", " !important;");
+        return colorScale.GetColorStyle(value).Replace(";", " !important;");
     }
 }

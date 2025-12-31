@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using fmassman.Shared;
 
 namespace fmassman.Client.Services
@@ -6,6 +7,13 @@ namespace fmassman.Client.Services
     public class ApiRosterService : IRosterRepository
     {
         private readonly HttpClient _http;
+        
+        // Case-insensitive deserialization to handle API returning camelCase 
+        // while C# models use PascalCase
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public ApiRosterService(HttpClient http)
         {
@@ -14,7 +22,7 @@ namespace fmassman.Client.Services
 
         public async Task<List<PlayerImportData>> LoadAsync()
         {
-            return await _http.GetFromJsonAsync<List<PlayerImportData>>("api/roster") ?? new List<PlayerImportData>();
+            return await _http.GetFromJsonAsync<List<PlayerImportData>>("api/roster", _jsonOptions) ?? new List<PlayerImportData>();
         }
 
         public async Task SaveAsync(List<PlayerImportData> players)
@@ -38,7 +46,7 @@ namespace fmassman.Client.Services
 
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<PlayerImportData>();
+                return await response.Content.ReadFromJsonAsync<PlayerImportData>(_jsonOptions);
             }
             
             // If it failed, throw or return null. 
@@ -49,3 +57,4 @@ namespace fmassman.Client.Services
         }
     }
 }
+

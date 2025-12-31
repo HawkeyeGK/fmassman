@@ -107,7 +107,9 @@ namespace fmassman.Shared
 
             var roles = _cachedRoles.Where(r => 
                 r.Phase.Equals(phase, StringComparison.OrdinalIgnoreCase) && 
-                (isGoalkeeper ? r.Category == "Goalkeeper" : r.Category != "Goalkeeper")
+                (isGoalkeeper 
+                    ? r.Category.Equals("Goalkeeper", StringComparison.OrdinalIgnoreCase) 
+                    : !r.Category.Equals("Goalkeeper", StringComparison.OrdinalIgnoreCase))
             );
 
             foreach (var role in roles)

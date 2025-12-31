@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using fmassman.Shared;
 using fmassman.Shared.Services;
 
@@ -7,6 +8,13 @@ namespace fmassman.Client.Services
     public class ApiRoleService : IRoleService
     {
         private readonly HttpClient _http;
+        
+        // Case-insensitive deserialization to handle API returning camelCase 
+        // while C# models use PascalCase
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public ApiRoleService(HttpClient http)
         {
@@ -23,7 +31,7 @@ namespace fmassman.Client.Services
 
         public async Task<List<RoleDefinition>> LoadLocalRolesAsync()
         {
-            var roles = await _http.GetFromJsonAsync<List<RoleDefinition>>("api/roles") ?? new List<RoleDefinition>();
+            var roles = await _http.GetFromJsonAsync<List<RoleDefinition>>("api/roles", _jsonOptions) ?? new List<RoleDefinition>();
             RoleFitCalculator.SetCache(roles);
             return roles;
         }
@@ -39,3 +47,4 @@ namespace fmassman.Client.Services
         }
     }
 }
+

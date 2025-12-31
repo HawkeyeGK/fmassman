@@ -99,7 +99,16 @@ namespace fmassman.Shared
             if (player == null) return new List<RoleFitResult>();
 
             var results = new List<RoleFitResult>();
-            var roles = _cachedRoles.Where(r => r.Phase.Equals(phase, StringComparison.OrdinalIgnoreCase));
+            
+            // Strict Filter:
+            // IF player has Goalkeeping attributes -> ONLY evaluate "Goalkeeper" category roles
+            // IF player has NO Goalkeeping attributes -> NEVER evaluate "Goalkeeper" category roles
+            bool isGoalkeeper = player.Goalkeeping != null;
+
+            var roles = _cachedRoles.Where(r => 
+                r.Phase.Equals(phase, StringComparison.OrdinalIgnoreCase) && 
+                (isGoalkeeper ? r.Category == "Goalkeeper" : r.Category != "Goalkeeper")
+            );
 
             foreach (var role in roles)
             {

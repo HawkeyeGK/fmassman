@@ -144,5 +144,46 @@ namespace fmassman.Tests
                 Assert.Equal(0.0, result.Score);
             }
         }
+        [Fact]
+        public void Calculate_ShouldFilterRolesByPlayerType()
+        {
+            // Arrange: Setup mixed roles
+            var mixedRoles = new List<RoleDefinition>
+            {
+                new RoleDefinition { Name = "GkRole", Phase = "TestPhase", Category = "Goalkeeper", Weights = new Dictionary<string, double> { { "Reflexes", 1.0 } } },
+                new RoleDefinition { Name = "FieldRole", Phase = "TestPhase", Category = "Forward", Weights = new Dictionary<string, double> { { "Finishing", 1.0 } } }
+            };
+            RoleFitCalculator.SetCache(mixedRoles);
+
+            // Case 1: Goalkeeper Player (Has Goalkeeping attributes)
+            var gkPlayer = new PlayerSnapshot
+            {
+                Goalkeeping = new GoalkeepingAttributes { Reflexes = 15 } // Not null
+            };
+
+            // Case 2: Field Player (Goalkeeping is null)
+            var fieldPlayer = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes { Finishing = 15 },
+                Goalkeeping = null 
+            };
+
+            // Act
+            var gkResults = RoleFitCalculator.Calculate(gkPlayer, "TestPhase");
+            var fieldResults = RoleFitCalculator.Calculate(fieldPlayer, "TestPhase");
+
+            // Assert
+            
+            // GK Player should ONLY get GkRole
+            Assert.Single(gkResults); 
+            Assert.Equal("GkRole", gkResults.First().RoleName);
+
+            // Field Player should ONLY get FieldRole
+            Assert.Single(fieldResults);
+            Assert.Equal("FieldRole", fieldResults.First().RoleName);
+
+            // Restore defaults
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
     }
 }

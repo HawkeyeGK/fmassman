@@ -114,7 +114,15 @@ namespace fmassman.Api
                 var base64Slices = SliceImage(memoryStream, isGoalkeeper);
 
                 // 3. Extract Data using OpenAI
-                PlayerImportData playerData = await ExtractDataFromSlicesAsync(base64Slices, blobName, rawImageBlobUrl);
+                PlayerImportData playerData;
+                if (isGoalkeeper)
+                {
+                    playerData = await ExtractGkDataAsync(base64Slices, blobName, rawImageBlobUrl);
+                }
+                else
+                {
+                    playerData = await ExtractDataFromSlicesAsync(base64Slices, blobName, rawImageBlobUrl);
+                }
 
                 if (playerData != null)
                 {
@@ -303,6 +311,167 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
                         FreeKickTaking = SafeJsonParser.GetSafeInt(flatData["FreeKickTaking"]),
                         LongThrows = SafeJsonParser.GetSafeInt(flatData["LongThrows"]),
                         PenaltyTaking = SafeJsonParser.GetSafeInt(flatData["PenaltyTaking"])
+                    },
+                    Mental = new MentalAttributes
+                    {
+                        Aggression = SafeJsonParser.GetSafeInt(flatData["Aggression"]),
+                        Anticipation = SafeJsonParser.GetSafeInt(flatData["Anticipation"]),
+                        Bravery = SafeJsonParser.GetSafeInt(flatData["Bravery"]),
+                        Composure = SafeJsonParser.GetSafeInt(flatData["Composure"]),
+                        Concentration = SafeJsonParser.GetSafeInt(flatData["Concentration"]),
+                        Decisions = SafeJsonParser.GetSafeInt(flatData["Decisions"]),
+                        Determination = SafeJsonParser.GetSafeInt(flatData["Determination"]),
+                        Flair = SafeJsonParser.GetSafeInt(flatData["Flair"]),
+                        Leadership = SafeJsonParser.GetSafeInt(flatData["Leadership"]),
+                        OffTheBall = SafeJsonParser.GetSafeInt(flatData["OffTheBall"]),
+                        Positioning = SafeJsonParser.GetSafeInt(flatData["Positioning"]),
+                        Teamwork = SafeJsonParser.GetSafeInt(flatData["Teamwork"]),
+                        Vision = SafeJsonParser.GetSafeInt(flatData["Vision"]),
+                        WorkRate = SafeJsonParser.GetSafeInt(flatData["WorkRate"])
+                    },
+                    Physical = new PhysicalAttributes
+                    {
+                        Acceleration = SafeJsonParser.GetSafeInt(flatData["Acceleration"]),
+                        Agility = SafeJsonParser.GetSafeInt(flatData["Agility"]),
+                        Balance = SafeJsonParser.GetSafeInt(flatData["Balance"]),
+                        JumpingReach = SafeJsonParser.GetSafeInt(flatData["JumpingReach"]),
+                        NaturalFitness = SafeJsonParser.GetSafeInt(flatData["NaturalFitness"]),
+                        Pace = SafeJsonParser.GetSafeInt(flatData["Pace"]),
+                        Stamina = SafeJsonParser.GetSafeInt(flatData["Stamina"]),
+                        Strength = SafeJsonParser.GetSafeInt(flatData["Strength"])
+                    }
+                }
+            };
+
+            return playerData;
+        }
+
+        private async Task<PlayerImportData> ExtractGkDataAsync(List<string> base64Slices, string fileName, string rawImageBlobUrl)
+        {
+            string systemPrompt = @"
+You are a data extraction assistant for Football Manager 26.
+Your goal is to extract GOALKEEPER data from 5 separate image slices into a strict, FLAT JSON format.
+
+### I have sent you 5 images:
+1. **Header:** Contains Name, Game Date, Wage, Contract, Transfer Value, Age, DOB, Club/Squad Status.
+2. **Goalkeeping (13 rows):** Aerial Reach, Command of Area, Communication, Eccentricity, First Touch, Handling, Kicking, One on Ones, Passing, Punching, Reflexes, Rushing Out, Throwing.
+3. **Mental (14 rows):** Aggression, Anticipation, Bravery, Composure, Concentration, Decisions, Determination, Flair, Leadership, Off The Ball, Positioning, Teamwork, Vision, Work Rate.
+4. **Physical & Technical:** - **Physical (8 rows):** Acceleration, Agility, Balance, Jumping Reach, Natural Fitness, Pace, Stamina, Strength.
+   - **Technical (3 rows):** Free Kick Taking, Penalty Taking, Technique.
+5. **Bio:** Height and Personality.
+
+### REQUIRED JSON STRUCTURE
+Return ONLY a FLAT JSON object. Values must be Integers (except Name/Dates/Personality).
+- PlayerName, DateOfBirth, HeightFeet, HeightInches, Personality
+- GameDate, PlayingTime, Age, TransferValueLow, TransferValueHigh, Wage, ContractExpiry
+- AerialReach, CommandOfArea, Communication, Eccentricity, FirstTouch, Handling, Kicking, OneOnOnes, Passing, Punching, Reflexes, RushingOut, Throwing
+- FreeKickTaking, PenaltyTaking, Technique
+- Aggression, Anticipation, Bravery, Composure, Concentration, Decisions, Determination, Flair, Leadership, OffTheBall, Positioning, Teamwork, Vision, WorkRate
+- Acceleration, Agility, Balance, JumpingReach, NaturalFitness, Pace, Stamina, Strength
+
+### CRITICAL RULES
+- **Temperature 0:** Do not guess. If a number is obscured, return 0.
+- **Playing Time:** Look for text describing squad status (e.g., 'Star Player', 'Youngster') in the Header.
+";
+
+            var requestBody = new
+            {
+                model = "gpt-4o",
+                temperature = 0.0,
+                messages = new object[]
+                {
+                    new { role = "system", content = systemPrompt },
+                    new
+                    {
+                        role = "user",
+                        content = new object[]
+                        {
+                            new { type = "text", text = "Extract the goalkeeper data from these 5 images." },
+                            new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Slices[0]}" } },
+                            new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Slices[1]}" } },
+                            new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Slices[2]}" } },
+                            new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Slices[3]}" } },
+                            new { type = "image_url", image_url = new { url = $"data:image/jpeg;base64,{base64Slices[4]}" } }
+                        }
+                    }
+                },
+                response_format = new { type = "json_object" }
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(requestBody, _jsonSerializerOptions), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new Exception($"OpenAI API Error (GK): {response.StatusCode} - {errorBody}");
+            }
+
+            var responseString = await response.Content.ReadAsStringAsync();
+            var jsonResponse = JsonNode.Parse(responseString);
+            string? contentString = jsonResponse?["choices"]?[0]?["message"]?["content"]?.GetValue<string>();
+
+            if (string.IsNullOrEmpty(contentString))
+            {
+                 throw new Exception("Empty response content from OpenAI for GK.");
+            }
+
+            JsonNode? flatData = JsonNode.Parse(contentString);
+
+            if (flatData == null)
+            {
+                throw new Exception("Failed to parse OpenAI GK response content as JSON.");
+            }
+
+            DateTime fileCreationDate = DateTime.UtcNow; 
+
+            PlayerImportData playerData = new PlayerImportData
+            {
+                PlayerName = SafeJsonParser.GetSafeString(flatData["PlayerName"]) ?? string.Empty,
+                DateOfBirth = SafeJsonParser.GetSafeString(flatData["DateOfBirth"]) ?? string.Empty,
+                HeightFeet = SafeJsonParser.GetSafeInt(flatData["HeightFeet"]),
+                HeightInches = SafeJsonParser.GetSafeInt(flatData["HeightInches"]),
+                Snapshot = new PlayerSnapshot
+                {
+                    SourceFilename = fileName,
+                    RawImageBlobUrl = rawImageBlobUrl,
+                    FileCreationDate = fileCreationDate,
+                    GameDate = SafeJsonParser.GetSafeString(flatData["GameDate"]) ?? string.Empty,
+                    PlayingTime = SafeJsonParser.GetSafeString(flatData["PlayingTime"]) ?? string.Empty,
+                    Personality = SafeJsonParser.GetSafeString(flatData["Personality"]) ?? string.Empty,
+                    Age = SafeJsonParser.GetSafeInt(flatData["Age"]),
+                    TransferValueLow = SafeJsonParser.GetSafeInt(flatData["TransferValueLow"]),
+                    TransferValueHigh = SafeJsonParser.GetSafeInt(flatData["TransferValueHigh"]),
+                    Wage = SafeJsonParser.GetSafeString(flatData["Wage"]) ?? string.Empty,
+                    ContractExpiry = SafeJsonParser.GetSafeString(flatData["ContractExpiry"]) ?? string.Empty,
+                    
+                    Goalkeeping = new GoalkeepingAttributes
+                    {
+                        AerialReach = SafeJsonParser.GetSafeInt(flatData["AerialReach"]),
+                        CommandOfArea = SafeJsonParser.GetSafeInt(flatData["CommandOfArea"]),
+                        Communication = SafeJsonParser.GetSafeInt(flatData["Communication"]),
+                        Eccentricity = SafeJsonParser.GetSafeInt(flatData["Eccentricity"]),
+                        FirstTouch = SafeJsonParser.GetSafeInt(flatData["FirstTouch"]),
+                        Handling = SafeJsonParser.GetSafeInt(flatData["Handling"]),
+                        Kicking = SafeJsonParser.GetSafeInt(flatData["Kicking"]),
+                        OneOnOnes = SafeJsonParser.GetSafeInt(flatData["OneOnOnes"]),
+                        Passing = SafeJsonParser.GetSafeInt(flatData["Passing"]),
+                        Punching = SafeJsonParser.GetSafeInt(flatData["Punching"]),
+                        Reflexes = SafeJsonParser.GetSafeInt(flatData["Reflexes"]),
+                        RushingOut = SafeJsonParser.GetSafeInt(flatData["RushingOut"]),
+                        Throwing = SafeJsonParser.GetSafeInt(flatData["Throwing"])
+                    },
+                    SetPieces = new SetPieceAttributes
+                    {
+                        FreeKickTaking = SafeJsonParser.GetSafeInt(flatData["FreeKickTaking"]),
+                        PenaltyTaking = SafeJsonParser.GetSafeInt(flatData["PenaltyTaking"]),
+                        Corners = 0, 
+                        LongThrows = 0
+                    },
+                    Technical = new TechnicalAttributes
+                    {
+                        Technique = SafeJsonParser.GetSafeInt(flatData["Technique"]),
+                        Crossing = 0, Dribbling = 0, Finishing = 0, FirstTouch = 0, Heading = 0, LongShots = 0, Marking = 0, Passing = 0, Tackling = 0
                     },
                     Mental = new MentalAttributes
                     {

@@ -32,7 +32,7 @@ namespace fmassman.Client.Services
             await SaveAsync(new List<PlayerImportData> { player });
         }
 
-        public async Task<PlayerImportData?> UploadPlayerImage(MultipartFormDataContent content, bool isGoalkeeper)
+        public async Task<PlayerImportData?> UploadPlayerImage(HttpContent content, bool isGoalkeeper)
         {
             var response = await _http.PostAsync($"api/UploadPlayerImage?gk={isGoalkeeper}", content);
 

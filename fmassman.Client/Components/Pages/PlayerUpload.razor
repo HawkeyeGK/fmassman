@@ -80,10 +80,8 @@
             using var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
 
-            var content = new MultipartFormDataContent();
-            content.Add(fileContent, "file", file.Name);
-
-            var result = await RosterService.UploadPlayerImage(content, _isGoalkeeper);
+            // Pass the stream directly (Raw Binary Upload)
+            var result = await RosterService.UploadPlayerImage(fileContent, _isGoalkeeper);
             
             _createdPlayerName = result?.PlayerName;
             statusMessage = "Player image uploaded and processed successfully!";

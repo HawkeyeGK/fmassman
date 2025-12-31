@@ -7,9 +7,18 @@ using fmassman.Shared;
 using fmassman.Shared.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWebApplication(builder =>
+    {
+        // Configure JSON serialization to be case-insensitive
+        // This ensures camelCase JSON from client properly deserializes into PascalCase C# properties
+        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+        {
+            options.SerializerOptions.PropertyNameCaseInsensitive = true;
+        });
+    })
     .ConfigureServices((context, services) =>
     {
         services.AddApplicationInsightsTelemetryWorkerService();

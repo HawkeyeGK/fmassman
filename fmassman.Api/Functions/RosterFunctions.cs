@@ -29,15 +29,34 @@ namespace fmassman.Api.Functions
 
         [Function("SaveRoster")]
         public async Task<IActionResult> SaveRoster(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "roster")] HttpRequest req,
-            [FromBody] List<PlayerImportData> players)
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "roster")] HttpRequest req)
         {
-            _logger.LogInformation("Processing SaveRoster request with {Count} players.", players?.Count ?? 0);
+            _logger.LogInformation("Processing SaveRoster request.");
 
-            if (players == null)
+            // Manually deserialize with case-insensitive options
+            // [FromBody] doesn't respect configured JSON options in Azure Functions
+            List<PlayerImportData>? players = null;
+            try
             {
-                _logger.LogWarning("SaveRoster: players payload is NULL");
-                return new BadRequestObjectResult("Invalid payload");
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                players = await System.Text.Json.JsonSerializer.DeserializeAsync<List<PlayerImportData>>(
+                    req.Body, options);
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                _logger.LogError(ex, "SaveRoster: Failed to deserialize request body");
+                return new BadRequestObjectResult($"Invalid JSON: {ex.Message}");
+            }
+
+            _logger.LogInformation("SaveRoster: Deserialized {Count} players.", players?.Count ?? 0);
+
+            if (players == null || players.Count == 0)
+            {
+                _logger.LogWarning("SaveRoster: players payload is NULL or empty");
+                return new BadRequestObjectResult("Invalid payload - no players provided");
             }
 
             // DEBUG: Log Goalkeeping data for each player to trace deserialization issues

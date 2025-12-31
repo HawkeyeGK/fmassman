@@ -1,4 +1,5 @@
 using fmassman.Shared;
+using fmassman.Shared.Services;
 using fmassman.Client.Helpers;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ namespace fmassman.Client.Models
     public class PlayerDetailsViewModel
     {
         private readonly IRosterRepository _rosterRepository;
+        private readonly IRoleService _roleService;
         private readonly NavigationManager _navigationManager;
 
         public PlayerImportData? Player { get; private set; }
@@ -27,9 +29,10 @@ namespace fmassman.Client.Models
             .OrderByDescending(r => r.Score)
             .FirstOrDefault();
 
-        public PlayerDetailsViewModel(IRosterRepository rosterRepository, NavigationManager navigationManager)
+        public PlayerDetailsViewModel(IRosterRepository rosterRepository, IRoleService roleService, NavigationManager navigationManager)
         {
             _rosterRepository = rosterRepository;
+            _roleService = roleService;
             _navigationManager = navigationManager;
         }
 
@@ -104,6 +107,9 @@ namespace fmassman.Client.Models
                 {
                     if (Player.Snapshot != null)
                     {
+                        // Ensure roles are loaded before calculating fits
+                        try { await _roleService.LoadLocalRolesAsync(); } catch { }
+                        
                         Analysis = PlayerAnalyzer.Analyze(Player.Snapshot);
                         HeaderData = RosterItemViewModel.FromPlayer(Player);
                         

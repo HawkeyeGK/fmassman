@@ -49,6 +49,9 @@ public class PlayerEditorViewModel
                 
                 if (Player.Snapshot.SetPieces == null)
                     Player.Snapshot.SetPieces = new SetPieceAttributes();
+
+                if (Player.Snapshot.Goalkeeping == null)
+                    Player.Snapshot.Goalkeeping = new GoalkeepingAttributes();
             }
         }
         finally

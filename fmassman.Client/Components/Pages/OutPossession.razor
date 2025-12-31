@@ -110,7 +110,7 @@ else if (matrixItems != null)
 
             // 1. Analyze all players
             var analyzedPlayers = roster
-                .Where(p => p.Snapshot != null)
+                .Where(p => p.Snapshot != null && p.Snapshot.Goalkeeping == null)
                 .Select(p => new { Name = p.PlayerName, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
                 .ToList();
 

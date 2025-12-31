@@ -1,0 +1,156 @@
+@page "/goalkeepers"
+
+@using fmassman.Shared
+@using fmassman.Client.Models
+@using fmassman.Client.Helpers
+@inject IRosterRepository Repository
+@inject IRoleService RoleService
+
+<PageTitle>Goalkeeper Analysis</PageTitle>
+
+<h1>Goalkeeper Analysis</h1>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <h4>Error Loading Analysis</h4>
+        <p>@errorMessage</p>
+    </div>
+}
+
+@if (gkItems == null && string.IsNullOrEmpty(errorMessage))
+{
+    <p><em>Loading...</em></p>
+}
+else if (gkItems != null)
+{
+    @if (gkItems.Count == 0)
+    {
+        <div class="alert alert-info">No Goalkeepers found in the roster.</div>
+    }
+    else
+    {
+        <div class="grid-scroll-container">
+            <table class="table table-bordered table-dark table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th class="sticky-col" style="min-width: 200px; background-color: #2c3034;">Name</th>
+                        <th class="text-center">Age</th>
+                        <th class="text-center" style="min-width: 250px;">Best Role</th>
+                        <th class="text-center">Reflexes</th>
+                        <th class="text-center">Handling</th>
+                        <th class="text-center">Aerial Reach</th>
+                        <th class="text-center">Cmd Area</th>
+                        <th class="text-center">1v1s</th>
+                        <th class="text-center">Kicking</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var player in gkItems.OrderByDescending(p => p.BestRoleScore))
+                    {
+                        <tr>
+                            <td class="sticky-col" style="background-color: #2c3034; font-weight: bold;">
+                                <a href="/player/@player.Name" class="text-decoration-none text-info">@player.Name</a>
+                            </td>
+                            <td class="text-center">@player.Age</td>
+                            <td class="text-center">
+                                @player.BestRoleName - <span class="text-warning">@player.BestRoleScore.ToString("F1")</span>
+                            </td>
+                            <td class="text-center matrix-cell" style="@GetColorStyle(player.Reflexes)">@player.Reflexes</td>
+                            <td class="text-center matrix-cell" style="@GetColorStyle(player.Handling)">@player.Handling</td>
+                            <td class="text-center matrix-cell" style="@GetColorStyle(player.AerialReach)">@player.AerialReach</td>
+                            <td class="text-center matrix-cell" style="@GetColorStyle(player.CommandOfArea)">@player.CommandOfArea</td>
+                            <td class="text-center matrix-cell" style="@GetColorStyle(player.OneOnOnes)">@player.OneOnOnes</td>
+                            <td class="text-center matrix-cell" style="@GetColorStyle(player.Kicking)">@player.Kicking</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<GkItem>? gkItems;
+    private HeatmapColorScale? colorScale;
+    private string errorMessage = string.Empty;
+
+    private class GkItem
+    {
+        public string Name { get; set; } = "";
+        public int Age { get; set; }
+        public string BestRoleName { get; set; } = "";
+        public double BestRoleScore { get; set; }
+        
+        // Key Attributes
+        public int Reflexes { get; set; }
+        public int Handling { get; set; }
+        public int AerialReach { get; set; }
+        public int CommandOfArea { get; set; }
+        public int OneOnOnes { get; set; }
+        public int Kicking { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load roles so calculator works
+            try { await RoleService.LoadLocalRolesAsync(); } catch { }
+
+            var roster = await Repository.LoadAsync();
+            
+            var goalkeepers = roster
+                .Where(p => p.Snapshot != null && p.Snapshot.Goalkeeping != null)
+                .ToList();
+
+            gkItems = new List<GkItem>();
+
+            foreach (var p in goalkeepers)
+            {
+                var analysis = PlayerAnalyzer.Analyze(p.Snapshot!);
+                
+                string roleName = "Unknown";
+                double roleScore = 0;
+                
+                var allFits = analysis.InPossessionFits.Concat(analysis.OutPossessionFits);
+                var topRole = allFits.OrderByDescending(r => r.Score).FirstOrDefault();
+                if (topRole != null)
+                {
+                    roleName = topRole.RoleName;
+                    roleScore = topRole.Score;
+                }
+
+                var gk = p.Snapshot!.Goalkeeping!;
+                
+                gkItems.Add(new GkItem
+                {
+                    Name = p.PlayerName,
+                    Age = p.Snapshot!.Age,
+                    BestRoleName = roleName,
+                    BestRoleScore = roleScore,
+                    Reflexes = gk.Reflexes,
+                    Handling = gk.Handling,
+                    AerialReach = gk.AerialReach,
+                    CommandOfArea = gk.CommandOfArea,
+                    OneOnOnes = gk.OneOnOnes,
+                    Kicking = gk.Kicking
+                });
+            }
+
+            // Create color scale based on 1-20 attribute range
+            var scores = new List<double> { 1, 20 };
+            colorScale = new HeatmapColorScale(scores);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+    }
+
+    private string GetColorStyle(int value)
+    {
+        if (colorScale == null) return "";
+        return colorScale.GetColorStyle((double)value).Replace(";", " !important;");
+    }
+}

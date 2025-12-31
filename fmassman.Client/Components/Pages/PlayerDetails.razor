@@ -63,18 +63,42 @@
                 </div>
 
                  <div class="col-md-3">
-                    <h5 class="card-title text-info">Physical</h5>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item bg-transparent d-flex justify-content-between">
-                            <span>Height:</span> <strong>@(VM.Player?.HeightFeet ?? 0)' @(VM.Player?.HeightInches ?? 0)"</strong>
-                        </li>
-                         <li class="list-group-item bg-transparent d-flex justify-content-between">
-                            <span>Speed:</span> <strong>@h.Speed.ToString("F1")</strong>
-                        </li>
-                        <li class="list-group-item bg-transparent d-flex justify-content-between">
-                            <span>DNA:</span> <strong>@h.DNA.ToString("F1")</strong>
-                        </li>
-                    </ul>
+                    @if (VM.IsGoalkeeper)
+                    {
+                        <h5 class="card-title text-info">Goalkeeping</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Height:</span> <strong>@(VM.Player?.HeightFeet ?? 0)' @(VM.Player?.HeightInches ?? 0)"</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Handling:</span> <strong>@VM.Player?.Snapshot?.Goalkeeping?.Handling</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Reflexes:</span> <strong>@VM.Player?.Snapshot?.Goalkeeping?.Reflexes</strong>
+                            </li>
+                             <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Cmd Area:</span> <strong>@VM.Player?.Snapshot?.Goalkeeping?.CommandOfArea</strong>
+                            </li>
+                             <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Technique:</span> <strong>@VM.Player?.Snapshot?.Technical?.Technique</strong>
+                            </li>
+                        </ul>
+                    }
+                    else
+                    {
+                        <h5 class="card-title text-info">Physical</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Height:</span> <strong>@(VM.Player?.HeightFeet ?? 0)' @(VM.Player?.HeightInches ?? 0)"</strong>
+                            </li>
+                             <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>Speed:</span> <strong>@h.Speed.ToString("F1")</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span>DNA:</span> <strong>@h.DNA.ToString("F1")</strong>
+                            </li>
+                        </ul>
+                    }
                 </div>
 
                  <div class="col-md-3">

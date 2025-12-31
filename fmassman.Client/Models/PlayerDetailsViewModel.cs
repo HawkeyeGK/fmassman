@@ -17,6 +17,8 @@ namespace fmassman.Client.Models
         public RosterItemViewModel? HeaderData { get; private set; }
         public bool IsLoading { get; private set; }
 
+        public bool IsGoalkeeper => Player?.Snapshot?.Goalkeeping != null;
+
         public RoleFitResult? BestInPossession => Analysis?.InPossessionFits
             .OrderByDescending(r => r.Score)
             .FirstOrDefault();

@@ -198,46 +198,6 @@ else
                 }
             </div>
         </EditForm>
-        
-        @* DEBUG PANEL - Remove after fixing the issue *@
-        <div class="card bg-dark border-warning mt-4">
-            <div class="card-header bg-warning text-dark">
-                <strong>🔧 DEBUG PANEL</strong> (Remove after fixing save issue)
-            </div>
-            <div class="card-body">
-                @if (VM.SaveCompleted)
-                {
-                    <div class="alert alert-success">
-                        <strong>Save Completed!</strong> Check the trace log below, then:
-                        <a href="/player/@Name" class="btn btn-sm btn-primary ms-2">View Profile</a>
-                        <a href="/player/@Name/edit" class="btn btn-sm btn-secondary ms-2">Reload Edit Page</a>
-                    </div>
-                }
-                
-                <h6>Current GK Values in Memory:</h6>
-                @if (VM.Player?.Snapshot?.Goalkeeping != null)
-                {
-                    var gk = VM.Player.Snapshot.Goalkeeping;
-                    <div class="row row-cols-4 g-2 mb-3">
-                        <div class="col"><span class="badge bg-secondary">Handling: @gk.Handling</span></div>
-                        <div class="col"><span class="badge bg-secondary">Reflexes: @gk.Reflexes</span></div>
-                        <div class="col"><span class="badge bg-secondary">AerialReach: @gk.AerialReach</span></div>
-                        <div class="col"><span class="badge bg-secondary">CommandOfArea: @gk.CommandOfArea</span></div>
-                        <div class="col"><span class="badge bg-secondary">OneOnOnes: @gk.OneOnOnes</span></div>
-                        <div class="col"><span class="badge bg-secondary">Kicking: @gk.Kicking</span></div>
-                        <div class="col"><span class="badge bg-secondary">Throwing: @gk.Throwing</span></div>
-                        <div class="col"><span class="badge bg-secondary">Communication: @gk.Communication</span></div>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-danger">Goalkeeping is NULL!</p>
-                }
-                
-                <h6>Trace Log:</h6>
-                <pre class="bg-black text-success p-2 rounded" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;">@string.Join("\n", VM.DebugLog)</pre>
-            </div>
-        </div>
     </div>
 }
 

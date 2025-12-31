@@ -205,6 +205,15 @@ else
                 <strong>🔧 DEBUG PANEL</strong> (Remove after fixing save issue)
             </div>
             <div class="card-body">
+                @if (VM.SaveCompleted)
+                {
+                    <div class="alert alert-success">
+                        <strong>Save Completed!</strong> Check the trace log below, then:
+                        <a href="/player/@Name" class="btn btn-sm btn-primary ms-2">View Profile</a>
+                        <a href="/player/@Name/edit" class="btn btn-sm btn-secondary ms-2">Reload Edit Page</a>
+                    </div>
+                }
+                
                 <h6>Current GK Values in Memory:</h6>
                 @if (VM.Player?.Snapshot?.Goalkeeping != null)
                 {

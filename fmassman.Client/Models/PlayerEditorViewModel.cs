@@ -94,8 +94,13 @@ public class PlayerEditorViewModel
         }
     }
 
+    // DEBUG: Flag to show save completed without navigating
+    public bool SaveCompleted { get; private set; }
+    
     public async Task SaveAsync()
     {
+        SaveCompleted = false;
+        
         if (Player == null) 
         {
             DebugLog.Add("[SAVE] Player is null, aborting save");
@@ -139,9 +144,12 @@ public class PlayerEditorViewModel
             DebugLog.Add("[SAVE] Replaced player in list, calling SaveAsync...");
             
             await _rosterRepository.SaveAsync(currentPlayers);
-            DebugLog.Add("[SAVE] SaveAsync completed, navigating...");
+            DebugLog.Add("[SAVE] SaveAsync completed!");
+            DebugLog.Add("[SAVE] DEBUG MODE: Navigation paused. Check trace log above.");
             
-            _navigationManager.NavigateTo($"/player/{Player.PlayerName}");
+            // DEBUG: Don't navigate - let the user see the trace log
+            SaveCompleted = true;
+            // _navigationManager.NavigateTo($"/player/{Player.PlayerName}");
         }
         else
         {

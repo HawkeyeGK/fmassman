@@ -62,7 +62,7 @@ namespace fmassman.Shared
 
         private static readonly List<string> _categoryOrder = new()
         {
-            "Center Back", "Full Back", "Wing Back", "Defensive Midfield", "Central Midfield",
+            "Goalkeeper", "Center Back", "Full Back", "Wing Back", "Defensive Midfield", "Central Midfield",
             "Attacking Midfield", "Outside Midfield", "Wing", "Striker"
         };
 

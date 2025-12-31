@@ -31,6 +31,7 @@ namespace fmassman.Shared
         public SetPieceAttributes? SetPieces { get; set; }
         public MentalAttributes? Mental { get; set; }
         public PhysicalAttributes? Physical { get; set; }
+        public GoalkeepingAttributes? Goalkeeping { get; set; }
     }
 
     public class TechnicalAttributes
@@ -83,5 +84,22 @@ namespace fmassman.Shared
         public int Pace { get; set; }
         public int Stamina { get; set; }
         public int Strength { get; set; }
+    }
+
+    public class GoalkeepingAttributes
+    {
+        public int AerialReach { get; set; }
+        public int CommandOfArea { get; set; }
+        public int Communication { get; set; }
+        public int Eccentricity { get; set; }
+        public int FirstTouch { get; set; }
+        public int Handling { get; set; }
+        public int Kicking { get; set; }
+        public int OneOnOnes { get; set; }
+        public int Passing { get; set; }
+        public int Punching { get; set; }
+        public int Reflexes { get; set; }
+        public int RushingOut { get; set; }
+        public int Throwing { get; set; }
     }
 }

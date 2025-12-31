@@ -52,6 +52,28 @@ namespace fmassman.Api
             })
         };
 
+        private static readonly List<ScreenLayout> _gkLayouts = new()
+        {
+            // 1. Desktop (QHD)
+            new ScreenLayout("Desktop (QHD) - GK", 2000, new[]
+            {
+                new Rectangle(0, 0, -1, 390),       // 1. Header
+                new Rectangle(660, 420, 440, 625),  // 2. Goalkeeping (x:660->1100, y:420->1045)
+                new Rectangle(1120, 420, 440, 665), // 3. Mental (Standard)
+                new Rectangle(1570, 420, 440, 580), // 4. Phys + Tech (x:1570->2010, y:420->1000)
+                new Rectangle(2035, 420, 475, 305)  // 5. Bio (Standard)
+            }),
+            // 2. Laptop (FHD)
+            new ScreenLayout("Laptop (FHD) - GK", 0, new[]
+            {
+                new Rectangle(0, 0, -1, 295),       // 1. Header
+                new Rectangle(500, 315, 330, 465),  // 2. Goalkeeping (x:500->830, y:315->780)
+                new Rectangle(840, 315, 330, 535),  // 3. Mental (Standard)
+                new Rectangle(1175, 315, 335, 435), // 4. Phys + Tech (x:1175->1510, y:315->750 est)
+                new Rectangle(1525, 330, 355, 295)  // 5. Bio (Standard)
+            })
+        };
+
         // Helper methods moved to fmassman.Shared.Helpers.SafeJsonParser
 
         public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, IRosterRepository repository, BlobServiceClient blobServiceClient)
@@ -88,7 +110,8 @@ namespace fmassman.Api
                 memoryStream.Position = 0;
 
                 // 2. Slice Image using ImageSharp
-                var base64Slices = SliceImage(memoryStream);
+                bool isGoalkeeper = bool.TryParse(req.Query["gk"], out var gk) && gk;
+                var base64Slices = SliceImage(memoryStream, isGoalkeeper);
 
                 // 3. Extract Data using OpenAI
                 PlayerImportData playerData = await ExtractDataFromSlicesAsync(base64Slices, blobName, rawImageBlobUrl);
@@ -115,7 +138,7 @@ namespace fmassman.Api
             }
         }
 
-        private List<string> SliceImage(Stream imageStream)
+        private List<string> SliceImage(Stream imageStream, bool isGoalkeeper)
         {
             var base64Slices = new List<string>();
 
@@ -123,7 +146,8 @@ namespace fmassman.Api
             using (Image img = Image.Load(imageStream))
             {
                 // Select Layout based on Width
-                var layout = _layouts.OrderByDescending(x => x.MinWidth)
+                var layouts = isGoalkeeper ? _gkLayouts : _layouts;
+                var layout = layouts.OrderByDescending(x => x.MinWidth)
                                      .FirstOrDefault(x => img.Width >= x.MinWidth) 
                                      ?? _layouts.Last(); // Should theoretically always match the last one (0 min width), but fallback just in case
 

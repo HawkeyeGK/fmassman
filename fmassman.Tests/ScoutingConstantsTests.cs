@@ -35,15 +35,16 @@ namespace fmassman.Tests
         [Fact]
         public void GetCategoryRank_ReturnsCorrectIndex_ForKnownCategory()
         {
-            Assert.Equal(0, ScoutingConstants.GetCategoryRank("Center Back"));
-            Assert.Equal(4, ScoutingConstants.GetCategoryRank("Central Midfield"));
-            Assert.Equal(8, ScoutingConstants.GetCategoryRank("Striker"));
+            Assert.Equal(0, ScoutingConstants.GetCategoryRank("Goalkeeper"));
+            Assert.Equal(1, ScoutingConstants.GetCategoryRank("Center Back"));
+            Assert.Equal(5, ScoutingConstants.GetCategoryRank("Central Midfield"));
+            Assert.Equal(9, ScoutingConstants.GetCategoryRank("Striker"));
         }
 
         [Fact]
         public void GetCategoryRank_ReturnsDefault_ForUnknownCategory()
         {
-            Assert.Equal(99, ScoutingConstants.GetCategoryRank("Goalkeeper"));
+            Assert.Equal(99, ScoutingConstants.GetCategoryRank("Unknown Category"));
             Assert.Equal(99, ScoutingConstants.GetCategoryRank(""));
         }
 

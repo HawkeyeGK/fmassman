@@ -11,7 +11,13 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>Role Editor</h1>
-    <div>
+    <div class="d-flex align-items-center gap-3">
+        <div class="form-check form-switch pt-1">
+            <input class="form-check-input" type="checkbox" role="switch" id="gkModeSwitch" 
+                   @bind="vm.IsGoalkeeperMode" />
+            <label class="form-check-label" for="gkModeSwitch">Goalkeeper Mode</label>
+        </div>
+
         <button class="btn btn-warning me-2" @onclick="vm.ResetDefaults">
             <i class="bi bi-arrow-counterclockwise"></i> Reset to Baseline
         </button>
@@ -80,7 +86,7 @@ else
                         <div class="input-group mt-3">
                             <select class="form-select" @bind="vm.NewAttribute">
                                 <option value="">-- Select Attribute --</option>
-                                @foreach (var attr in RoleFitCalculator.ValidAttributeNames)
+                                @foreach (var attr in vm.AvailableAttributes)
                                 {
                                     if (!vm.SelectedRole.Weights.ContainsKey(attr))
                                     {

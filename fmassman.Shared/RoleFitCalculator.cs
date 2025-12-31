@@ -40,11 +40,11 @@ namespace fmassman.Shared
             _attributeMap["Crossing"] = p => p.Technical?.Crossing ?? 0;
             _attributeMap["Dribbling"] = p => p.Technical?.Dribbling ?? 0;
             _attributeMap["Finishing"] = p => p.Technical?.Finishing ?? 0;
-            _attributeMap["FirstTouch"] = p => p.Technical?.FirstTouch ?? 0;
+            _attributeMap["FirstTouch"] = p => p.Goalkeeping != null ? p.Goalkeeping.FirstTouch : (p.Technical?.FirstTouch ?? 0);
             _attributeMap["Heading"] = p => p.Technical?.Heading ?? 0;
             _attributeMap["LongShots"] = p => p.Technical?.LongShots ?? 0;
             _attributeMap["Marking"] = p => p.Technical?.Marking ?? 0;
-            _attributeMap["Passing"] = p => p.Technical?.Passing ?? 0;
+            _attributeMap["Passing"] = p => p.Goalkeeping != null ? p.Goalkeeping.Passing : (p.Technical?.Passing ?? 0);
             _attributeMap["Tackling"] = p => p.Technical?.Tackling ?? 0;
             _attributeMap["Technique"] = p => p.Technical?.Technique ?? 0;
 
@@ -79,6 +79,19 @@ namespace fmassman.Shared
             _attributeMap["Pace"] = p => p.Physical?.Pace ?? 0;
             _attributeMap["Stamina"] = p => p.Physical?.Stamina ?? 0;
             _attributeMap["Strength"] = p => p.Physical?.Strength ?? 0;
+
+            // --- Goalkeeping ---
+            _attributeMap["AerialReach"] = p => p.Goalkeeping?.AerialReach ?? 0;
+            _attributeMap["CommandOfArea"] = p => p.Goalkeeping?.CommandOfArea ?? 0;
+            _attributeMap["Communication"] = p => p.Goalkeeping?.Communication ?? 0;
+            _attributeMap["Eccentricity"] = p => p.Goalkeeping?.Eccentricity ?? 0;
+            _attributeMap["Handling"] = p => p.Goalkeeping?.Handling ?? 0;
+            _attributeMap["Kicking"] = p => p.Goalkeeping?.Kicking ?? 0;
+            _attributeMap["OneOnOnes"] = p => p.Goalkeeping?.OneOnOnes ?? 0;
+            _attributeMap["Punching"] = p => p.Goalkeeping?.Punching ?? 0;
+            _attributeMap["Reflexes"] = p => p.Goalkeeping?.Reflexes ?? 0;
+            _attributeMap["RushingOut"] = p => p.Goalkeeping?.RushingOut ?? 0;
+            _attributeMap["Throwing"] = p => p.Goalkeeping?.Throwing ?? 0;
         }
 
         public static List<RoleFitResult> Calculate(PlayerSnapshot player, string phase)

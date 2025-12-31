@@ -30,6 +30,28 @@ namespace fmassman.Api
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
+        private record ScreenLayout(string Name, int MinWidth, Rectangle[] Slices);
+
+        private static readonly List<ScreenLayout> _layouts = new()
+        {
+            new ScreenLayout("Desktop (QHD)", 2000, new[]
+            {
+                new Rectangle(0, 0, -1, 390),       // 1. Header (-1 = Use Image Width)
+                new Rectangle(660, 420, 440, 715),  // 2. Technical
+                new Rectangle(1120, 420, 440, 665), // 3. Mental
+                new Rectangle(1570, 420, 440, 410), // 4. Physical
+                new Rectangle(2035, 420, 475, 305)  // 5. Bio
+            }),
+            new ScreenLayout("Laptop (FHD)", 0, new[] // Fallback
+            {
+                new Rectangle(0, 0, -1, 295),       // 1. Header
+                new Rectangle(500, 315, 330, 535),  // 2. Technical
+                new Rectangle(840, 315, 330, 535),  // 3. Mental
+                new Rectangle(1175, 315, 335, 310), // 4. Physical
+                new Rectangle(1525, 330, 355, 295)  // 5. Bio
+            })
+        };
+
         // Helper methods moved to fmassman.Shared.Helpers.SafeJsonParser
 
         public ImageProcessor(ILogger<ImageProcessor> logger, IHttpClientFactory httpClientFactory, IRosterRepository repository, BlobServiceClient blobServiceClient)
@@ -100,26 +122,35 @@ namespace fmassman.Api
             // ImageSharp Load
             using (Image img = Image.Load(imageStream))
             {
-                // Define Slices (Same coordinates as before)
-                var slices = new Rectangle[]
-                {
-                    new Rectangle(0, 0, img.Width, 390),                 // 1. Header
-                    new Rectangle(660, 420, 440, 715),                   // 2. Technical
-                    new Rectangle(1120, 420, 440, 665),                  // 3. Mental
-                    new Rectangle(1570, 420, 440, 410),                  // 4. Physical
-                    new Rectangle(2035, 420, 475, 305)                   // 5. Bio
-                };
+                // Select Layout based on Width
+                var layout = _layouts.OrderByDescending(x => x.MinWidth)
+                                     .FirstOrDefault(x => img.Width >= x.MinWidth) 
+                                     ?? _layouts.Last(); // Should theoretically always match the last one (0 min width), but fallback just in case
 
-                foreach (var rect in slices)
+                _logger.LogInformation("Processing Image: {Width}x{Height}. Selected Layout: {LayoutName}", 
+                                       img.Width, img.Height, layout.Name);
+
+                foreach (var rectDef in layout.Slices)
                 {
-                    // Clone and Crop
-                    using (var slice = img.Clone(ctx => ctx.Crop(rect)))
+                    // Handle dynamic width for Header (Width = -1)
+                    int width = rectDef.Width == -1 ? img.Width : rectDef.Width;
+                    var cropRect = new Rectangle(rectDef.X, rectDef.Y, width, rectDef.Height);
+
+                    try
                     {
-                        using (var ms = new MemoryStream())
+                        // Clone and Crop
+                        using (var slice = img.Clone(ctx => ctx.Crop(cropRect)))
                         {
-                            slice.Save(ms, new JpegEncoder());
-                            base64Slices.Add(Convert.ToBase64String(ms.ToArray()));
+                            using (var ms = new MemoryStream())
+                            {
+                                slice.Save(ms, new JpegEncoder());
+                                base64Slices.Add(Convert.ToBase64String(ms.ToArray()));
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception($"Crop failed for layout '{layout.Name}'. Image Size: {img.Width}x{img.Height}. Attempted Crop: {cropRect}. Error: {ex.Message}");
                     }
                 }
             }

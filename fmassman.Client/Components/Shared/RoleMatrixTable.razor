@@ -1,0 +1,140 @@
+@using fmassman.Client.Helpers
+@using fmassman.Client.Models
+
+<div class="grid-scroll-container">
+    <table class="table table-bordered table-dark table-sm table-hover mb-0">
+        <thead>
+            <tr>
+                <th class="sticky-col" style="min-width: 200px; background-color: #2c3034; cursor: pointer;" 
+                    @onclick='() => SortTable("Player")'>
+                    Player <span class="text-warning">@GetSortIndicator("Player")</span>
+                </th>
+                @foreach (var col in Columns)
+                {
+                    <th class="text-center" style="min-width: 100px; cursor: pointer;" 
+                        @onclick="() => SortTable(col.Key)">
+                        <div>
+                            @col.Name 
+                            <span class="text-warning">@GetSortIndicator(col.Key)</span>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #aaa; font-weight: normal;">@col.Category</div>
+                        @if (!string.IsNullOrEmpty(col.Phase))
+                        {
+                            <div style="font-size: 0.7rem; color: #88ddff; font-weight: normal;">@col.Phase</div>
+                        }
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in sortedItems)
+            {
+                <tr>
+                    <td class="sticky-col" style="background-color: #2c3034; font-weight: bold;">
+                        <a href="/player/@player.Name" class="text-decoration-none text-info">@player.Name</a>
+                    </td>
+                    @foreach (var col in Columns)
+                    {
+                        <td class="matrix-cell" style="@(GetColorStyle(player.GetScore(col.Key)))">
+                            @player.GetScore(col.Key).ToString("F1")
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public List<MatrixItem> Items { get; set; } = new();
+    [Parameter] public List<MatrixColumn> Columns { get; set; } = new();
+
+    private List<MatrixItem> sortedItems = new();
+    private HeatmapColorScale? colorScale;
+    
+    // Sorting State
+    private string currentSortKey = "Player";
+    private bool isAscending = true;
+
+    protected override void OnParametersSet()
+    {
+         Initialize();
+    }
+
+    private void Initialize()
+    {
+        // 1. Initialize Color Scale
+        var allScores = Items.SelectMany(i => i.Scores.Values);
+        if (allScores.Any())
+        {
+             colorScale = new HeatmapColorScale(allScores);
+        }
+        else
+        {
+             // Fallback for empty or all-zero
+             colorScale = new HeatmapColorScale(new[] { 0.0, 100.0 });
+        }
+
+        // 2. Initialize Sorted List
+        ApplySort();
+    }
+
+    private void SortTable(string key)
+    {
+        if (currentSortKey == key)
+        {
+            // Toggle direction
+            isAscending = !isAscending;
+        }
+        else
+        {
+            // New column
+            currentSortKey = key;
+            // If Name -> Ascending (A-Z). If Score -> Descending (High-Low)
+            isAscending = (key == "Player");
+        }
+
+        ApplySort();
+    }
+
+    private void ApplySort()
+    {
+        if (Items == null) 
+        {
+            sortedItems = new();
+            return;
+        }
+
+        IEnumerable<MatrixItem> query = Items;
+        
+        if (currentSortKey == "Player")
+        {
+            query = isAscending 
+                ? query.OrderBy(p => p.Name)
+                : query.OrderByDescending(p => p.Name);
+        }
+        else
+        {
+            // For scores, we usually want the sort to break ties alphabetically
+            query = isAscending
+                ? query.OrderBy(p => p.GetScore(currentSortKey)).ThenBy(p => p.Name)
+                : query.OrderByDescending(p => p.GetScore(currentSortKey)).ThenBy(p => p.Name);
+        }
+        
+        sortedItems = query.ToList();
+    }
+
+    private string GetSortIndicator(string key)
+    {
+        if (currentSortKey != key) return "";
+        return isAscending ? "▲" : "▼";
+    }
+    
+    private string GetColorStyle(double value)
+    {
+        if (colorScale == null) return "";
+        // Original code replaced ";" with " !important;" to force override any table styles if needed, 
+        // though strictly speaking might not be necessary if inline. Keeping it for safety.
+        return colorScale.GetColorStyle(value).Replace(";", " !important;");
+    }
+}

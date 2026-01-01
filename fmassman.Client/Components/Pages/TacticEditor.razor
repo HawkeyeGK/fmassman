@@ -84,7 +84,7 @@ else
         }
         else
         {
-            Model = await TacticService.GetByIdAsync(Id);
+            Model = await TacticService.GetByIdAsync(Id!);
             if (Model == null)
             {
                 // Handle not found

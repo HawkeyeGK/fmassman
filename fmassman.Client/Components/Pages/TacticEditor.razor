@@ -8,7 +8,7 @@
 
 <h3>@(IsNew ? "New Tactic" : "Edit Tactic")</h3>
 
-@if (Model == null || inPossessionRoles == null || outPossessionRoles == null)
+@if (Model == null || allRoles == null)
 {
     <p>Loading...</p>
 }
@@ -24,39 +24,120 @@ else
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <h4>In Possession Roles</h4>
+        <!-- Column 1: Category Navigation -->
+        <div class="col-md-3">
+            <h4>Categories</h4>
             <div class="list-group">
-                @foreach (var role in inPossessionRoles)
+                @foreach (var cat in Categories)
                 {
-                    <label class="list-group-item">
-                        <input class="form-check-input me-1" type="checkbox" 
-                               checked="@IsRoleSelected(role.Id, true)"
-                               @onchange="@(e => ToggleRole(role.Id, true, e.Value))">
-                        @role.Name (@role.Category)
-                    </label>
+                    <button type="button" 
+                            class="list-group-item list-group-item-action @(selectedCategory == cat ? "active" : "")"
+                            @onclick="() => selectedCategory = cat">
+                        @cat
+                    </button>
                 }
             </div>
         </div>
-        <div class="col-md-6">
-            <h4>Out Possession Roles</h4>
-            <div class="list-group">
-                @foreach (var role in outPossessionRoles)
-                {
-                    <label class="list-group-item">
-                        <input class="form-check-input me-1" type="checkbox" 
-                               checked="@IsRoleSelected(role.Id, false)"
-                               @onchange="@(e => ToggleRole(role.Id, false, e.Value))">
-                        @role.Name (@role.Category)
-                    </label>
-                }
-            </div>
-        </div>
-    </div>
 
-    <div class="mt-4">
-        <button class="btn btn-primary me-2" @onclick="Save">Save</button>
-        <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        <!-- Column 2: Role Selection Area -->
+        <div class="col-md-5">
+            @if (!string.IsNullOrEmpty(selectedCategory))
+            {
+                <h4 class="mb-3">Roles: @selectedCategory</h4>
+                
+                <div class="card mb-3">
+                    <div class="card-header">In Possession (@selectedCategory)</div>
+                    <div class="list-group list-group-flush">
+                        @foreach (var role in GetRolesForCategory(selectedCategory, true))
+                        {
+                            <label class="list-group-item">
+                                <input class="form-check-input me-2" type="checkbox" 
+                                       checked="@IsRoleSelected(role.Id, true)"
+                                       @onchange="@(e => ToggleRole(role.Id, true, e.Value))">
+                                @role.Name
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Out Possession (@selectedCategory)</div>
+                    <div class="list-group list-group-flush">
+                        @foreach (var role in GetRolesForCategory(selectedCategory, false))
+                        {
+                            <label class="list-group-item">
+                                <input class="form-check-input me-2" type="checkbox" 
+                                       checked="@IsRoleSelected(role.Id, false)"
+                                       @onchange="@(e => ToggleRole(role.Id, false, e.Value))">
+                                @role.Name
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">Select a category to view roles.</div>
+            }
+        </div>
+
+        <!-- Column 3: Tactic Summary (The Basket) -->
+        <div class="col-md-4">
+            <div class="border rounded p-3 bg-light">
+                <h4>Current Tactic</h4>
+                
+                <h5 class="mt-3">In Possession</h5>
+                <ul class="list-group mb-3">
+                    @foreach (var roleId in Model.InPossessionRoleIds)
+                    {
+                        var role = GetRole(roleId);
+                        if (role != null)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@role.Category</strong>: @role.Name
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveRole(roleId, true)">
+                                    <i class="bi bi-x"></i> X
+                                </button>
+                            </li>
+                        }
+                    }
+                    @if (!Model.InPossessionRoleIds.Any())
+                    {
+                        <li class="list-group-item text-muted fst-italic">No roles selected</li>
+                    }
+                </ul>
+
+                <h5 class="mt-3">Out Possession</h5>
+                <ul class="list-group mb-3">
+                    @foreach (var roleId in Model.OutPossessionRoleIds)
+                    {
+                        var role = GetRole(roleId);
+                        if (role != null)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@role.Category</strong>: @role.Name
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveRole(roleId, false)">
+                                    <i class="bi bi-x"></i> X
+                                </button>
+                            </li>
+                        }
+                    }
+                     @if (!Model.OutPossessionRoleIds.Any())
+                    {
+                        <li class="list-group-item text-muted fst-italic">No roles selected</li>
+                    }
+                </ul>
+
+                 <div class="mt-4 d-grid gap-2">
+                    <button class="btn btn-primary" @onclick="Save">Save Tactic</button>
+                    <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
@@ -68,15 +149,22 @@ else
     private bool IsNew => string.IsNullOrEmpty(Id) || Id == "new";
     private bool showValidation = false;
 
-    private List<RoleDefinition>? inPossessionRoles;
-    private List<RoleDefinition>? outPossessionRoles;
+    private List<RoleDefinition>? allRoles;
+    private List<string> Categories { get; set; } = new();
+    private string? selectedCategory;
 
     protected override async Task OnInitializedAsync()
     {
         // Load Roles first
-        var allRoles = await RoleService.LoadLocalRolesAsync();
-        inPossessionRoles = allRoles.Where(r => r.Phase == "InPossession").OrderBy(r => r.Category).ThenBy(r => r.Name).ToList();
-        outPossessionRoles = allRoles.Where(r => r.Phase == "OutPossession").OrderBy(r => r.Category).ThenBy(r => r.Name).ToList();
+        allRoles = await RoleService.LoadLocalRolesAsync();
+        
+        Categories = allRoles
+            .Select(r => r.Category)
+            .Distinct()
+            .OrderBy(c => ScoutingConstants.GetCategoryRank(c))
+            .ToList();
+            
+        selectedCategory = Categories.FirstOrDefault();
 
         if (IsNew)
         {
@@ -91,6 +179,18 @@ else
                 nav.NavigateTo("/tactics");
             }
         }
+    }
+
+    private IEnumerable<RoleDefinition> GetRolesForCategory(string category, bool inPossession)
+    {
+        if (allRoles == null) return Enumerable.Empty<RoleDefinition>();
+        var phase = inPossession ? "InPossession" : "OutPossession";
+        return allRoles.Where(r => r.Category == category && r.Phase == phase).OrderBy(r => r.Name);
+    }
+
+    private RoleDefinition? GetRole(string roleId)
+    {
+        return allRoles?.FirstOrDefault(r => r.Id == roleId);
     }
 
     private bool IsRoleSelected(string roleId, bool isInPossession)
@@ -111,6 +211,16 @@ else
             list.Add(roleId);
         }
         else if (!isChecked && list.Contains(roleId))
+        {
+            list.Remove(roleId);
+        }
+    }
+
+    private void RemoveRole(string roleId, bool isInPossession)
+    {
+        if (Model == null) return;
+        var list = isInPossession ? Model.InPossessionRoleIds : Model.OutPossessionRoleIds;
+        if (list.Contains(roleId))
         {
             list.Remove(roleId);
         }

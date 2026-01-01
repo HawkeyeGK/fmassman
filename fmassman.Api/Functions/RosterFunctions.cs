@@ -59,21 +59,7 @@ namespace fmassman.Api.Functions
                 return new BadRequestObjectResult("Invalid payload - no players provided");
             }
 
-            // DEBUG: Log Goalkeeping data for each player to trace deserialization issues
-            foreach (var player in players)
-            {
-                var gk = player.Snapshot?.Goalkeeping;
-                if (gk != null)
-                {
-                    _logger.LogInformation("SaveRoster: Player {Name} - GK Handling={Handling}, Reflexes={Reflexes}, AerialReach={AerialReach}",
-                        player.PlayerName, gk.Handling, gk.Reflexes, gk.AerialReach);
-                }
-                else
-                {
-                    _logger.LogWarning("SaveRoster: Player {Name} - Goalkeeping is NULL (Snapshot null? {SnapshotNull})",
-                        player.PlayerName, player.Snapshot == null);
-                }
-            }
+
 
             await _repository.SaveAsync(players);
             _logger.LogInformation("SaveRoster: Save completed successfully");

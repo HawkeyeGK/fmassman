@@ -1,0 +1,132 @@
+@page "/tactic/{Id?}"
+@using fmassman.Shared
+@using fmassman.Shared.Services
+@using fmassman.Client.Services
+@inject ITacticService TacticService
+@inject IRoleService RoleService
+@inject NavigationManager nav
+
+<h3>@(IsNew ? "New Tactic" : "Edit Tactic")</h3>
+
+@if (Model == null || inPossessionRoles == null || outPossessionRoles == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="mb-3">
+        <label for="name" class="form-label">Tactic Name</label>
+        <input type="text" class="form-control" id="name" @bind="Model.Name" />
+        @if (showValidation && string.IsNullOrWhiteSpace(Model.Name))
+        {
+            <div class="text-danger">Name is required.</div>
+        }
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h4>In Possession Roles</h4>
+            <div class="list-group">
+                @foreach (var role in inPossessionRoles)
+                {
+                    <label class="list-group-item">
+                        <input class="form-check-input me-1" type="checkbox" 
+                               checked="@IsRoleSelected(role.Id, true)"
+                               @onchange="@(e => ToggleRole(role.Id, true, e.Value))">
+                        @role.Name (@role.Category)
+                    </label>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h4>Out Possession Roles</h4>
+            <div class="list-group">
+                @foreach (var role in outPossessionRoles)
+                {
+                    <label class="list-group-item">
+                        <input class="form-check-input me-1" type="checkbox" 
+                               checked="@IsRoleSelected(role.Id, false)"
+                               @onchange="@(e => ToggleRole(role.Id, false, e.Value))">
+                        @role.Name (@role.Category)
+                    </label>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button class="btn btn-primary me-2" @onclick="Save">Save</button>
+        <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    private Tactic? Model { get; set; }
+    private bool IsNew => string.IsNullOrEmpty(Id) || Id == "new";
+    private bool showValidation = false;
+
+    private List<RoleDefinition>? inPossessionRoles;
+    private List<RoleDefinition>? outPossessionRoles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load Roles first
+        var allRoles = await RoleService.LoadLocalRolesAsync();
+        inPossessionRoles = allRoles.Where(r => r.Phase == "InPossession").OrderBy(r => r.Category).ThenBy(r => r.Name).ToList();
+        outPossessionRoles = allRoles.Where(r => r.Phase == "OutPossession").OrderBy(r => r.Category).ThenBy(r => r.Name).ToList();
+
+        if (IsNew)
+        {
+            Model = new Tactic();
+        }
+        else
+        {
+            Model = await TacticService.GetByIdAsync(Id);
+            if (Model == null)
+            {
+                // Handle not found
+                nav.NavigateTo("/tactics");
+            }
+        }
+    }
+
+    private bool IsRoleSelected(string roleId, bool isInPossession)
+    {
+        if (Model == null) return false;
+        var list = isInPossession ? Model.InPossessionRoleIds : Model.OutPossessionRoleIds;
+        return list.Contains(roleId);
+    }
+
+    private void ToggleRole(string roleId, bool isInPossession, object? checkedValue)
+    {
+        if (Model == null) return;
+        var isChecked = checkedValue is bool b && b;
+        var list = isInPossession ? Model.InPossessionRoleIds : Model.OutPossessionRoleIds;
+
+        if (isChecked && !list.Contains(roleId))
+        {
+            list.Add(roleId);
+        }
+        else if (!isChecked && list.Contains(roleId))
+        {
+            list.Remove(roleId);
+        }
+    }
+
+    private async Task Save()
+    {
+        showValidation = true;
+        if (Model == null || string.IsNullOrWhiteSpace(Model.Name)) return;
+
+        await TacticService.SaveAsync(Model);
+        nav.NavigateTo("/tactics");
+    }
+
+    private void Cancel()
+    {
+        nav.NavigateTo("/tactics");
+    }
+}

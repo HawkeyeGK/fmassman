@@ -7,23 +7,13 @@
 @using fmassman.Client.Services
 @inject IRosterRepository Repository
 @inject IRoleService RoleService
-@inject ITacticService TacticService
+
 
 <PageTitle>Goalkeeper Analysis</PageTitle>
 
 <h1>Goalkeeper Analysis</h1>
 
-<div class="row mb-3">
-    <div class="col-md-4">
-        <select class="form-select" @bind="selectedTacticId">
-            <option value="">-- All Roles --</option>
-            @foreach (var tactic in tactics)
-            {
-                <option value="@tactic.Id">@tactic.Name</option>
-            }
-        </select>
-    </div>
-</div>
+
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
@@ -45,16 +35,14 @@ else if (matrixItems != null)
     }
     else
     {
-        <RoleMatrixTable Items="@matrixItems" Columns="@GetFilteredColumns().ToList()" />
+        <RoleMatrixTable Items="@matrixItems" Columns="@columns" />
     }
 }
 
 @code {
     private List<MatrixItem>? matrixItems;
     private List<MatrixColumn> columns = new();
-    private List<Tactic> tactics = new();
     private List<RoleDefinition> allRoles = new();
-    private string? selectedTacticId;
     private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -68,11 +56,7 @@ else if (matrixItems != null)
             } 
             catch { }
 
-            try
-            {
-                tactics = await TacticService.GetAllAsync();
-            }
-            catch { }
+
 
             var roster = await Repository.LoadAsync();
             
@@ -149,25 +133,5 @@ else if (matrixItems != null)
         }
     }
 
-    private IEnumerable<MatrixColumn> GetFilteredColumns()
-    {
-        if (string.IsNullOrEmpty(selectedTacticId))
-        {
-            return columns;
-        }
 
-        var tactic = tactics.FirstOrDefault(t => t.Id == selectedTacticId);
-        if (tactic == null) return columns;
-
-        var allowedRoleIds = (tactic.InPossessionRoleIds ?? new List<string>())
-            .Concat(tactic.OutPossessionRoleIds ?? new List<string>());
-        
-        // Map IDs to Names
-        var allowedRoleNames = allRoles
-            .Where(r => allowedRoleIds.Contains(r.Id))
-            .Select(r => r.Name)
-            .ToHashSet();
-
-        return columns.Where(c => allowedRoleNames.Contains(c.Name));
-    }
 }

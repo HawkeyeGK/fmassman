@@ -185,5 +185,174 @@ namespace fmassman.Tests
             // Restore defaults
             RoleFitCalculator.SetCache(GetTestRoles());
         }
+
+        [Fact]
+        public void Calculate_GoalkeeperAttributeLookups_ReturnsCorrectValues()
+        {
+            // Arrange: Create a role that uses GK-specific attributes
+            var gkRoles = new List<RoleDefinition>
+            {
+                new RoleDefinition 
+                { 
+                    Name = "Sweeper Keeper", 
+                    Phase = "InPossession", 
+                    Category = "Goalkeeper", 
+                    Weights = new Dictionary<string, double> 
+                    { 
+                        { "Reflexes", 1.0 }, 
+                        { "Handling", 1.0 }, 
+                        { "CommandOfArea", 1.0 },
+                        { "OneOnOnes", 1.0 },
+                        { "Kicking", 1.0 }
+                    } 
+                }
+            };
+            RoleFitCalculator.SetCache(gkRoles);
+
+            var gkPlayer = new PlayerSnapshot
+            {
+                Goalkeeping = new GoalkeepingAttributes 
+                { 
+                    Reflexes = 20, 
+                    Handling = 20, 
+                    CommandOfArea = 20, 
+                    OneOnOnes = 20, 
+                    Kicking = 20 
+                }
+            };
+
+            // Act
+            var results = RoleFitCalculator.Calculate(gkPlayer, "InPossession");
+
+            // Assert: All GK attributes at max should yield 100%
+            Assert.Single(results);
+            Assert.Equal("Sweeper Keeper", results.First().RoleName);
+            Assert.Equal(100.0, results.First().Score);
+
+            // Restore
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
+
+        [Fact]
+        public void Calculate_SharedAttributes_UseGoalkeeperValuesWhenAvailable()
+        {
+            // Arrange: FirstTouch and Passing should prefer GK values when Goalkeeping is not null
+            var gkRoles = new List<RoleDefinition>
+            {
+                new RoleDefinition 
+                { 
+                    Name = "Ball Playing GK", 
+                    Phase = "InPossession", 
+                    Category = "Goalkeeper", 
+                    Weights = new Dictionary<string, double> 
+                    { 
+                        { "FirstTouch", 1.0 }, 
+                        { "Passing", 1.0 } 
+                    } 
+                }
+            };
+            RoleFitCalculator.SetCache(gkRoles);
+
+            var gkPlayer = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes { FirstTouch = 5, Passing = 5 }, // Low values
+                Goalkeeping = new GoalkeepingAttributes { FirstTouch = 20, Passing = 20 } // High values (should be used)
+            };
+
+            // Act
+            var results = RoleFitCalculator.Calculate(gkPlayer, "InPossession");
+
+            // Assert: Should use GK values (20), not Technical values (5)
+            Assert.Single(results);
+            Assert.Equal(100.0, results.First().Score); // 40/40 = 100%
+
+            // Restore
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
+
+        [Fact]
+        public void Calculate_SharedAttributes_UseTechnicalValuesWhenNotGoalkeeper()
+        {
+            // Arrange: Field player should use Technical attributes for FirstTouch/Passing
+            var fieldRoles = new List<RoleDefinition>
+            {
+                new RoleDefinition 
+                { 
+                    Name = "Playmaker", 
+                    Phase = "InPossession", 
+                    Category = "Midfield", 
+                    Weights = new Dictionary<string, double> 
+                    { 
+                        { "FirstTouch", 1.0 }, 
+                        { "Passing", 1.0 } 
+                    } 
+                }
+            };
+            RoleFitCalculator.SetCache(fieldRoles);
+
+            var fieldPlayer = new PlayerSnapshot
+            {
+                Technical = new TechnicalAttributes { FirstTouch = 10, Passing = 10 },
+                Goalkeeping = null // Not a goalkeeper
+            };
+
+            // Act
+            var results = RoleFitCalculator.Calculate(fieldPlayer, "InPossession");
+
+            // Assert: Uses Technical values (10 each = 50%)
+            Assert.Single(results);
+            Assert.Equal(50.0, results.First().Score);
+
+            // Restore
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
+
+        [Fact]
+        public void Calculate_GoalkeeperWithOnlyGkAttributes_HandlesNullTechnical()
+        {
+            // Arrange: A GK player might not have Technical/Mental/Physical populated
+            var gkRoles = new List<RoleDefinition>
+            {
+                new RoleDefinition 
+                { 
+                    Name = "Traditional GK", 
+                    Phase = "OutPossession", 
+                    Category = "Goalkeeper", 
+                    Weights = new Dictionary<string, double> 
+                    { 
+                        { "Reflexes", 2.0 }, 
+                        { "Handling", 2.0 },
+                        { "AerialReach", 1.0 },
+                        { "Communication", 1.0 }
+                    } 
+                }
+            };
+            RoleFitCalculator.SetCache(gkRoles);
+
+            var gkPlayer = new PlayerSnapshot
+            {
+                Technical = null,
+                Mental = null,
+                Physical = null,
+                Goalkeeping = new GoalkeepingAttributes 
+                { 
+                    Reflexes = 15, 
+                    Handling = 15, 
+                    AerialReach = 15, 
+                    Communication = 15 
+                }
+            };
+
+            // Act
+            var results = RoleFitCalculator.Calculate(gkPlayer, "OutPossession");
+
+            // Assert: Should not crash, and should calculate correctly
+            // (15*2 + 15*2 + 15*1 + 15*1) / (20*2 + 20*2 + 20*1 + 20*1) = 90/120 = 75%
+            Assert.Single(results);
+            Assert.Equal(75.0, results.First().Score);
+
+            // Restore
+            RoleFitCalculator.SetCache(GetTestRoles());
+        }
     }
 }

@@ -1,4 +1,6 @@
 using fmassman.Shared;
+using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace fmassman.Tests
@@ -194,6 +196,88 @@ namespace fmassman.Tests
             Assert.Equal(0.0, result.DirectAttack);
             Assert.Equal(0.0, result.PossessionAttack);
             Assert.Equal(0.0, result.Gegenpress);
+        }
+
+        [Fact]
+        public void Analyze_GoalkeeperSnapshot_HandlesNullFieldAttributes()
+        {
+            // Arrange: A goalkeeper might only have Goalkeeping attributes populated
+            var gkPlayer = new PlayerSnapshot
+            {
+                Technical = null,
+                Mental = null,
+                Physical = null,
+                SetPieces = null,
+                Goalkeeping = new GoalkeepingAttributes
+                {
+                    Reflexes = 18,
+                    Handling = 17,
+                    CommandOfArea = 16,
+                    Communication = 15,
+                    AerialReach = 14,
+                    Kicking = 13,
+                    OneOnOnes = 12,
+                    Throwing = 11,
+                    Punching = 10,
+                    RushingOut = 9,
+                    Eccentricity = 8,
+                    FirstTouch = 7,
+                    Passing = 6
+                }
+            };
+
+            // Act - Should not throw
+            var result = PlayerAnalyzer.Analyze(gkPlayer);
+
+            // Assert - Field player metrics should be 0 (no crash)
+            Assert.NotNull(result);
+            Assert.Equal(0.0, result.Speed);
+            Assert.Equal(0.0, result.DNA);
+            Assert.Equal(0.0, result.AggressiveDefense);
+            Assert.Equal(0.0, result.CautiousDefense);
+            Assert.Equal(0.0, result.DirectAttack);
+            Assert.Equal(0.0, result.PossessionAttack);
+            Assert.Equal(0.0, result.Gegenpress);
+        }
+
+        [Fact]
+        public void Analyze_GoalkeeperSnapshot_ReturnsRoleFitResults()
+        {
+            // Arrange: Setup GK roles in the calculator
+            var gkRoles = new List<RoleDefinition>
+            {
+                new RoleDefinition 
+                { 
+                    Name = "Sweeper Keeper", 
+                    Phase = "InPossession", 
+                    Category = "Goalkeeper", 
+                    Weights = new Dictionary<string, double> { { "Reflexes", 1.0 } } 
+                },
+                new RoleDefinition 
+                { 
+                    Name = "Traditional GK", 
+                    Phase = "OutPossession", 
+                    Category = "Goalkeeper", 
+                    Weights = new Dictionary<string, double> { { "Handling", 1.0 } } 
+                }
+            };
+            RoleFitCalculator.SetCache(gkRoles);
+
+            var gkPlayer = new PlayerSnapshot
+            {
+                Goalkeeping = new GoalkeepingAttributes { Reflexes = 20, Handling = 20 }
+            };
+
+            // Act
+            var result = PlayerAnalyzer.Analyze(gkPlayer);
+
+            // Assert: Should have role fit results for goalkeeper
+            Assert.NotNull(result.InPossessionFits);
+            Assert.NotNull(result.OutPossessionFits);
+            Assert.Single(result.InPossessionFits);
+            Assert.Single(result.OutPossessionFits);
+            Assert.Equal("Sweeper Keeper", result.InPossessionFits.First().RoleName);
+            Assert.Equal("Traditional GK", result.OutPossessionFits.First().RoleName);
         }
     }
 }

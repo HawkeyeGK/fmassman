@@ -85,7 +85,7 @@ else
 
             await Task.WhenAll(tagsTask, playersTask);
 
-            tags = tagsTask.Result.OrderBy(t => t.Name).ToList();
+            tags = tagsTask.Result.OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name).ToList();
             allPlayers = playersTask.Result.OrderBy(p => p.PlayerName).ToList();
 
             // Ensure TagIds is not null

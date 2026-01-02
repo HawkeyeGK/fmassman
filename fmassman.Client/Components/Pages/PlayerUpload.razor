@@ -111,7 +111,7 @@
         try
         {
             _tags = await TagRepository.GetAllAsync();
-            _tags = _tags.OrderBy(t => t.Name).ToList();
+            _tags = _tags.OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name).ToList();
 
             var defaultTag = _tags.FirstOrDefault(t => t.IsDefault);
             if (defaultTag != null)

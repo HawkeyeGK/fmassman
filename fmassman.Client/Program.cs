@@ -23,6 +23,7 @@ builder.Services.AddScoped<ApiRosterService>();
 builder.Services.AddScoped<IRosterRepository>(sp => sp.GetRequiredService<ApiRosterService>());
 builder.Services.AddScoped<IRoleService, ApiRoleService>();
 builder.Services.AddScoped<ITacticService, ApiTacticService>();
+builder.Services.AddScoped<ITagRepository, ApiTagService>();
 
 builder.Services.AddTransient<RoleEditorViewModel>();
 builder.Services.AddTransient<PlayerDetailsViewModel>();

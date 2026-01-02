@@ -65,6 +65,7 @@ var host = new HostBuilder()
         // Register Repositories/Services
         services.AddSingleton<IRosterRepository, CosmosRosterRepository>();
         services.AddScoped<fmassman.Shared.ITacticRepository, fmassman.Api.Repositories.CosmosTacticRepository>();
+        services.AddScoped<ITagRepository, fmassman.Api.Repositories.CosmosTagRepository>();
 
         services.AddSingleton<IRoleService>(sp =>
         {

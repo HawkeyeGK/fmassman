@@ -202,7 +202,8 @@ else
             Name = tag.Name,
             IsRostered = tag.IsRostered,
             IsDefault = tag.IsDefault,
-            IsArchived = tag.IsArchived
+            IsArchived = tag.IsArchived,
+            DisplayOrder = tag.DisplayOrder
         };
 
     }
@@ -289,9 +290,20 @@ else
         errorMessage = null; successMessage = null;
         try 
         {
-            var tempOrder = tag1.DisplayOrder;
-            tag1.DisplayOrder = tag2.DisplayOrder;
-            tag2.DisplayOrder = tempOrder;
+            // Handle case where both tags have the same DisplayOrder (e.g., legacy data with 0)
+            if (tag1.DisplayOrder == tag2.DisplayOrder)
+            {
+                // Assign based on current list position to create distinct values
+                tag1.DisplayOrder = tags.IndexOf(tag2);
+                tag2.DisplayOrder = tags.IndexOf(tag1);
+            }
+            else
+            {
+                // Normal swap of DisplayOrder values
+                var tempOrder = tag1.DisplayOrder;
+                tag1.DisplayOrder = tag2.DisplayOrder;
+                tag2.DisplayOrder = tempOrder;
+            }
             
             await TagRepository.SaveAsync(tag1);
             await TagRepository.SaveAsync(tag2);

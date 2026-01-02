@@ -38,7 +38,7 @@ else if (matrixItems != null)
     else
     {
         <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
-        <RoleMatrixTable Items="@FilteredMatrixItems" Columns="@columns" RowClass="@GetRowClass" />
+        <RoleMatrixTable Items="@FilteredMatrixItems" Columns="@columns" NameClass="@GetNameClass" />
     }
 }
 
@@ -178,12 +178,12 @@ else if (matrixItems != null)
         // Re-render
     }
 
-    private string GetRowClass(MatrixItem item)
+    private string GetNameClass(MatrixItem item)
     {
         var playerTags = _allTags.Where(t => item.TagIds.Contains(t.Id)).ToList();
-        if (playerTags.Any(t => t.IsArchived)) return "table-danger";
-        if (!playerTags.Any(t => t.IsRostered)) return "table-info";
-        return "";
+        if (playerTags.Any(t => t.IsArchived)) return "text-danger";
+        if (!playerTags.Any(t => t.IsRostered)) return "text-info";
+        return "text-white";
     }
 
 

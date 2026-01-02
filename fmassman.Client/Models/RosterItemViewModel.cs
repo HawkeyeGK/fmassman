@@ -6,6 +6,7 @@ namespace fmassman.Client.Models
         public string SortName { get; set; } = string.Empty;
         public int Age { get; set; }
         public DateTime? GameDate { get; set; }
+        public List<string> TagIds { get; set; } = new(); // NEW
         
         public string Personality { get; set; } = string.Empty;
         public string PlayingTime { get; set; } = string.Empty;
@@ -56,6 +57,7 @@ namespace fmassman.Client.Models
                 SortName = sortName,
                 Age = player.Snapshot.Age,
                 GameDate = ParseSmartDate(player.Snapshot.GameDate),
+                TagIds = player.TagIds != null ? new List<string>(player.TagIds) : new List<string>(), // Map TagIds
                 Personality = player.Snapshot.Personality ?? "",
                 PlayingTime = player.Snapshot.PlayingTime ?? "",
                 TransferValueLow = player.Snapshot.TransferValueLow,

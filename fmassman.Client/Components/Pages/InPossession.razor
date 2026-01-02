@@ -4,10 +4,12 @@
 @using fmassman.Client.Models
 @using fmassman.Client.Helpers
 @using fmassman.Client.Components.Shared
+@using fmassman.Client.Components.Controls
 @using fmassman.Client.Services
 @inject IRosterRepository Repository
 @inject IRoleService RoleService
 @inject ITacticService TacticService
+@inject ITagRepository TagRepository
 
 <PageTitle>In Possession Analysis</PageTitle>
 
@@ -38,7 +40,8 @@
 }
 else if (matrixItems != null)
 {
-    <RoleMatrixTable Items="@matrixItems" Columns="@GetFilteredColumns().ToList()" />
+    <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
+    <RoleMatrixTable Items="@FilteredMatrixItems" Columns="@GetFilteredColumns().ToList()" RowClass="@GetRowClass" />
 }
 
 @code {
@@ -48,24 +51,39 @@ else if (matrixItems != null)
     private List<RoleDefinition> allRoles = new();
     private string? selectedTacticId;
     private string errorMessage = string.Empty;
+    
+    // Tags
+    private List<TagDefinition> _allTags = new();
+    private List<string> _selectedTagIds = new();
+
+    private List<MatrixItem> FilteredMatrixItems
+    {
+        get
+        {
+            if (matrixItems == null) return new();
+            if (_selectedTagIds == null || !_selectedTagIds.Any()) return new();
+
+            return matrixItems
+                .Where(i => i.TagIds.Intersect(_selectedTagIds).Any())
+                .ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         try 
         {
             // Load roles first so calculator has data
-            try 
-            { 
-                allRoles = await RoleService.LoadLocalRolesAsync(); 
-            } 
-            catch { }
-
-            try
-            {
-                tactics = await TacticService.GetAllAsync();
-            }
-            catch { }
+            try { allRoles = await RoleService.LoadLocalRolesAsync(); } catch { }
+            try { tactics = await TacticService.GetAllAsync(); } catch { }
             
+            // Load Tags
+            _allTags = await TagRepository.GetAllAsync();
+            _allTags = _allTags.OrderBy(t => t.Name).ToList();
+
+            // Set Defaults
+            SetDefaultTags();
+
             var roster = await Repository.LoadAsync();
             if (roster.Count == 0) 
             {
@@ -84,7 +102,7 @@ else if (matrixItems != null)
             // Filter out goalkeepers as per original logic
             var analyzedPlayers = roster
                 .Where(p => p.Snapshot != null && p.Snapshot.Goalkeeping == null)
-                .Select(p => new { Name = p.PlayerName, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
+                .Select(p => new { Name = p.PlayerName, TagIds = p.TagIds, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
                 .ToList();
 
             if (analyzedPlayers.Count == 0) 
@@ -118,6 +136,7 @@ else if (matrixItems != null)
                 items.Add(new MatrixItem
                 {
                     Name = item.Name,
+                    TagIds = item.TagIds != null ? new List<string>(item.TagIds) : new(),
                     Scores = scoreMap
                 });
             }
@@ -129,6 +148,28 @@ else if (matrixItems != null)
         {
             errorMessage = $"Error loading analysis: {ex.Message}";
         }
+    }
+
+    private void SetDefaultTags()
+    {
+        var defaults = _allTags.Where(t => t.IsDefault).Select(t => t.Id).ToList();
+        if (defaults.Any())
+        {
+            _selectedTagIds = defaults;
+        }
+        else
+        {
+            _selectedTagIds = _allTags.Where(t => t.IsRostered).Select(t => t.Id).ToList();
+            if (!_selectedTagIds.Any()) 
+            {
+                _selectedTagIds = _allTags.Select(t => t.Id).ToList();
+            }
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        // Re-render
     }
 
     private IEnumerable<MatrixColumn> GetFilteredColumns()
@@ -150,5 +191,13 @@ else if (matrixItems != null)
             .ToHashSet();
 
         return columns.Where(c => allowedRoleNames.Contains(c.Name));
+    }
+
+    private string GetRowClass(MatrixItem item)
+    {
+        var playerTags = _allTags.Where(t => item.TagIds.Contains(t.Id)).ToList();
+        if (playerTags.Any(t => t.IsArchived)) return "table-danger";
+        if (!playerTags.Any(t => t.IsRostered)) return "table-info";
+        return "";
     }
 }

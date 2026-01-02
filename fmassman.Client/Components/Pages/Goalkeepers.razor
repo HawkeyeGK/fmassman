@@ -4,9 +4,11 @@
 @using fmassman.Client.Models
 @using fmassman.Client.Helpers
 @using fmassman.Client.Components.Shared
+@using fmassman.Client.Components.Controls
 @using fmassman.Client.Services
 @inject IRosterRepository Repository
 @inject IRoleService RoleService
+@inject ITagRepository TagRepository
 
 
 <PageTitle>Goalkeeper Analysis</PageTitle>
@@ -35,7 +37,8 @@ else if (matrixItems != null)
     }
     else
     {
-        <RoleMatrixTable Items="@matrixItems" Columns="@columns" />
+        <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
+        <RoleMatrixTable Items="@FilteredMatrixItems" Columns="@columns" RowClass="@GetRowClass" />
     }
 }
 
@@ -45,17 +48,36 @@ else if (matrixItems != null)
     private List<RoleDefinition> allRoles = new();
     private string errorMessage = string.Empty;
 
+    // Tags
+    private List<TagDefinition> _allTags = new();
+    private List<string> _selectedTagIds = new();
+
+    private List<MatrixItem> FilteredMatrixItems
+    {
+        get
+        {
+            if (matrixItems == null) return new();
+            if (_selectedTagIds == null || !_selectedTagIds.Any()) return new();
+
+            return matrixItems
+                .Where(i => i.TagIds.Intersect(_selectedTagIds).Any())
+                .ToList();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
             // Load roles so calculator works
-            try 
-            { 
-                allRoles = await RoleService.LoadLocalRolesAsync(); 
-            } 
-            catch { }
+            try { allRoles = await RoleService.LoadLocalRolesAsync(); } catch { }
+            
+            // Load Tags
+            _allTags = await TagRepository.GetAllAsync();
+            _allTags = _allTags.OrderBy(t => t.Name).ToList();
 
+            // Set Defaults
+            SetDefaultTags();
 
 
             var roster = await Repository.LoadAsync();
@@ -72,11 +94,11 @@ else if (matrixItems != null)
 
             // Analyze all players
             // We use a temporary structure to hold analysis to avoid re-running it for column gen
-            var analyzedPlayers = new List<(string Name, PlayerAnalysis Analysis)>();
+            var analyzedPlayers = new List<(string Name, List<string> TagIds, PlayerAnalysis Analysis)>();
             
             foreach (var p in goalkeepers)
             {
-                analyzedPlayers.Add((p.PlayerName, PlayerAnalyzer.Analyze(p.Snapshot!)));
+                analyzedPlayers.Add((p.PlayerName, p.TagIds, PlayerAnalyzer.Analyze(p.Snapshot!)));
             }
             
             // Generate Columns from the first player
@@ -121,6 +143,7 @@ else if (matrixItems != null)
                 matrixItems.Add(new MatrixItem
                 {
                     Name = item.Name,
+                    TagIds = item.TagIds != null ? new List<string>(item.TagIds) : new(),
                     Scores = scores
                 });
             }
@@ -131,6 +154,36 @@ else if (matrixItems != null)
         {
             errorMessage = $"Error loading data: {ex.Message}";
         }
+    }
+
+    private void SetDefaultTags()
+    {
+        var defaults = _allTags.Where(t => t.IsDefault).Select(t => t.Id).ToList();
+        if (defaults.Any())
+        {
+            _selectedTagIds = defaults;
+        }
+        else
+        {
+            _selectedTagIds = _allTags.Where(t => t.IsRostered).Select(t => t.Id).ToList();
+            if (!_selectedTagIds.Any()) 
+            {
+                _selectedTagIds = _allTags.Select(t => t.Id).ToList();
+            }
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        // Re-render
+    }
+
+    private string GetRowClass(MatrixItem item)
+    {
+        var playerTags = _allTags.Where(t => item.TagIds.Contains(t.Id)).ToList();
+        if (playerTags.Any(t => t.IsArchived)) return "table-danger";
+        if (!playerTags.Any(t => t.IsRostered)) return "table-info";
+        return "";
     }
 
 

@@ -2,7 +2,9 @@
 
 @using fmassman.Shared
 @using fmassman.Client.Models
+@using fmassman.Client.Components.Controls
 @inject IRosterRepository Repository
+@inject ITagRepository TagRepository
 @inject IRoleService RoleService
 
 <PageTitle>Player Roster</PageTitle>
@@ -23,8 +25,10 @@
 }
 else if (rosterItems != null)
 {
+    <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
+
     <div class="grid-scroll-container">
-        <QuickGrid Items="@rosterItems.AsQueryable()" Class="table table-striped table-hover table-sm" Pagination="@pagination">
+        <QuickGrid Items="@FilteredRosterItems" Class="table table-striped table-hover table-sm" Pagination="@pagination" RowClass="@GetRowClass">
             <TemplateColumn Title="Name" SortBy="@nameSort">
                 <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.Name">
                     <a href="/player/@context.Name" class="text-decoration-none text-info fw-bold">@context.Name</a>
@@ -70,6 +74,9 @@ else if (rosterItems != null)
 
 @code {
     private List<RosterItemViewModel>? rosterItems;
+    private List<TagDefinition> _allTags = new();
+    private List<string> _selectedTagIds = new();
+    
     private PaginationState pagination = new PaginationState { ItemsPerPage = 50 };
     private string errorMessage = string.Empty;
 
@@ -87,18 +94,52 @@ else if (rosterItems != null)
     private static readonly GridSort<RosterItemViewModel> contractSort = 
         GridSort<RosterItemViewModel>.ByAscending(p => RosterItemViewModel.ParseSmartDate(p.ContractExpiry) ?? DateTime.MaxValue);
 
+    private IQueryable<RosterItemViewModel> FilteredRosterItems
+    {
+        get
+        {
+            if (rosterItems == null) return Enumerable.Empty<RosterItemViewModel>().AsQueryable();
+            
+            // Filter logic: Show player if they have at least one of the selected tags
+            // OR if no tags selected, show nothing? Requirement said fallback to defaults. 
+            // If user unchecks ALL, list might be empty.
+            if (_selectedTagIds == null || !_selectedTagIds.Any())
+            {
+                return Enumerable.Empty<RosterItemViewModel>().AsQueryable();
+            }
+
+            return rosterItems
+                .Where(p => p.TagIds.Intersect(_selectedTagIds).Any())
+                .AsQueryable();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Try to load roles first (non-critical - page can work without it)
-            try
+            // Load Roles (optional)
+            try { await RoleService.LoadLocalRolesAsync(); } catch { }
+
+            // Load Tags
+            _allTags = await TagRepository.GetAllAsync();
+            _allTags = _allTags.OrderBy(t => t.Name).ToList();
+
+            // Set Defaults
+            var defaults = _allTags.Where(t => t.IsDefault).Select(t => t.Id).ToList();
+            if (defaults.Any())
             {
-                await RoleService.LoadLocalRolesAsync();
+                _selectedTagIds = defaults;
             }
-            catch
+            else
             {
-                // Silently ignore role loading failures - calculations will use defaults
+                // Fallback: Select all Rostered tags
+                _selectedTagIds = _allTags.Where(t => t.IsRostered).Select(t => t.Id).ToList();
+                // If still empty (no rostered tags), maybe select all? 
+                if (!_selectedTagIds.Any()) 
+                {
+                    _selectedTagIds = _allTags.Select(t => t.Id).ToList();
+                }
             }
             
             var players = await Repository.LoadAsync();
@@ -108,5 +149,32 @@ else if (rosterItems != null)
         {
             errorMessage = $"Error loading roster: {ex.Message}";
         }
+    }
+
+    private void ApplyFilter()
+    {
+        // Re-render QuickGrid
+        pagination.SetCurrentPageIndexAsync(0); // Reset pagination
+    }
+
+    private string GetRowClass(RosterItemViewModel p)
+    {
+        // Resolve tags
+        // Optimization: _allTags is small, but looking up every row might be slight overhead. 
+        // But logic requires checking IsArchived/IsRostered on the TAG definitions, not just IDs.
+        
+        var playerTags = _allTags.Where(t => p.TagIds.Contains(t.Id)).ToList();
+
+        // Priority 1: Archived - if player has ANY archived tag
+        if (playerTags.Any(t => t.IsArchived)) return "table-danger";
+
+        // Priority 2: Scouted - if player has NO rostered tags
+        // Assumption: A player is "Rostered" if they have at least one tag where IsRostered == true.
+        // If they have tags but NONE are rostered tags -> Scouted.
+        // If they have NO tags -> Scouted?
+        if (!playerTags.Any(t => t.IsRostered)) return "table-info";
+
+        // Priority 3: Standard
+        return "";
     }
 }

@@ -38,10 +38,7 @@ else
                     <tr>
                         <td>
                             @player.PlayerName
-                            @if (!string.IsNullOrEmpty(player.Position))
-                            {
-                                <small class="text-muted d-block">@player.Position</small>
-                            }
+
                         </td>
                         @foreach (var tag in tags)
                         {

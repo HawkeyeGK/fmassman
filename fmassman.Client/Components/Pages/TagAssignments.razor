@@ -1,0 +1,155 @@
+@page "/tag-assignments"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using fmassman.Shared
+@using fmassman.Client.Components.Controls
+@inject IRosterRepository RosterService
+@inject ITagRepository TagRepository
+
+<h3>Tag Assignments</h3>
+
+<div class="mb-3">
+    <TagFilter AllTags="tags" @bind-SelectedTagIds="filterTagIds" />
+</div>
+
+@if (allPlayers == null || tags == null)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    @foreach (var tag in tags)
+                    {
+                        <th>@tag.Name</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var player in FilteredPlayers)
+                {
+                    <tr>
+                        <td>
+                            @player.PlayerName
+                            @if (!string.IsNullOrEmpty(player.Position))
+                            {
+                                <small class="text-muted d-block">@player.Position</small>
+                            }
+                        </td>
+                        @foreach (var tag in tags)
+                        {
+                            <td>
+                                <input type="checkbox" 
+                                       checked="@player.TagIds.Contains(tag.Id)" 
+                                       @onchange="@(e => ToggleTag(player, tag.Id, e.Value))" />
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3">@errorMessage</div>
+    }
+}
+
+@code {
+    private List<PlayerImportData> allPlayers;
+    private List<TagDefinition> tags;
+    private List<string> filterTagIds = new();
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var tagsTask = TagRepository.GetAllAsync();
+            var playersTask = RosterService.LoadAsync();
+
+            await Task.WhenAll(tagsTask, playersTask);
+
+            tags = tagsTask.Result.OrderBy(t => t.Name).ToList();
+            allPlayers = playersTask.Result;
+
+            // Ensure TagIds is not null
+            foreach (var p in allPlayers)
+            {
+                if (p.TagIds == null) p.TagIds = new List<string>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load data: {ex.Message}";
+        }
+    }
+
+    private IEnumerable<PlayerImportData> FilteredPlayers
+    {
+        get
+        {
+            if (allPlayers == null) return Enumerable.Empty<PlayerImportData>();
+
+            if (filterTagIds == null || !filterTagIds.Any())
+            {
+                return allPlayers;
+            }
+
+            return allPlayers.Where(p => p.TagIds.Any(tId => filterTagIds.Contains(tId)));
+        }
+    }
+
+    private async Task ToggleTag(PlayerImportData player, string tagId, object checkedValue)
+    {
+        bool isChecked = (bool)checkedValue;
+        bool changed = false;
+
+        // Optimistic update
+        if (isChecked)
+        {
+            if (!player.TagIds.Contains(tagId))
+            {
+                player.TagIds.Add(tagId);
+                changed = true;
+            }
+        }
+        else
+        {
+            if (player.TagIds.Contains(tagId))
+            {
+                player.TagIds.Remove(tagId);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            try
+            {
+                errorMessage = null; // Clear previous errors
+                await RosterService.UpdatePlayerTagsAsync(player.PlayerName, player.TagIds);
+            }
+            catch (Exception ex)
+            {
+                // Revert on failure
+                if (isChecked)
+                    player.TagIds.Remove(tagId);
+                else
+                    player.TagIds.Add(tagId);
+
+                errorMessage = $"Failed to update tag for {player.PlayerName}: {ex.Message}";
+                // Force UI update to show reverted state if it doesn't happen automatically
+                StateHasChanged(); 
+            }
+        }
+    }
+}

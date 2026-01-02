@@ -113,6 +113,28 @@ else
                                 }
                                 else
                                 {
+                                    <div class="btn-group me-2">
+                                        @if (tags.IndexOf(tag) > 0)
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveTagUp(tag)" disabled="@(editingTag != null)" title="Move Up">
+                                                <i class="bi bi-arrow-up"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary disabled" style="visibility:hidden"><i class="bi bi-arrow-up"></i></button>
+                                        }
+                                        @if (tags.IndexOf(tag) < tags.Count - 1)
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveTagDown(tag)" disabled="@(editingTag != null)" title="Move Down">
+                                                <i class="bi bi-arrow-down"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary disabled" style="visibility:hidden"><i class="bi bi-arrow-down"></i></button>
+                                        }
+                                    </div>
                                     <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditTag(tag)" disabled="@(editingTag != null)">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
@@ -151,7 +173,7 @@ else
         try 
         {
             tags = await TagRepository.GetAllAsync();
-            tags = tags.OrderBy(t => t.Name).ToList();
+            tags = tags.OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name).ToList();
         } 
         catch (Exception ex)
         {
@@ -162,9 +184,10 @@ else
     private void CreateTag()
     {
         errorMessage = null; successMessage = null;
-        editingTag = new TagDefinition { Name = "New Tag" };
+        int nextOrder = tags.Any() ? tags.Max(t => t.DisplayOrder) + 1 : 0;
+        editingTag = new TagDefinition { Name = "New Tag", DisplayOrder = nextOrder };
         isNewTag = true;
-        tags.Insert(0, editingTag);
+        tags.Add(editingTag); // Add to end since it has highest order
 
     }
 
@@ -240,6 +263,44 @@ else
             {
                 errorMessage = ex.Message;
             }
+        }
+    }
+
+    private async Task MoveTagUp(TagDefinition tag)
+    {
+        var paramsIndex = tags.IndexOf(tag);
+        if (paramsIndex <= 0) return;
+
+        var otherTag = tags[paramsIndex - 1];
+        await SwapTags(tag, otherTag);
+    }
+
+    private async Task MoveTagDown(TagDefinition tag)
+    {
+         var paramsIndex = tags.IndexOf(tag);
+        if (paramsIndex < 0 || paramsIndex >= tags.Count - 1) return;
+
+        var otherTag = tags[paramsIndex + 1];
+        await SwapTags(tag, otherTag);       
+    }
+
+    private async Task SwapTags(TagDefinition tag1, TagDefinition tag2)
+    {
+        errorMessage = null; successMessage = null;
+        try 
+        {
+            var tempOrder = tag1.DisplayOrder;
+            tag1.DisplayOrder = tag2.DisplayOrder;
+            tag2.DisplayOrder = tempOrder;
+            
+            await TagRepository.SaveAsync(tag1);
+            await TagRepository.SaveAsync(tag2);
+
+            await LoadTags();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to reorder tags: {ex.Message}";
         }
     }
 

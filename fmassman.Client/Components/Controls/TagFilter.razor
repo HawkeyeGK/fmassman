@@ -25,7 +25,7 @@
 <div class="d-flex flex-wrap gap-2 mb-3">
     @if (AllTags != null)
     {
-        @foreach (var tag in AllTags)
+        @foreach (var tag in AllTags.OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name))
         {
             var isSelected = SelectedTagIds.Contains(tag.Id);
             <button type="button" 

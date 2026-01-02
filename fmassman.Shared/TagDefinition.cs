@@ -11,5 +11,6 @@ namespace fmassman.Shared
         public bool IsRostered { get; set; } = true;
         public bool IsDefault { get; set; }
         public bool IsArchived { get; set; }
+        public int DisplayOrder { get; set; }
     }
 }

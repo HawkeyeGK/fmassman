@@ -38,7 +38,7 @@ else if (matrixItems != null)
     else
     {
         <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
-        <RoleMatrixTable Items="@FilteredMatrixItems" Columns="@columns" NameClass="@GetNameClass" />
+        <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@columns" NameClass="@GetNameClass" />
     }
 }
 
@@ -51,19 +51,7 @@ else if (matrixItems != null)
     // Tags
     private List<TagDefinition> _allTags = new();
     private List<string> _selectedTagIds = new();
-
-    private List<MatrixItem> FilteredMatrixItems
-    {
-        get
-        {
-            if (matrixItems == null) return new();
-            if (_selectedTagIds == null || !_selectedTagIds.Any()) return new();
-
-            return matrixItems
-                .Where(i => i.TagIds.Intersect(_selectedTagIds).Any())
-                .ToList();
-        }
-    }
+    private List<MatrixItem> _filteredMatrixItems = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,6 +77,7 @@ else if (matrixItems != null)
             if (goalkeepers.Count == 0)
             {
                 matrixItems = new List<MatrixItem>();
+                UpdateFilteredItems();
                 return;
             }
 
@@ -149,6 +138,7 @@ else if (matrixItems != null)
             }
 
             // Initial sort handled by component (default Player ASC)
+            UpdateFilteredItems();
         }
         catch (Exception ex)
         {
@@ -173,9 +163,29 @@ else if (matrixItems != null)
         }
     }
 
+    private void UpdateFilteredItems()
+    {
+        if (matrixItems == null)
+        {
+            _filteredMatrixItems = new();
+            return;
+        }
+
+        if (_selectedTagIds == null || !_selectedTagIds.Any())
+        {
+            _filteredMatrixItems = new();
+            return;
+        }
+
+        _filteredMatrixItems = matrixItems
+            .Where(i => i.TagIds.Intersect(_selectedTagIds).Any())
+            .ToList();
+    }
+
     private void ApplyFilter()
     {
-        // Force re-render to update FilteredMatrixItems
+        // Update the filtered list and force re-render
+        UpdateFilteredItems();
         StateHasChanged();
     }
 

@@ -1,5 +1,6 @@
 @page "/upload"
 @inject fmassman.Client.Services.ApiRosterService RosterService
+@inject ITagRepository TagRepository
 @using System.Net.Http.Headers
 @using fmassman.Shared
 
@@ -9,6 +10,16 @@
 
 <div class="row">
     <div class="col-md-6">
+        <div class="mb-3">
+             <label class="form-label">Assign to Tag:</label>
+             <select class="form-select" @bind="_selectedTagId">
+                 @foreach (var tag in _tags)
+                 {
+                     <option value="@tag.Id">@tag.Name</option>
+                 }
+             </select>
+        </div>
+
         <div class="mb-3">
             <label for="formFile" class="form-label">Select Player Image/Screenshot (.png, .jpg, .jpeg)</label>
             <InputFile OnChange="@LoadFiles" multiple accept=".png,.jpg,.jpeg" class="form-control" id="formFile" />
@@ -90,6 +101,33 @@
     private bool _isGoalkeeper = false;
     private long maxFileSize = 1024 * 1024 * 10; // 10MB
     private int maxAllowedFiles = 50;
+    
+    // Tag Integration
+    private List<TagDefinition> _tags = new();
+    private string _selectedTagId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _tags = await TagRepository.GetAllAsync();
+            _tags = _tags.OrderBy(t => t.Name).ToList();
+
+            var defaultTag = _tags.FirstOrDefault(t => t.IsDefault);
+            if (defaultTag != null)
+            {
+                _selectedTagId = defaultTag.Id;
+            }
+            else if (_tags.Any())
+            {
+                _selectedTagId = _tags.First().Id;
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error silently or log? Tags are auxiliary, so maybe just don't crash
+        }
+    }
 
     private async Task LoadFiles(InputFileChangeEventArgs e)
     {
@@ -113,9 +151,26 @@
 
                 var result = await RosterService.UploadPlayerImage(fileContent, _isGoalkeeper);
 
-                item.Status = UploadStatus.Success;
-                item.ResultPlayerName = result?.PlayerName;
-                item.Message = "Uploaded successfully.";
+                if (result != null)
+                {
+                    // Assign Tag if selected
+                    if (!string.IsNullOrEmpty(_selectedTagId))
+                    {
+                        if (result.TagIds == null) result.TagIds = new List<string>();
+                        
+                        // User request: "Action: if (!player.TagIds.Contains(_selectedTagId)) { player.TagIds.Add(_selectedTagId); }"
+                        if (!result.TagIds.Contains(_selectedTagId))
+                        {
+                            result.TagIds.Add(_selectedTagId);
+                            // We must save again to persist the tag
+                            await RosterService.UpsertAsync(result);
+                        }
+                    }
+
+                    item.Status = UploadStatus.Success;
+                    item.ResultPlayerName = result.PlayerName;
+                    item.Message = "Uploaded successfully.";
+                }
             }
             catch (Exception ex)
             {

@@ -2,6 +2,7 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using fmassman.Shared
 @using fmassman.Client.Components.Controls
+@using Microsoft.AspNetCore.Components.QuickGrid
 @inject IRosterRepository RosterService
 @inject ITagRepository TagRepository
 
@@ -21,38 +22,26 @@
 }
 else
 {
-    <div class="table-responsive">
-        <table class="table table-striped table-hover table-sm">
-            <thead>
-                <tr>
-                    <th>Player</th>
-                    @foreach (var tag in tags)
-                    {
-                        <th>@tag.Name</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var player in FilteredPlayers)
-                {
-                    <tr>
-                        <td>
-                            @player.PlayerName
-
-                        </td>
-                        @foreach (var tag in tags)
-                        {
-                            <td>
-                                <input type="checkbox" 
-                                       checked="@player.TagIds.Contains(tag.Id)" 
-                                       @onchange="@(e => ToggleTag(player, tag.Id, e.Value))" />
-                            </td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
+    <div class="grid-scroll-container">
+        <QuickGrid Items="@FilteredPlayers" Class="table table-striped table-hover table-sm" Pagination="@pagination">
+            <TemplateColumn Title="Player" SortBy="@nameSort" Class="align-middle">
+                <div>
+                    @context.PlayerName
+                </div>
+            </TemplateColumn>
+            
+            @foreach (var tag in tags)
+            {
+                var currentTag = tag; // Capture variable for closure
+                <TemplateColumn Title="@currentTag.Name" Class="align-middle text-center">
+                    <input type="checkbox" 
+                           checked="@context.TagIds.Contains(currentTag.Id)" 
+                           @onchange="@(e => ToggleTag(context, currentTag.Id, e.Value))" />
+                </TemplateColumn>
+            }
+        </QuickGrid>
     </div>
+    <Paginator State="@pagination" />
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -65,6 +54,11 @@ else
     private List<TagDefinition> tags;
     private List<string> filterTagIds = new();
     private string errorMessage;
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 20 };
+
+    // Sort rule for Player Name
+    private static readonly GridSort<PlayerImportData> nameSort = 
+        GridSort<PlayerImportData>.ByAscending(p => p.PlayerName);
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,7 +70,7 @@ else
             await Task.WhenAll(tagsTask, playersTask);
 
             tags = tagsTask.Result.OrderBy(t => t.Name).ToList();
-            allPlayers = playersTask.Result;
+            allPlayers = playersTask.Result.OrderBy(p => p.PlayerName).ToList();
 
             // Ensure TagIds is not null
             foreach (var p in allPlayers)
@@ -90,18 +84,20 @@ else
         }
     }
 
-    private IEnumerable<PlayerImportData> FilteredPlayers
+    private IQueryable<PlayerImportData> FilteredPlayers
     {
         get
         {
-            if (allPlayers == null) return Enumerable.Empty<PlayerImportData>();
+            if (allPlayers == null) return Enumerable.Empty<PlayerImportData>().AsQueryable();
 
-            if (filterTagIds == null || !filterTagIds.Any())
+            var query = allPlayers.AsQueryable();
+
+            if (filterTagIds != null && filterTagIds.Any())
             {
-                return allPlayers;
+                 query = query.Where(p => p.TagIds.Any(tId => filterTagIds.Contains(tId)));
             }
 
-            return allPlayers.Where(p => p.TagIds.Any(tId => filterTagIds.Contains(tId)));
+            return query;
         }
     }
 

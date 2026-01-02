@@ -1,9 +1,21 @@
 @using fmassman.Shared
 
 <style>
-    /* Suppress default Bootstrap focus ring to prevent "last clicked" glow */
-    .btn-check:focus + .btn, .btn:focus {
+    /* 1. Suppress default Bootstrap focus ring globally for these buttons */
+    .tag-filter-btn:focus {
         box-shadow: none !important;
+    }
+
+    /* 2. Define custom permanent glows for SELECTED items */
+    /* Use !important to override the focus suppression above */
+    .glow-primary {
+        box-shadow: 0 0 8px rgba(13, 110, 253, 0.6) !important;
+    }
+    .glow-danger {
+        box-shadow: 0 0 8px rgba(220, 53, 69, 0.6) !important;
+    }
+    .glow-info {
+        box-shadow: 0 0 8px rgba(13, 202, 240, 0.6) !important;
     }
 </style>
 
@@ -14,7 +26,7 @@
         {
             var isSelected = SelectedTagIds.Contains(tag.Id);
             <button type="button" 
-                    class="btn btn-sm rounded-pill @GetButtonClass(tag, isSelected)" 
+                    class="btn btn-sm rounded-pill tag-filter-btn @GetButtonClass(tag, isSelected)" 
                     @onclick="() => ToggleTag(tag.Id)">
                 @tag.Name
                 @if (isSelected)
@@ -63,15 +75,13 @@
 
         if (isSelected)
         {
-            // Selected: Solid color, Bold, Shadow (Glow)
-            // Note: btn-info usually has black text, we might want to force white if it matches the others, 
-            // but let's stick to default bootstrap contrast for now.
-            return $"btn-{colorType} fw-bold shadow border-{colorType}";
+            // Selected: Solid color, Bold, Custom Glow
+            return $"btn-{colorType} fw-bold glow-{colorType} border-{colorType}";
         }
         else
         {
-            // Unselected: Outline color, Muted opacity
-            // This ensures color coding is visible before selection
+            // Unselected: Outline color
+            // Focus ring suppressed via .tag-filter-btn:focus css
             return $"btn-outline-{colorType}";
         }
     }

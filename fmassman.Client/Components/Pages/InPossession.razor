@@ -160,21 +160,46 @@ else if (matrixItems != null)
 
     private void UpdateFilteredItems()
     {
+        Console.WriteLine("=== UpdateFilteredItems (InPossession) ===");
+        
         if (matrixItems == null)
         {
+            Console.WriteLine("matrixItems is null");
             _filteredMatrixItems = new();
             return;
         }
+
+        Console.WriteLine($"Total matrixItems: {matrixItems.Count}");
 
         if (_selectedTagIds == null || !_selectedTagIds.Any())
         {
+            Console.WriteLine("No tags selected - showing empty list");
             _filteredMatrixItems = new();
             return;
         }
 
-        _filteredMatrixItems = matrixItems
-            .Where(i => i.TagIds.Intersect(_selectedTagIds).Any())
-            .ToList();
+        Console.WriteLine($"Selected Tag IDs for filtering: {string.Join(", ", _selectedTagIds.Select(id => $"'{id}'"))}");
+
+        var filtered = new List<MatrixItem>();
+        foreach (var item in matrixItems)
+        {
+            var playerTagIds = item.TagIds ?? new List<string>();
+            var matches = playerTagIds.Intersect(_selectedTagIds).ToList();
+            
+            if (matches.Any())
+            {
+                filtered.Add(item);
+                Console.WriteLine($"MATCH: '{item.Name}' has tags [{string.Join(", ", playerTagIds.Select(id => $"'{id}'"))}] - matched on [{string.Join(", ", matches.Select(id => $"'{id}'"))}]");
+            }
+            else
+            {
+                Console.WriteLine($"NO MATCH: '{item.Name}' has tags [{string.Join(", ", playerTagIds.Select(id => $"'{id}'"))}]");
+            }
+        }
+
+        _filteredMatrixItems = filtered;
+        Console.WriteLine($"Filtered result count: {_filteredMatrixItems.Count}");
+        Console.WriteLine("==========================================");
     }
 
     private void ApplyFilter()

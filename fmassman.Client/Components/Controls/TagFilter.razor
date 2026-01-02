@@ -54,6 +54,27 @@
     [Parameter]
     public EventCallback OnChange { get; set; }
 
+    protected override void OnParametersSet()
+    {
+        // Debug logging to diagnose tag mismatch issues
+        if (AllTags != null && AllTags.Any())
+        {
+            Console.WriteLine("=== TagFilter Debug Info ===");
+            Console.WriteLine($"Total Tags: {AllTags.Count}");
+            foreach (var tag in AllTags)
+            {
+                var isSelected = SelectedTagIds?.Contains(tag.Id) ?? false;
+                Console.WriteLine($"Tag: '{tag.Name}' | ID: '{tag.Id}' | Selected: {isSelected} | IsRostered: {tag.IsRostered}");
+            }
+            Console.WriteLine($"Total Selected IDs: {SelectedTagIds?.Count ?? 0}");
+            if (SelectedTagIds != null && SelectedTagIds.Any())
+            {
+                Console.WriteLine($"Selected Tag IDs: {string.Join(", ", SelectedTagIds.Select(id => $"'{id}'"))}");
+            }
+            Console.WriteLine("===========================");
+        }
+    }
+
     private async Task ToggleTag(string tagId)
     {
         // Create a new list instance to ensure Blazor detects the change
@@ -63,11 +84,15 @@
         if (newSelection.Contains(tagId))
         {
             newSelection.Remove(tagId);
+            Console.WriteLine($"Removed tag ID: '{tagId}' from selection");
         }
         else
         {
             newSelection.Add(tagId);
+            Console.WriteLine($"Added tag ID: '{tagId}' to selection");
         }
+
+        Console.WriteLine($"New selection count: {newSelection.Count}");
 
         await SelectedTagIdsChanged.InvokeAsync(newSelection);
         await OnChange.InvokeAsync();

@@ -130,7 +130,7 @@ else
 
     @if (editingTag != null && editingTag.Id != null && !isNewTag)
     {
-        <div class="card shadow-sm border-info">
+        <div class="card shadow-sm border-info" @onkeydown="@(e => { if (e.ShiftKey) shiftPressed = true; })" @onkeyup="@(e => { shiftPressed = false; })" tabindex="0">
             <div class="card-header bg-info-subtle">
                 <h5 class="mb-0">Member Management: @editingTag.Name</h5>
             </div>
@@ -146,10 +146,16 @@ else
                         </div>
                         <input type="text" class="form-control mb-2" placeholder="Search players..." @bind="playerSearch" @bind:event="oninput" />
                         <div class="list-group overflow-auto" style="max-height: 300px;">
-                            @foreach (var player in FilteredAvailablePlayers)
+                            @{
+                                // Materialize for index access
+                                var visibleAvailable = FilteredAvailablePlayers.ToList();
+                            }
+                            @for (int i = 0; i < visibleAvailable.Count; i++)
                             {
+                                var player = visibleAvailable[i];
+                                var index = i; // capture index
                                 <button type="button" class="list-group-item list-group-item-action @(selectedAvailable.Contains(player) ? "active" : "")" 
-                                        @onclick="() => ToggleSelection(selectedAvailable, player)">
+                                        @onclick="@(e => HandleSelection(e, visibleAvailable, selectedAvailable, index, ref lastAvailableIndex))">
                                     @player.PlayerName
                                     @if(player.TagIds != null && player.TagIds.Any())
                                     {
@@ -173,10 +179,16 @@ else
                         <h6 class="mb-2">Current Members</h6>
                         <div class="alert alert-secondary py-1 px-2 mb-2"><small>@CurrentMembers.Count members</small></div>
                          <div class="list-group overflow-auto" style="max-height: 300px;">
-                            @foreach (var player in CurrentMembers)
+                            @{
+                                // Materialize just in case, though logic is simpler here
+                                var visibleCurrent = CurrentMembers;
+                            }
+                            @for (int i = 0; i < visibleCurrent.Count; i++)
                             {
+                                var player = visibleCurrent[i];
+                                var index = i;
                                 <button type="button" class="list-group-item list-group-item-action @(selectedCurrent.Contains(player) ? "active" : "")" 
-                                        @onclick="() => ToggleSelection(selectedCurrent, player)">
+                                        @onclick="@(e => HandleSelection(e, visibleCurrent, selectedCurrent, index, ref lastCurrentIndex))">
                                     @player.PlayerName
                                 </button>
                             }
@@ -197,6 +209,7 @@ else
     private string errorMessage;
     private string successMessage;
     private bool isNewTag = false;
+    private bool shiftPressed = false; // tracked via events but MouseEventArgs is safer
 
     // Member Management
     private List<PlayerImportData> allPlayers;
@@ -208,6 +221,10 @@ else
     private List<PlayerImportData> selectedAvailable = new();
     private List<PlayerImportData> selectedCurrent = new();
     private bool membersDirty = false;
+    
+    // Selection State
+    private int? lastAvailableIndex = null;
+    private int? lastCurrentIndex = null;
 
     private IEnumerable<PlayerImportData> FilteredAvailablePlayers
     {
@@ -290,6 +307,8 @@ else
     {
         selectedAvailable.Clear();
         selectedCurrent.Clear();
+        lastAvailableIndex = null;
+        lastCurrentIndex = null;
         membersDirty = false;
         playerSearch = "";
     }
@@ -333,9 +352,6 @@ else
             if (!confirmed) return;
         }
 
-        // If explicitly reverting member changes in UI memory:
-        // We'd need to re-load roster from server to be purely safe, 
-        // but since we modify the objects in 'allPlayers' directly in the UI, we should probably reload correct state.
         if(membersDirty)
         {
              allPlayers = await RosterRepository.LoadAsync();
@@ -344,7 +360,7 @@ else
 
         editingTag = null;
         errorMessage = null;
-        await LoadTags(); // Revert any temp changes in list
+        await LoadTags(); 
     }
 
     private async Task DeleteTag(TagDefinition tag)
@@ -375,12 +391,47 @@ else
     }
 
     // Member Management Logic
-    private void ToggleSelection(List<PlayerImportData> selectionList, PlayerImportData player)
+    
+    // Updated to handle modifiers
+    private void HandleSelection(MouseEventArgs e, List<PlayerImportData> visibleItems, List<PlayerImportData> selectedItems, int clickedIndex, ref int? lastIndexRef)
     {
-        if (selectionList.Contains(player))
-            selectionList.Remove(player);
+        var item = visibleItems[clickedIndex];
+
+        if (e.ShiftKey && lastIndexRef.HasValue)
+        {
+            // Range Select
+            int start = Math.Min(lastIndexRef.Value, clickedIndex);
+            int end = Math.Max(lastIndexRef.Value, clickedIndex);
+
+            // Select all in range
+            for (int i = start; i <= end; i++)
+            {
+                var rangeItem = visibleItems[i];
+                if (!selectedItems.Contains(rangeItem))
+                {
+                    selectedItems.Add(rangeItem);
+                }
+            }
+        }
+        else if (e.CtrlKey || e.MetaKey)
+        {
+            // Toggle (Add/Remove)
+            if (selectedItems.Contains(item))
+                selectedItems.Remove(item);
+            else
+                selectedItems.Add(item);
+            
+            lastIndexRef = clickedIndex;
+        }
         else
-            selectionList.Add(player);
+        {
+            // Simple Click: Select only this one (standard default)
+            // Or toggle if we want looser UX? User asked for shift/ctrl so let's allow standard behavior.
+            // Standard behavior: Clear others, select this one.
+            selectedItems.Clear();
+            selectedItems.Add(item);
+            lastIndexRef = clickedIndex;
+        }
     }
 
     private void AddSelectedMembers()
@@ -395,6 +446,7 @@ else
             }
         }
         selectedAvailable.Clear();
+        lastAvailableIndex = null;
     }
 
     private void RemoveSelectedMembers()
@@ -409,16 +461,13 @@ else
             }
         }
         selectedCurrent.Clear();
+        lastCurrentIndex = null;
     }
 
     private async Task SaveMembers()
     {
         try
         {
-            // Ideally we only save modified players, but RosterRepository.SaveAsync takes the whole list typically or replaces the container content?
-            // Checking existing implementation of RosterRepository (previous context implied SaveAsync(List<PlayerImportData>)).
-            // Assuming it accepts the full list to overwrite.
-            
             await RosterRepository.SaveAsync(allPlayers);
             membersDirty = false;
             successMessage = "Member changes saved successfully.";

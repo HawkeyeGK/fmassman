@@ -25,8 +25,8 @@ else
     <div class="grid-scroll-container">
         <QuickGrid Items="@FilteredPlayers" Class="table table-striped table-hover table-sm" Pagination="@pagination">
             <TemplateColumn Title="Player" SortBy="@nameSort" Class="align-middle">
-                <div>
-                    @context.PlayerName
+                <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.PlayerName">
+                    <a href="/player/@context.PlayerName" class="text-decoration-none fw-bold text-white">@context.PlayerName</a>
                 </div>
             </TemplateColumn>
             

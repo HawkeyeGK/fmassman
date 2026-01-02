@@ -58,13 +58,22 @@ else
 
     // Sort rule for Player Name
     private static readonly GridSort<PlayerImportData> nameSort = 
-        GridSort<PlayerImportData>.ByAscending(p => p.PlayerName);
+        GridSort<PlayerImportData>.ByAscending(p => GetSortName(p));
 
     private GridSort<PlayerImportData> GetTagSort(string tagId)
     {
         return GridSort<PlayerImportData>
             .ByDescending(p => p.TagIds.Contains(tagId))
-            .ThenAscending(p => p.PlayerName);
+            .ThenAscending(p => GetSortName(p));
+    }
+
+    private static string GetSortName(PlayerImportData player)
+    {
+        var rawName = player.PlayerName.Trim();
+        var lastSpaceIndex = rawName.LastIndexOf(' ');
+        return (lastSpaceIndex > 0)
+            ? $"{rawName.Substring(lastSpaceIndex + 1)}, {rawName.Substring(0, lastSpaceIndex)}"
+            : rawName;
     }
 
     protected override async Task OnInitializedAsync()

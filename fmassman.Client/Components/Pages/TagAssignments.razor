@@ -33,7 +33,7 @@ else
             @foreach (var tag in tags)
             {
                 var currentTag = tag; // Capture variable for closure
-                <TemplateColumn Title="@currentTag.Name" Class="align-middle text-center">
+                <TemplateColumn Title="@currentTag.Name" SortBy="@GetTagSort(currentTag.Id)" Class="align-middle text-center">
                     <input type="checkbox" 
                            checked="@context.TagIds.Contains(currentTag.Id)" 
                            @onchange="@(e => ToggleTag(context, currentTag.Id, e.Value))" />
@@ -59,6 +59,13 @@ else
     // Sort rule for Player Name
     private static readonly GridSort<PlayerImportData> nameSort = 
         GridSort<PlayerImportData>.ByAscending(p => p.PlayerName);
+
+    private GridSort<PlayerImportData> GetTagSort(string tagId)
+    {
+        return GridSort<PlayerImportData>
+            .ByDescending(p => p.TagIds.Contains(tagId))
+            .ThenAscending(p => p.PlayerName);
+    }
 
     protected override async Task OnInitializedAsync()
     {

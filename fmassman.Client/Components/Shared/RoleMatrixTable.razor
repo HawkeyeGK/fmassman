@@ -29,9 +29,9 @@
         <tbody>
             @foreach (var player in sortedItems)
             {
-                <tr class="@GetRowClass(player)">
+                <tr>
                     <td class="sticky-col" style="background-color: #2c3034; font-weight: bold;">
-                        <a href="/player/@player.Name" class="text-decoration-none text-info">@player.Name</a>
+                        <a href="/player/@player.Name" class="text-decoration-none @GetNameClass(player)">@player.Name</a>
                     </td>
                     @foreach (var col in Columns)
                     {
@@ -48,7 +48,8 @@
 @code {
     [Parameter] public List<MatrixItem> Items { get; set; } = new();
     [Parameter] public List<MatrixColumn> Columns { get; set; } = new();
-    [Parameter] public Func<MatrixItem, string>? RowClass { get; set; }
+    // Removed RowClass, added NameClass
+    [Parameter] public Func<MatrixItem, string>? NameClass { get; set; }
 
     private List<MatrixItem> sortedItems = new();
     private HeatmapColorScale? colorScale;
@@ -139,8 +140,9 @@
         return colorScale.GetColorStyle(value).Replace(";", " !important;");
     }
 
-    private string GetRowClass(MatrixItem item)
+    private string GetNameClass(MatrixItem item)
     {
-        return RowClass?.Invoke(item) ?? "";
+        // Default to white if no class provided or resolved
+        return NameClass?.Invoke(item) ?? "text-white";
     }
 }

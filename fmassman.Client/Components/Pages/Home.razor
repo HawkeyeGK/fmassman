@@ -28,10 +28,10 @@ else if (rosterItems != null)
     <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
 
     <div class="grid-scroll-container">
-        <QuickGrid Items="@FilteredRosterItems" Class="table table-striped table-hover table-sm" Pagination="@pagination" RowClass="@GetRowClass">
+        <QuickGrid Items="@FilteredRosterItems" Class="table table-striped table-hover table-sm" Pagination="@pagination">
             <TemplateColumn Title="Name" SortBy="@nameSort">
                 <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.Name">
-                    <a href="/player/@context.Name" class="text-decoration-none text-info fw-bold">@context.Name</a>
+                    <a href="/player/@context.Name" class="text-decoration-none fw-bold @GetNameClass(context)">@context.Name</a>
                 </div>
             </TemplateColumn>
             <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
@@ -157,24 +157,18 @@ else if (rosterItems != null)
         pagination.SetCurrentPageIndexAsync(0); // Reset pagination
     }
 
-    private string GetRowClass(RosterItemViewModel p)
+    private string GetNameClass(RosterItemViewModel p)
     {
         // Resolve tags
-        // Optimization: _allTags is small, but looking up every row might be slight overhead. 
-        // But logic requires checking IsArchived/IsRostered on the TAG definitions, not just IDs.
-        
         var playerTags = _allTags.Where(t => p.TagIds.Contains(t.Id)).ToList();
 
         // Priority 1: Archived - if player has ANY archived tag
-        if (playerTags.Any(t => t.IsArchived)) return "table-danger";
+        if (playerTags.Any(t => t.IsArchived)) return "text-danger";
 
         // Priority 2: Scouted - if player has NO rostered tags
-        // Assumption: A player is "Rostered" if they have at least one tag where IsRostered == true.
-        // If they have tags but NONE are rostered tags -> Scouted.
-        // If they have NO tags -> Scouted?
-        if (!playerTags.Any(t => t.IsRostered)) return "table-info";
+        if (!playerTags.Any(t => t.IsRostered)) return "text-info";
 
-        // Priority 3: Standard
-        return "";
+        // Priority 3: Standard (Rostered), return white in dark mode
+        return "text-white";
     }
 }

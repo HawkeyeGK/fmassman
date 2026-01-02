@@ -63,6 +63,17 @@ namespace fmassman.Client.Services
             var errorBody = await response.Content.ReadAsStringAsync();
             throw new HttpRequestException($"Upload failed ({response.StatusCode}): {errorBody}");
         }
+
+        public async Task UpdatePlayerTagsAsync(string playerName, List<string> tagIds)
+        {
+            var response = await _http.PatchAsJsonAsync($"api/roster/{Uri.EscapeDataString(playerName)}/tags", tagIds, _jsonOptions);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                 var errorBody = await response.Content.ReadAsStringAsync();
+                 throw new HttpRequestException($"Update tags failed ({response.StatusCode}): {errorBody}");
+            }
+        }
     }
 }
 

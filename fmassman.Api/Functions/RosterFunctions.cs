@@ -81,5 +81,46 @@ namespace fmassman.Api.Functions
             await _repository.DeleteAsync(playerName);
             return new OkResult();
         }
+        [Function("UpdatePlayerTags")]
+        public async Task<IActionResult> UpdatePlayerTags(
+            [HttpTrigger(AuthorizationLevel.Function, "patch", Route = "roster/{playerName}/tags")] HttpRequest req,
+            string playerName)
+        {
+            _logger.LogInformation("Processing UpdatePlayerTags request for '{PlayerName}'.", playerName);
+            
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                return new BadRequestObjectResult("Player name is required");
+            }
+
+            if (req.ContentLength == 0)
+            {
+                 return new BadRequestObjectResult("Invalid payload - no tags provided");
+            }
+
+            List<string>? tagIds;
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                 tagIds = await System.Text.Json.JsonSerializer.DeserializeAsync<List<string>>(req.Body, options);
+            }
+             catch (System.Text.Json.JsonException ex)
+            {
+                _logger.LogError(ex, "UpdatePlayerTags: Failed to deserialize request body");
+                return new BadRequestObjectResult($"Invalid JSON: {ex.Message}");
+            }
+
+            if (tagIds == null)
+            {
+                 return new BadRequestObjectResult("Invalid payload - tagIds cannot be null");
+            }
+
+            await _repository.UpdatePlayerTagsAsync(playerName, tagIds);
+            
+            return new OkResult();
+        }
     }
 }

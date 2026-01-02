@@ -68,5 +68,19 @@ namespace fmassman.Shared
         {
             await _container.UpsertItemAsync(player, new PartitionKey(player.PlayerName));
         }
+
+        public async Task UpdatePlayerTagsAsync(string playerName, List<string> tagIds)
+        {
+            var patchOperations = new List<PatchOperation>
+            {
+                PatchOperation.Replace("/TagIds", tagIds)
+            };
+
+            await _container.PatchItemAsync<PlayerImportData>(
+                id: playerName,
+                partitionKey: new PartitionKey(playerName),
+                patchOperations: patchOperations
+            );
+        }
     }
 }

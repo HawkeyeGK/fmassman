@@ -169,7 +169,8 @@ else if (matrixItems != null)
 
     private void ApplyFilter()
     {
-        // Re-render
+        // Force re-render to update FilteredMatrixItems
+        StateHasChanged();
     }
 
     private IEnumerable<MatrixColumn> GetFilteredColumns()

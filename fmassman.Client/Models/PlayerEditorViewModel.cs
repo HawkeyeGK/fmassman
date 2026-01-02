@@ -13,6 +13,10 @@ public class PlayerEditorViewModel
     public PlayerImportData? Player { get; private set; }
     public bool IsLoading { get; private set; }
 
+    // TagIds will be bound directly to Player.TagIds in the UI, 
+    // but we might want exposing AvailableTags here if we move logic to VM.
+    // For now, simple pass-through property isn't strictly needed if we bind to Player.TagIds directly.
+
     public PlayerEditorViewModel(
         IRosterRepository rosterRepository,
         NavigationManager navigationManager,
@@ -51,6 +55,10 @@ public class PlayerEditorViewModel
 
                 if (Player.Snapshot.Goalkeeping == null)
                     Player.Snapshot.Goalkeeping = new GoalkeepingAttributes();
+                
+                // Ensure TagIds list exists
+                if (Player.TagIds == null)
+                    Player.TagIds = new List<string>();
             }
         }
         finally

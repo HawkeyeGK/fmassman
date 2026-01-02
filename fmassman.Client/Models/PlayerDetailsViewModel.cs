@@ -12,11 +12,13 @@ namespace fmassman.Client.Models
     {
         private readonly IRosterRepository _rosterRepository;
         private readonly IRoleService _roleService;
+        private readonly ITagRepository _tagRepository;
         private readonly NavigationManager _navigationManager;
 
         public PlayerImportData? Player { get; private set; }
         public PlayerAnalysis? Analysis { get; private set; }
         public RosterItemViewModel? HeaderData { get; private set; }
+        public List<TagDefinition> AssignedTags { get; private set; } = new();
         public bool IsLoading { get; private set; }
 
         public bool IsGoalkeeper => Player?.Snapshot?.Goalkeeping != null;
@@ -29,10 +31,15 @@ namespace fmassman.Client.Models
             .OrderByDescending(r => r.Score)
             .FirstOrDefault();
 
-        public PlayerDetailsViewModel(IRosterRepository rosterRepository, IRoleService roleService, NavigationManager navigationManager)
+        public PlayerDetailsViewModel(
+            IRosterRepository rosterRepository, 
+            IRoleService roleService, 
+            ITagRepository tagRepository,
+            NavigationManager navigationManager)
         {
             _rosterRepository = rosterRepository;
             _roleService = roleService;
+            _tagRepository = tagRepository;
             _navigationManager = navigationManager;
         }
 
@@ -100,11 +107,25 @@ namespace fmassman.Client.Models
                     return;
                 }
 
-                var allPlayers = await _rosterRepository.LoadAsync();
+                // Parallel fetch of Roster and Tags for efficiency
+                var rosterTask = _rosterRepository.LoadAsync();
+                var tagsTask = _tagRepository.GetAllAsync();
+
+                await Task.WhenAll(rosterTask, tagsTask);
+
+                var allPlayers = rosterTask.Result;
+                var allTags = tagsTask.Result;
+
                 Player = allPlayers.FirstOrDefault(p => p.PlayerName.Equals(name, System.StringComparison.OrdinalIgnoreCase));
 
                 if (Player != null)
                 {
+                    // Map Tag IDs to objects
+                    AssignedTags = allTags
+                        .Where(t => Player.TagIds != null && Player.TagIds.Contains(t.Id))
+                        .OrderBy(t => t.Name)
+                        .ToList();
+
                     if (Player.Snapshot != null)
                     {
                         // Ensure roles are loaded before calculating fits

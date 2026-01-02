@@ -1,8 +1,9 @@
 @page "/player/{Name}/edit"
 @using fmassman.Client.Models
 @using fmassman.Client.Components.Controls
+@using fmassman.Shared
 @inject PlayerEditorViewModel VM
-
+@inject ITagRepository TagRepository
 
 @if (VM.IsLoading || VM.Player == null)
 {
@@ -33,6 +34,9 @@ else
                     <ul class="nav nav-tabs mb-3">
                         <li class="nav-item">
                             <a class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0" style="cursor: pointer">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 6 ? "active" : "")" @onclick="() => _activeTab = 6" style="cursor: pointer">Tags</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1" style="cursor: pointer">Technical</a>
@@ -90,6 +94,52 @@ else
                                         <label class="form-label">Transfer Value High</label>
                                         <InputNumber @bind-Value="VM.Player.Snapshot!.TransferValueHigh" class="form-control" />
                                     </div>
+                                </div>
+                            </div>
+                        }
+
+                        @if (_activeTab == 6)
+                        {
+                            <div class="alert alert-secondary mb-3">
+                                <small>Manage player tags. Use tags to group players (e.g., First Team, Scouted, Shortlist).</small>
+                            </div>
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    @if (_availableTags == null)
+                                    {
+                                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading tags...</div>
+                                    }
+                                    else if (!_availableTags.Any())
+                                    {
+                                        <p class="text-muted">No tags defined. <a href="/tags">Create some tags first.</a></p>
+                                    }
+                                    else
+                                    {
+                                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                                            @foreach (var tag in _availableTags)
+                                            {
+                                                <div class="col">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               checked="@IsTagSelected(tag.Id)" 
+                                                               @onchange="@(e => ToggleTag(tag.Id, e))" 
+                                                               id="tag_@tag.Id" />
+                                                        <label class="form-check-label d-flex align-items-center" for="tag_@tag.Id">
+                                                            @tag.Name
+                                                            @if (tag.IsArchived)
+                                                            {
+                                                                <span class="badge bg-danger ms-2" style="font-size:0.6rem">Archived</span>
+                                                            }
+                                                            @if (!tag.IsRostered)
+                                                            {
+                                                                <span class="badge bg-info ms-2" style="font-size:0.6rem">Scouted</span>
+                                                            }
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         }
@@ -208,6 +258,7 @@ else
     private int _activeTab = 0;
     private bool _isImagePanelVisible = false;
     private string? _signedImageUrl;
+    private List<TagDefinition>? _availableTags;
 
     private async Task ToggleImagePanel()
     {
@@ -224,7 +275,33 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Decode the name to ensure we find the player
-        await VM.LoadAsync(System.Net.WebUtility.UrlDecode(Name));
+        // Parallel load of player and tags
+        var playerTask = VM.LoadAsync(System.Net.WebUtility.UrlDecode(Name));
+        var tagsTask = TagRepository.GetAllAsync();
+
+        await Task.WhenAll(playerTask, tagsTask);
+        _availableTags = tagsTask.Result.OrderBy(t => t.Name).ToList();
+    }
+
+    private bool IsTagSelected(string tagId)
+    {
+        return VM.Player?.TagIds?.Contains(tagId) ?? false;
+    }
+
+    private void ToggleTag(string tagId, ChangeEventArgs e)
+    {
+        if (VM.Player == null) return;
+        if (VM.Player.TagIds == null) VM.Player.TagIds = new List<string>();
+
+        if (e.Value is bool isChecked && isChecked)
+        {
+            if (!VM.Player.TagIds.Contains(tagId))
+                VM.Player.TagIds.Add(tagId);
+        }
+        else
+        {
+            if (VM.Player.TagIds.Contains(tagId))
+                VM.Player.TagIds.Remove(tagId);
+        }
     }
 }

@@ -15,7 +15,7 @@
                 
                 @if (!confirmDelete)
                 {
-                    <button class="btn btn-sm btn-outline-danger" @onclick="() => confirmDelete = true">Delete</button>
+                    <button class="btn btn-sm btn-outline-danger text-light" @onclick="() => confirmDelete = true">Delete</button>
                 }
                 else
                 {
@@ -26,6 +26,17 @@
             </div>
         </div>
         <div class="card-body">
+            @if (VM.AssignedTags.Any())
+            {
+                <div class="mb-3">
+                    @foreach (var tag in VM.AssignedTags)
+                    {
+                        var badgeClass = tag.IsArchived ? "bg-danger" : (!tag.IsRostered ? "bg-info text-dark" : "bg-success");
+                        <span class="badge @badgeClass me-1">@tag.Name</span>
+                    }
+                </div>
+            }
+
             <div class="row">
                 <div class="col-md-3">
                     <h5 class="card-title text-info">Profile</h5>

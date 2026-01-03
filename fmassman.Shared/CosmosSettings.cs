@@ -7,5 +7,6 @@ namespace fmassman.Shared
         public string RoleContainer { get; set; } = "Roles";
         public string TacticsContainer { get; set; } = "tactics";
         public string TagContainer { get; set; } = "tags";
+        public string PositionContainer { get; set; } = "positions";
     }
 }

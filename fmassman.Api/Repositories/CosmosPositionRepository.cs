@@ -13,21 +13,32 @@ namespace fmassman.Api.Repositories
 {
     public class CosmosPositionRepository : IPositionRepository
     {
+        private Container? _container;
         private readonly CosmosClient _cosmosClient;
         private readonly CosmosSettings _settings;
-        private readonly Container _container;
+        private const string ContainerName = "positions";
 
         public CosmosPositionRepository(CosmosClient cosmosClient, IOptions<CosmosSettings> settings)
         {
             _cosmosClient = cosmosClient;
             _settings = settings.Value;
-            _container = _cosmosClient.GetContainer(_settings.DatabaseName, _settings.PositionContainer);
+        }
+
+        private async Task<Container> GetContainerAsync()
+        {
+            if (_container != null) return _container;
+
+            var database = _cosmosClient.GetDatabase(_settings.DatabaseName);
+            await database.CreateContainerIfNotExistsAsync(ContainerName, "/id");
+            _container = _cosmosClient.GetContainer(_settings.DatabaseName, ContainerName);
+            return _container;
         }
 
         public async Task<List<PositionDefinition>> GetAllAsync()
         {
+            var container = await GetContainerAsync();
             var query = new QueryDefinition("SELECT * FROM c");
-            var iterator = _container.GetItemQueryIterator<PositionDefinition>(query);
+            var iterator = container.GetItemQueryIterator<PositionDefinition>(query);
             var results = new List<PositionDefinition>();
 
             while (iterator.HasMoreResults)
@@ -41,9 +52,10 @@ namespace fmassman.Api.Repositories
 
         public async Task<PositionDefinition?> GetByIdAsync(string id)
         {
+            var container = await GetContainerAsync();
             try
             {
-                var response = await _container.ReadItemAsync<PositionDefinition>(id, new PartitionKey(id));
+                var response = await container.ReadItemAsync<PositionDefinition>(id, new PartitionKey(id));
                 return response.Resource;
             }
             catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -54,12 +66,14 @@ namespace fmassman.Api.Repositories
 
         public async Task UpsertAsync(PositionDefinition position)
         {
-            await _container.UpsertItemAsync(position, new PartitionKey(position.Id));
+            var container = await GetContainerAsync();
+            await container.UpsertItemAsync(position, new PartitionKey(position.Id));
         }
 
         public async Task DeleteAsync(string id)
         {
-            await _container.DeleteItemAsync<PositionDefinition>(id, new PartitionKey(id));
+            var container = await GetContainerAsync();
+            await container.DeleteItemAsync<PositionDefinition>(id, new PartitionKey(id));
         }
     }
 }

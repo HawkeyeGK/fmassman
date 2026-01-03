@@ -25,8 +25,16 @@ namespace fmassman.Api.Functions
         [Function("GetPositions")]
         public async Task<IActionResult> GetPositions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "positions")] HttpRequest req)
         {
-            var positions = await _repository.GetAllAsync();
-            return new OkObjectResult(positions);
+            try
+            {
+                var positions = await _repository.GetAllAsync();
+                return new OkObjectResult(positions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting positions");
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+            }
         }
 
         [Function("UpsertPosition")]

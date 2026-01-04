@@ -53,8 +53,9 @@ public class PlayerEditorViewModel
                 if (Player.Snapshot.SetPieces == null)
                     Player.Snapshot.SetPieces = new SetPieceAttributes();
 
-                if (Player.Snapshot.Goalkeeping == null)
-                    Player.Snapshot.Goalkeeping = new GoalkeepingAttributes();
+                // Note: Goalkeeping is intentionally NOT auto-initialized here.
+                // The Goalkeeping object should only exist if the player was imported as a goalkeeper.
+                // Auto-initializing it would incorrectly flag outfield players as goalkeepers.
                 
                 // Ensure TagIds list exists
                 if (Player.TagIds == null)

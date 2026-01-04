@@ -11,6 +11,8 @@ namespace fmassman.Shared
         public int HeightFeet { get; set; }
         public int HeightInches { get; set; }
         public List<string> TagIds { get; set; } = new List<string>();
+        [JsonProperty("positionIds")]
+        public List<string> PositionIds { get; set; } = new List<string>();
         public PlayerSnapshot? Snapshot { get; set; }
     }
 

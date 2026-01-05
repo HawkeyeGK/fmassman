@@ -6,6 +6,7 @@
 @using fmassman.Client.Services
 @inject PlayerEditorViewModel VM
 @inject ITagRepository TagRepository
+@inject IPositionService PositionService
 
 
 @if (VM.IsLoading || VM.Player == null)
@@ -36,31 +37,105 @@ else
                 <div class="@(_isImagePanelVisible ? "col-md-4" : "col-12")">
                     <ul class="nav nav-tabs mb-3">
                         <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0" style="cursor: pointer">Profile</a>
+                            <a class="nav-link @(_activeTab == 0 ? "active" : "")" @onclick="() => _activeTab = 0" style="cursor: pointer">Position & Tags</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 6 ? "active" : "")" @onclick="() => _activeTab = 6" style="cursor: pointer">Tags</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1" style="cursor: pointer">Technical</a>
+                            <a class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1" style="cursor: pointer">Profile</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 2 ? "active" : "")" @onclick="() => _activeTab = 2" style="cursor: pointer">Mental</a>
+                            <a class="nav-link @(_activeTab == 2 ? "active" : "")" @onclick="() => _activeTab = 2" style="cursor: pointer">Technical</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 3 ? "active" : "")" @onclick="() => _activeTab = 3" style="cursor: pointer">Physical</a>
+                            <a class="nav-link @(_activeTab == 3 ? "active" : "")" @onclick="() => _activeTab = 3" style="cursor: pointer">Mental</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 4 ? "active" : "")" @onclick="() => _activeTab = 4" style="cursor: pointer">Set Pieces</a>
+                            <a class="nav-link @(_activeTab == 4 ? "active" : "")" @onclick="() => _activeTab = 4" style="cursor: pointer">Physical</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 5 ? "active" : "")" @onclick="() => _activeTab = 5" style="cursor: pointer">Goalkeeping</a>
+                            <a class="nav-link @(_activeTab == 5 ? "active" : "")" @onclick="() => _activeTab = 5" style="cursor: pointer">Set Pieces</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(_activeTab == 6 ? "active" : "")" @onclick="() => _activeTab = 6" style="cursor: pointer">Goalkeeping</a>
                         </li>
                     </ul>
 
                     <div class="tab-content">
                         @if (_activeTab == 0)
+                        {
+                            <div class="alert alert-secondary mb-3">
+                                <small>Manage player position and tags (groups).</small>
+                            </div>
+                            
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Primary Position</h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (_availablePositions == null)
+                                    {
+                                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading positions...</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label">Position</label>
+                                            <InputSelect @bind-Value="VM.Player.PositionId" class="form-select">
+                                                <option value="">Select Position...</option>
+                                                @foreach (var pos in _availablePositions)
+                                                {
+                                                    <option value="@pos.Id">@pos.Name (@pos.Code)</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Tags</h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (_availableTags == null)
+                                    {
+                                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading tags...</div>
+                                    }
+                                    else if (!_availableTags.Any())
+                                    {
+                                        <p class="text-muted">No tags defined. <a href="/tags">Create some tags first.</a></p>
+                                    }
+                                    else
+                                    {
+                                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                                            @foreach (var tag in _availableTags)
+                                            {
+                                                <div class="col">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               checked="@IsTagSelected(tag.Id)" 
+                                                               @onchange="@(e => ToggleTag(tag.Id, e))" 
+                                                               id="tag_@tag.Id" />
+                                                        <label class="form-check-label d-flex align-items-center" for="tag_@tag.Id">
+                                                            @tag.Name
+                                                            @if (tag.IsArchived)
+                                                            {
+                                                                <span class="badge bg-danger ms-2" style="font-size:0.6rem">Archived</span>
+                                                            }
+                                                            @if (!tag.IsRostered)
+                                                            {
+                                                                <span class="badge bg-info ms-2" style="font-size:0.6rem">Scouted</span>
+                                                            }
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (_activeTab == 1)
                         {
                             <div class="row">
                                 <div class="col-md-6">
@@ -102,51 +177,7 @@ else
                             </div>
                         }
 
-                        @if (_activeTab == 6)
-                        {
-                            <div class="alert alert-secondary mb-3">
-                                <small>Manage player tags. Use tags to group players (e.g., First Team, Scouted, Shortlist).</small>
-                            </div>
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    @if (_availableTags == null)
-                                    {
-                                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading tags...</div>
-                                    }
-                                    else if (!_availableTags.Any())
-                                    {
-                                        <p class="text-muted">No tags defined. <a href="/tags">Create some tags first.</a></p>
-                                    }
-                                    else
-                                    {
-                                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                                            @foreach (var tag in _availableTags)
-                                            {
-                                                <div class="col">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" 
-                                                               checked="@IsTagSelected(tag.Id)" 
-                                                               @onchange="@(e => ToggleTag(tag.Id, e))" 
-                                                               id="tag_@tag.Id" />
-                                                        <label class="form-check-label d-flex align-items-center" for="tag_@tag.Id">
-                                                            @tag.Name
-                                                            @if (tag.IsArchived)
-                                                            {
-                                                                <span class="badge bg-danger ms-2" style="font-size:0.6rem">Archived</span>
-                                                            }
-                                                            @if (!tag.IsRostered)
-                                                            {
-                                                                <span class="badge bg-info ms-2" style="font-size:0.6rem">Scouted</span>
-                                                            }
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
+
 
 
                         
@@ -265,6 +296,7 @@ else
     private bool _isImagePanelVisible = false;
     private string? _signedImageUrl;
     private List<TagDefinition>? _availableTags;
+    private List<PositionDefinition>? _availablePositions;
 
 
     private async Task ToggleImagePanel()
@@ -285,9 +317,11 @@ else
         // Parallel load of player, tags, and positions
         var playerTask = VM.LoadAsync(System.Net.WebUtility.UrlDecode(Name));
         var tagsTask = TagRepository.GetAllAsync();
+        var positionsTask = PositionService.GetAllAsync();
 
-        await Task.WhenAll(playerTask, tagsTask);
+        await Task.WhenAll(playerTask, tagsTask, positionsTask);
         _availableTags = tagsTask.Result.OrderBy(t => t.Name).ToList();
+        _availablePositions = positionsTask.Result.OrderBy(p => p.Name).ToList();
     }
 
     private bool IsTagSelected(string tagId)

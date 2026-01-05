@@ -82,5 +82,19 @@ namespace fmassman.Shared
                 patchOperations: patchOperations
             );
         }
+
+        public async Task UpdatePlayerPositionAsync(string playerName, string? positionId)
+        {
+            var patchOperations = new List<PatchOperation>
+            {
+                PatchOperation.Replace("/positionId", positionId)
+            };
+
+            await _container.PatchItemAsync<PlayerImportData>(
+                id: playerName,
+                partitionKey: new PartitionKey(playerName),
+                patchOperations: patchOperations
+            );
+        }
     }
 }

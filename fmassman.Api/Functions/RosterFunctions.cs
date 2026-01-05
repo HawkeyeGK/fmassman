@@ -122,5 +122,45 @@ namespace fmassman.Api.Functions
             
             return new OkResult();
         }
+
+
+        [Function("UpdatePlayerPosition")]
+        public async Task<IActionResult> UpdatePlayerPosition(
+            [HttpTrigger(AuthorizationLevel.Function, "put", Route = "roster/{playerName}/position")] HttpRequest req,
+            string playerName)
+        {
+            _logger.LogInformation("Processing UpdatePlayerPosition request for '{PlayerName}'.", playerName);
+
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                return new BadRequestObjectResult("Player name is required");
+            }
+
+            string? positionId = null;
+            try
+            {
+                // Deserialize the body as a string (which handles "value" or null)
+                // If the body is empty, we treat it as null? Or should we enforce a body?
+                // Standard JSON for string: "value"
+                if (req.ContentLength > 0)
+                {
+                     var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    positionId = await System.Text.Json.JsonSerializer.DeserializeAsync<string>(req.Body, options);
+                }
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                 _logger.LogError(ex, "UpdatePlayerPosition: Failed to deserialize request body");
+                 return new BadRequestObjectResult($"Invalid JSON: {ex.Message}");
+            }
+
+            // Note: positionId can be null if we want to clear the position
+            await _repository.UpdatePlayerPositionAsync(playerName, positionId);
+
+            return new OkResult();
+        }
     }
 }

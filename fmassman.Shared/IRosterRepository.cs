@@ -9,5 +9,6 @@ namespace fmassman.Shared
         Task DeleteAsync(string playerName);
         Task UpsertAsync(PlayerImportData player);
         Task UpdatePlayerTagsAsync(string playerName, List<string> tagIds);
+        Task UpdatePlayerPositionAsync(string playerName, string? positionId);
     }
 }

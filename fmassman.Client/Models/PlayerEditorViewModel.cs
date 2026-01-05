@@ -61,9 +61,7 @@ public class PlayerEditorViewModel
                 if (Player.TagIds == null)
                     Player.TagIds = new List<string>();
 
-                // Ensure PositionIds list exists
-                if (Player.PositionIds == null)
-                    Player.PositionIds = new List<string>();
+
             }
         }
         finally

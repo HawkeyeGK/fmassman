@@ -74,6 +74,18 @@ namespace fmassman.Client.Services
                  throw new HttpRequestException($"Update tags failed ({response.StatusCode}): {errorBody}");
             }
         }
+
+
+        public async Task UpdatePlayerPositionAsync(string playerName, string? positionId)
+        {
+            var response = await _http.PutAsJsonAsync($"api/roster/{Uri.EscapeDataString(playerName)}/position", positionId, _jsonOptions);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                 var errorBody = await response.Content.ReadAsStringAsync();
+                 throw new HttpRequestException($"Update position failed ({response.StatusCode}): {errorBody}");
+            }
+        }
     }
 }
 

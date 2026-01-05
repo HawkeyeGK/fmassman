@@ -2,11 +2,14 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using fmassman.Shared
 @using fmassman.Client.Components.Controls
+@using fmassman.Shared.Models
+@using fmassman.Client.Services
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject IRosterRepository RosterService
 @inject ITagRepository TagRepository
+@inject IPositionService PositionService
 
-<h3>Player Tags</h3>
+<h3>Player Classifications</h3>
 
 <div class="mb-3">
     <TagFilter AllTags="tags" @bind-SelectedTagIds="filterTagIds" />
@@ -28,6 +31,19 @@ else
                 <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.PlayerName">
                     <a href="/player/@context.PlayerName" class="text-decoration-none fw-bold text-white">@context.PlayerName</a>
                 </div>
+            </TemplateColumn>
+            
+            <TemplateColumn Title="Position" Class="align-middle">
+                 <select class="form-select form-select-sm" 
+                        style="@GetStyleForPosition(context.PositionId)"
+                        value="@context.PositionId" 
+                        @onchange="@(e => UpdatePosition(context, e))">
+                    <option value="">Select Position...</option>
+                    @foreach (var pos in positions)
+                    {
+                        <option value="@pos.Id">@pos.Name</option>
+                    }
+                </select>
             </TemplateColumn>
             
             @foreach (var tag in tags)
@@ -52,6 +68,7 @@ else
 @code {
     private List<PlayerImportData> allPlayers;
     private List<TagDefinition> tags;
+    private List<PositionDefinition> positions;
     private List<string> filterTagIds = new();
     private string errorMessage;
     private PaginationState pagination = new PaginationState { ItemsPerPage = 20 };
@@ -82,11 +99,13 @@ else
         {
             var tagsTask = TagRepository.GetAllAsync();
             var playersTask = RosterService.LoadAsync();
+            var positionsTask = PositionService.GetAllAsync();
 
-            await Task.WhenAll(tagsTask, playersTask);
+            await Task.WhenAll(tagsTask, playersTask, positionsTask);
 
             tags = tagsTask.Result.OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name).ToList();
             allPlayers = playersTask.Result.OrderBy(p => p.PlayerName).ToList();
+            positions = positionsTask.Result.OrderBy(p => p.Name).ToList();
 
             // Ensure TagIds is not null
             foreach (var p in allPlayers)
@@ -159,6 +178,42 @@ else
                 // Force UI update to show reverted state if it doesn't happen automatically
                 StateHasChanged(); 
             }
+        }
+    }
+    
+    private string GetStyleForPosition(string? positionId)
+    {
+        if (string.IsNullOrEmpty(positionId)) return "";
+        var pos = positions?.FirstOrDefault(p => p.Id == positionId);
+        if (pos == null) return "";
+        // Use border color to indicate position
+        return $"border-left: 5px solid {pos.ColorHex};";
+    }
+
+    private async Task UpdatePosition(PlayerImportData player, ChangeEventArgs e)
+    {
+        var newPosId = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(newPosId)) newPosId = null;
+
+        var oldPosId = player.PositionId;
+        
+        // Optimistic update
+        player.PositionId = newPosId;
+
+        try
+        {
+            errorMessage = null; 
+            // We cast RosterService to ApiRosterService or we add the method to IRosterRepository?
+            // IRosterRepository (Shared) now has UpdatePlayerPositionAsync.
+            // So we can use RosterService.UpdatePlayerPositionAsync
+            await RosterService.UpdatePlayerPositionAsync(player.PlayerName, newPosId);
+        }
+        catch (Exception ex)
+        {
+            // Revert
+            player.PositionId = oldPosId;
+            errorMessage = $"Failed to update position for {player.PlayerName}: {ex.Message}";
+            StateHasChanged();
         }
     }
 }

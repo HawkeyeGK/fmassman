@@ -6,7 +6,7 @@
 @using fmassman.Client.Services
 @inject PlayerEditorViewModel VM
 @inject ITagRepository TagRepository
-@inject IPositionService PositionService
+
 
 @if (VM.IsLoading || VM.Player == null)
 {
@@ -41,9 +41,7 @@ else
                         <li class="nav-item">
                             <a class="nav-link @(_activeTab == 6 ? "active" : "")" @onclick="() => _activeTab = 6" style="cursor: pointer">Tags</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(_activeTab == 7 ? "active" : "")" @onclick="() => _activeTab = 7" style="cursor: pointer">Positions</a>
-                        </li>
+
                         <li class="nav-item">
                             <a class="nav-link @(_activeTab == 1 ? "active" : "")" @onclick="() => _activeTab = 1" style="cursor: pointer">Technical</a>
                         </li>
@@ -150,51 +148,7 @@ else
                             </div>
                         }
 
-                        @if (_activeTab == 7)
-                        {
-                            <div class="alert alert-secondary mb-3">
-                                <small>Assign up to <strong>3 positions</strong> to this player. Click a position to toggle selection.</small>
-                            </div>
-                            @if (_positionWarning != null)
-                            {
-                                <div class="alert alert-warning alert-dismissible fade show py-2" role="alert">
-                                    @_positionWarning
-                                    <button type="button" class="btn-close" @onclick="() => _positionWarning = null" aria-label="Close"></button>
-                                </div>
-                            }
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    @if (_availablePositions == null)
-                                    {
-                                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading positions...</div>
-                                    }
-                                    else if (!_availablePositions.Any())
-                                    {
-                                        <p class="text-muted">No positions defined. <a href="/admin/positions">Create some positions first.</a></p>
-                                    }
-                                    else
-                                    {
-                                        <div class="d-flex flex-wrap gap-2">
-                                            @foreach (var position in _availablePositions)
-                                            {
-                                                var isSelected = IsPositionSelected(position.Id);
-                                                <button type="button" 
-                                                        class="btn position-badge @(isSelected ? "" : "btn-outline-secondary")"
-                                                        style="@(isSelected ? $"background-color: {position.ColorHex}; border-color: {position.ColorHex}; color: white;" : "")"
-                                                        @onclick="() => TogglePosition(position.Id)">
-                                                    <span class="fw-bold">@position.Code</span>
-                                                    <span class="ms-1">@position.Name</span>
-                                                </button>
-                                            }
-                                        </div>
-                                        <div class="mt-3 text-muted small">
-                                            <i class="bi bi-info-circle me-1"></i>
-                                            Selected: @(VM.Player?.PositionIds?.Count ?? 0) / 3
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
+
                         
                         @if (_activeTab == 1 && VM.Player.Snapshot?.Technical != null)
                         {
@@ -311,8 +265,7 @@ else
     private bool _isImagePanelVisible = false;
     private string? _signedImageUrl;
     private List<TagDefinition>? _availableTags;
-    private List<PositionDefinition>? _availablePositions;
-    private string? _positionWarning;
+
 
     private async Task ToggleImagePanel()
     {
@@ -332,11 +285,7 @@ else
         // Parallel load of player, tags, and positions
         var playerTask = VM.LoadAsync(System.Net.WebUtility.UrlDecode(Name));
         var tagsTask = TagRepository.GetAllAsync();
-        var positionsTask = PositionService.GetAllAsync();
-
-        await Task.WhenAll(playerTask, tagsTask, positionsTask);
         _availableTags = tagsTask.Result.OrderBy(t => t.Name).ToList();
-        _availablePositions = positionsTask.Result.OrderBy(p => p.Name).ToList();
     }
 
     private bool IsTagSelected(string tagId)
@@ -361,32 +310,5 @@ else
         }
     }
 
-    private bool IsPositionSelected(string positionId)
-    {
-        return VM.Player?.PositionIds?.Contains(positionId) ?? false;
-    }
 
-    private void TogglePosition(string positionId)
-    {
-        if (VM.Player == null) return;
-        if (VM.Player.PositionIds == null) VM.Player.PositionIds = new List<string>();
-
-        _positionWarning = null;
-
-        if (VM.Player.PositionIds.Contains(positionId))
-        {
-            // Remove position
-            VM.Player.PositionIds.Remove(positionId);
-        }
-        else
-        {
-            // Add position only if under limit
-            if (VM.Player.PositionIds.Count >= 3)
-            {
-                _positionWarning = "Maximum of 3 positions allowed. Remove a position first to add a new one.";
-                return;
-            }
-            VM.Player.PositionIds.Add(positionId);
-        }
-    }
 }

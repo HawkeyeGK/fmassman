@@ -5,6 +5,8 @@ using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Components;
+using fmassman.Client.Services;
+using fmassman.Shared.Models;
 
 namespace fmassman.Client.Models
 {
@@ -13,11 +15,13 @@ namespace fmassman.Client.Models
         private readonly IRosterRepository _rosterRepository;
         private readonly IRoleService _roleService;
         private readonly ITagRepository _tagRepository;
+        private readonly IPositionService _positionService;
         private readonly NavigationManager _navigationManager;
 
         public PlayerImportData? Player { get; private set; }
         public PlayerAnalysis? Analysis { get; private set; }
         public RosterItemViewModel? HeaderData { get; private set; }
+        public PositionDefinition? PrimaryPosition { get; private set; }
         public List<TagDefinition> AssignedTags { get; private set; } = new();
         public bool IsLoading { get; private set; }
 
@@ -35,11 +39,13 @@ namespace fmassman.Client.Models
             IRosterRepository rosterRepository, 
             IRoleService roleService, 
             ITagRepository tagRepository,
+            IPositionService positionService,
             NavigationManager navigationManager)
         {
             _rosterRepository = rosterRepository;
             _roleService = roleService;
             _tagRepository = tagRepository;
+            _positionService = positionService;
             _navigationManager = navigationManager;
         }
 
@@ -110,11 +116,13 @@ namespace fmassman.Client.Models
                 // Parallel fetch of Roster and Tags for efficiency
                 var rosterTask = _rosterRepository.LoadAsync();
                 var tagsTask = _tagRepository.GetAllAsync();
+                var positionsTask = _positionService.GetAllAsync();
 
-                await Task.WhenAll(rosterTask, tagsTask);
+                await Task.WhenAll(rosterTask, tagsTask, positionsTask);
 
                 var allPlayers = rosterTask.Result;
                 var allTags = tagsTask.Result;
+                var allPositions = positionsTask.Result;
 
                 Player = allPlayers.FirstOrDefault(p => p.PlayerName.Equals(name, System.StringComparison.OrdinalIgnoreCase));
 
@@ -135,6 +143,12 @@ namespace fmassman.Client.Models
                         HeaderData = RosterItemViewModel.FromPlayer(Player);
                         
                         BuildMatrix();
+                    }
+
+                    // Map Primary Position
+                    if (!string.IsNullOrEmpty(Player.PositionId))
+                    {
+                        PrimaryPosition = allPositions.FirstOrDefault(p => p.Id == Player.PositionId);
                     }
                 }
 

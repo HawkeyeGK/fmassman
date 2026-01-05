@@ -9,7 +9,13 @@
 {
     <div class="card border-primary mb-3">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h3 class="mb-0">@h.Name</h3>
+            <h3 class="mb-0">
+                @h.Name
+                @if (VM.PrimaryPosition != null)
+                {
+                    <span class="ms-2 badge border border-light" style="font-size: 0.5em; vertical-align: middle; background-color: @VM.PrimaryPosition.ColorHex;">@VM.PrimaryPosition.Name</span>
+                }
+            </h3>
             <div class="d-flex gap-2">
                 <a href="/player/@(Uri.EscapeDataString(Name))/edit" class="btn btn-sm btn-light">Edit</a>
                 

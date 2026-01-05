@@ -3,9 +3,12 @@
 @using fmassman.Shared
 @using fmassman.Client.Models
 @using fmassman.Client.Components.Controls
+@using fmassman.Client.Services
+@using fmassman.Shared.Models
 @inject IRosterRepository Repository
 @inject ITagRepository TagRepository
 @inject IRoleService RoleService
+@inject IPositionService PositionService
 
 <PageTitle>Player Roster</PageTitle>
 
@@ -33,6 +36,16 @@ else if (rosterItems != null)
                 <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.Name">
                     <a href="/player/@context.Name" class="text-decoration-none fw-bold @GetNameClass(context)">@context.Name</a>
                 </div>
+            </TemplateColumn>
+            <TemplateColumn Title="Pos">
+                @if (!string.IsNullOrEmpty(context.PositionId))
+                {
+                    var pos = GetPosition(context.PositionId);
+                    if (pos != null)
+                    {
+                        <span class="badge" style="background-color: @pos.ColorHex" title="@pos.Name">@pos.Code</span>
+                    }
+                }
             </TemplateColumn>
             <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
             <TemplateColumn Title="Personality" SortBy="@personalitySort">
@@ -76,6 +89,7 @@ else if (rosterItems != null)
     private List<RosterItemViewModel>? rosterItems;
     private List<TagDefinition> _allTags = new();
     private List<string> _selectedTagIds = new();
+    private List<PositionDefinition> _positions = new();
     
     private PaginationState pagination = new PaginationState { ItemsPerPage = 50 };
     private string errorMessage = string.Empty;
@@ -120,6 +134,7 @@ else if (rosterItems != null)
         {
             // Load Roles (optional)
             try { await RoleService.LoadLocalRolesAsync(); } catch { }
+            try { _positions = await PositionService.GetAllAsync(); } catch { }
 
             // Load Tags
             _allTags = await TagRepository.GetAllAsync();
@@ -170,5 +185,11 @@ else if (rosterItems != null)
 
         // Priority 3: Standard (Rostered), return white in dark mode
         return "text-white";
+    }
+
+    private PositionDefinition? GetPosition(string? positionId)
+    {
+        if (string.IsNullOrEmpty(positionId)) return null;
+        return _positions.FirstOrDefault(p => p.Id == positionId);
     }
 }

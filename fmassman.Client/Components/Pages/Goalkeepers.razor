@@ -6,9 +6,11 @@
 @using fmassman.Client.Components.Shared
 @using fmassman.Client.Components.Controls
 @using fmassman.Client.Services
+@using fmassman.Shared.Models
 @inject IRosterRepository Repository
 @inject IRoleService RoleService
 @inject ITagRepository TagRepository
+@inject IPositionService PositionService
 
 
 <PageTitle>Goalkeeper Analysis</PageTitle>
@@ -38,7 +40,7 @@ else if (matrixItems != null)
     else
     {
         <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
-        <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@columns" NameClass="@GetNameClass" />
+        <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@columns" NameClass="@GetNameClass" Positions="@_positions" />
     }
 }
 
@@ -52,6 +54,7 @@ else if (matrixItems != null)
     private List<TagDefinition> _allTags = new();
     private List<string> _selectedTagIds = new();
     private List<MatrixItem> _filteredMatrixItems = new();
+    private List<PositionDefinition> _positions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,6 +62,7 @@ else if (matrixItems != null)
         {
             // Load roles so calculator works
             try { allRoles = await RoleService.LoadLocalRolesAsync(); } catch { }
+            try { _positions = await PositionService.GetAllAsync(); } catch { }
             
             // Load Tags
             _allTags = await TagRepository.GetAllAsync();
@@ -83,11 +87,11 @@ else if (matrixItems != null)
 
             // Analyze all players
             // We use a temporary structure to hold analysis to avoid re-running it for column gen
-            var analyzedPlayers = new List<(string Name, List<string> TagIds, PlayerAnalysis Analysis)>();
+            var analyzedPlayers = new List<(string Name, List<string> TagIds, string? PositionId, PlayerAnalysis Analysis)>();
             
             foreach (var p in goalkeepers)
             {
-                analyzedPlayers.Add((p.PlayerName, p.TagIds, PlayerAnalyzer.Analyze(p.Snapshot!)));
+                analyzedPlayers.Add((p.PlayerName, p.TagIds, p.PositionId, PlayerAnalyzer.Analyze(p.Snapshot!)));
             }
             
             // Generate Columns from the first player
@@ -133,6 +137,7 @@ else if (matrixItems != null)
                 {
                     Name = item.Name,
                     TagIds = item.TagIds != null ? new List<string>(item.TagIds) : new(),
+                    PositionId = item.PositionId,
                     Scores = scores
                 });
             }

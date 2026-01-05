@@ -6,10 +6,12 @@
 @using fmassman.Client.Components.Shared
 @using fmassman.Client.Components.Controls
 @using fmassman.Client.Services
+@using fmassman.Shared.Models
 @inject IRosterRepository Repository
 @inject IRoleService RoleService
 @inject ITacticService TacticService
 @inject ITagRepository TagRepository
+@inject IPositionService PositionService
 
 <PageTitle>In Possession Analysis</PageTitle>
 
@@ -41,7 +43,7 @@
 else if (matrixItems != null)
 {
     <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
-    <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@GetFilteredColumns().ToList()" NameClass="@GetNameClass" />
+    <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@GetFilteredColumns().ToList()" NameClass="@GetNameClass" Positions="@_positions" />
 }
 
 @code {
@@ -56,6 +58,7 @@ else if (matrixItems != null)
     private List<TagDefinition> _allTags = new();
     private List<string> _selectedTagIds = new();
     private List<MatrixItem> _filteredMatrixItems = new();
+    private List<PositionDefinition> _positions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,6 +67,7 @@ else if (matrixItems != null)
             // Load roles first so calculator has data
             try { allRoles = await RoleService.LoadLocalRolesAsync(); } catch { }
             try { tactics = await TacticService.GetAllAsync(); } catch { }
+            try { _positions = await PositionService.GetAllAsync(); } catch { }
             
             // Load Tags
             _allTags = await TagRepository.GetAllAsync();
@@ -91,7 +95,7 @@ else if (matrixItems != null)
             // Filter out goalkeepers as per original logic
             var analyzedPlayers = roster
                 .Where(p => p.Snapshot != null && p.Snapshot.Goalkeeping == null)
-                .Select(p => new { Name = p.PlayerName, TagIds = p.TagIds, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
+                .Select(p => new { Name = p.PlayerName, TagIds = p.TagIds, PositionId = p.PositionId, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
                 .ToList();
 
             if (analyzedPlayers.Count == 0) 
@@ -127,6 +131,7 @@ else if (matrixItems != null)
                 {
                     Name = item.Name,
                     TagIds = item.TagIds != null ? new List<string>(item.TagIds) : new(),
+                    PositionId = item.PositionId,
                     Scores = scoreMap
                 });
             }

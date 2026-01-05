@@ -1,5 +1,6 @@
 @using fmassman.Client.Helpers
 @using fmassman.Client.Models
+@using fmassman.Shared.Models
 
 <div class="grid-scroll-container">
     <table class="table table-bordered table-dark table-sm table-hover mb-0">
@@ -9,6 +10,7 @@
                     @onclick='() => SortTable("Player")'>
                     Player <span class="text-warning">@GetSortIndicator("Player")</span>
                 </th>
+                <th class="text-center" style="min-width: 60px; background-color: #2c3034;">Pos</th>
                 @foreach (var col in Columns)
                 {
                     <th class="text-center" style="min-width: 100px; cursor: pointer;" 
@@ -33,6 +35,16 @@
                     <td class="sticky-col" style="background-color: #2c3034; font-weight: bold;">
                         <a href="/player/@player.Name" class="text-decoration-none @GetNameClass(player)">@player.Name</a>
                     </td>
+                    <td class="text-center" style="background-color: #2c3034;">
+                        @if (!string.IsNullOrEmpty(player.PositionId))
+                        {
+                            var pos = GetPosition(player.PositionId);
+                            if (pos != null)
+                            {
+                                <span class="badge" style="background-color: @pos.ColorHex" title="@pos.Name">@pos.Code</span>
+                            }
+                        }
+                    </td>
                     @foreach (var col in Columns)
                     {
                         <td class="matrix-cell" style="@(GetColorStyle(player.GetScore(col.Key)))">
@@ -48,6 +60,7 @@
 @code {
     [Parameter] public List<MatrixItem> Items { get; set; } = new();
     [Parameter] public List<MatrixColumn> Columns { get; set; } = new();
+    [Parameter] public List<PositionDefinition> Positions { get; set; } = new();
     // Removed RowClass, added NameClass
     [Parameter] public Func<MatrixItem, string>? NameClass { get; set; }
 
@@ -144,5 +157,11 @@
     {
         // Default to white if no class provided or resolved
         return NameClass?.Invoke(item) ?? "text-white";
+    }
+
+    private PositionDefinition? GetPosition(string? positionId)
+    {
+        if (string.IsNullOrEmpty(positionId)) return null;
+        return Positions.FirstOrDefault(p => p.Id == positionId);
     }
 }

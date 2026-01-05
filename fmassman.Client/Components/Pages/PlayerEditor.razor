@@ -285,6 +285,8 @@ else
         // Parallel load of player, tags, and positions
         var playerTask = VM.LoadAsync(System.Net.WebUtility.UrlDecode(Name));
         var tagsTask = TagRepository.GetAllAsync();
+
+        await Task.WhenAll(playerTask, tagsTask);
         _availableTags = tagsTask.Result.OrderBy(t => t.Name).ToList();
     }
 

@@ -179,104 +179,12 @@ namespace fmassman.Api.Functions
         [Function("MiroAuthCallbackFinal")]
         public async Task<IActionResult> MiroAuthCallbackFinal([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/finalize")] HttpRequest req)
         {
-            try
-            {
-                _logger.LogInformation($"Miro callback received on NEW ROUTE. Query: {req.QueryString}");
-                
-                var code = req.Query["code"].ToString();
-
-                if (string.IsNullOrEmpty(code))
-                {
-                    _logger.LogError($"Missing code parameter. Query string was: {req.QueryString}");
-                    return new ContentResult 
-                    { 
-                        Content = $"Missing code parameter. Query: {req.QueryString}",
-                        ContentType = "text/plain",
-                        StatusCode = 400
-                    };
-                }
-
-                var clientId = Environment.GetEnvironmentVariable("MiroClientId");
-                var clientSecret = Environment.GetEnvironmentVariable("MiroClientSecret");
-                // NOTE: User must update this Env Var to match new route!
-                var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
-
-                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(redirectUri))
-                {
-                    _logger.LogError("Missing Miro configuration.");
-                    return new ContentResult 
-                    { 
-                        Content = "Server configuration error - missing Miro credentials",
-                        ContentType = "text/plain",
-                        StatusCode = 500
-                    };
-                }
-
-                // Exchange code for tokens via Miro API
-                var httpClient = _httpClientFactory.CreateClient();
-                var values = new List<KeyValuePair<string, string>>
-                {
-                    new KeyValuePair<string, string>("grant_type", "authorization_code"),
-                    new KeyValuePair<string, string>("client_id", clientId),
-                    new KeyValuePair<string, string>("client_secret", clientSecret),
-                    new KeyValuePair<string, string>("code", code),
-                    new KeyValuePair<string, string>("redirect_uri", redirectUri)
-                };
-
-                var content = new FormUrlEncodedContent(values);
-                var tokenResponse = await httpClient.PostAsync("https://api.miro.com/v1/oauth/token", content);
-
-                if (!tokenResponse.IsSuccessStatusCode)
-                {
-                    var errorContent = await tokenResponse.Content.ReadAsStringAsync();
-                    _logger.LogError($"Error exchanging token: {tokenResponse.StatusCode} - {errorContent}");
-                    return new ContentResult 
-                    { 
-                        Content = $"Failed to exchange token with Miro: {tokenResponse.StatusCode}\nError: {errorContent}",
-                        ContentType = "text/plain",
-                        StatusCode = 502
-                    };
-                }
-
-                var jsonContent = await tokenResponse.Content.ReadAsStringAsync();
-                var tokenDto = Newtonsoft.Json.JsonConvert.DeserializeObject<MiroTokenResponse>(jsonContent);
-
-                if (tokenDto == null || string.IsNullOrEmpty(tokenDto.access_token))
-                {
-                    _logger.LogError($"Failed to deserialize Miro token response. Response: {jsonContent}");
-                    return new ContentResult 
-                    { 
-                        Content = "Invalid token response from Miro",
-                        ContentType = "text/plain",
-                        StatusCode = 502
-                    };
-                }
-
-                // Save tokens to Cosmos DB
-                var tokens = new MiroTokenSet
-                {
-                    AccessToken = tokenDto.access_token,
-                    RefreshToken = tokenDto.refresh_token,
-                    Scope = tokenDto.scope,
-                    ExpiresAt = DateTime.UtcNow.AddSeconds(tokenDto.expires_in)
-                };
-
-                await _settingsRepository.UpsertMiroTokensAsync(tokens);
-                _logger.LogInformation("Successfully saved Miro tokens to Cosmos DB");
-
-                return new RedirectResult("/admin/positions?status=success", false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex, "Unhandled exception in Miro callback");
-                // Fallback: Dump error to screen
-                return new ContentResult 
-                { 
-                    Content = $"EXCEPTION in callback: {ex.GetType().Name}: {ex.Message}\n\nStack: {ex.StackTrace}",
-                    ContentType = "text/plain",
-                    StatusCode = 500
-                };
-            }
+            _logger.LogInformation("ENTERING MiroAuthCallbackFinal - Diagnostic (DUMB MODE)");
+            
+            // Force async execution to verify state machine
+            await Task.Delay(10); 
+            
+            return new OkObjectResult("Callback V2 on 'miro/finalize' reached! The route works. The crash is in the logic.");
         }
 
         public class MiroTokenResponse

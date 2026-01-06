@@ -74,5 +74,28 @@ namespace fmassman.Api.Functions
             _logger.LogInformation("Test in PositionFunctions called!");
             return new OkObjectResult("Test in existing file successful!");
         }
+
+        // DIAGNOSTIC: Testing if Miro Login works when in existing file
+        [Function("MiroLoginDiagnostic")]
+        public IActionResult MiroLoginDiagnostic([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "diagnostic/miro/login")] HttpRequest req)
+        {
+            var clientId = Environment.GetEnvironmentVariable("MiroClientId");
+            var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
+
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(redirectUri))
+            {
+                _logger.LogError("Missing Miro configuration (ClientId or RedirectUrl).");
+                return new ContentResult 
+                { 
+                    Content = $"Missing Miro config. ClientId null: {clientId == null}, RedirectUri null: {redirectUri == null}",
+                    ContentType = "text/plain",
+                    StatusCode = 500
+                };
+            }
+
+            var miroAuthUrl = $"https://miro.com/oauth/authorize?response_type=code&client_id={clientId}&redirect_uri={System.Net.WebUtility.UrlEncode(redirectUri)}";
+            
+            return new RedirectResult(miroAuthUrl, false);
+        }
     }
 }

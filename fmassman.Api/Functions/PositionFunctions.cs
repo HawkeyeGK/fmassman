@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using fmassman.Shared.Interfaces;
@@ -15,11 +17,16 @@ namespace fmassman.Api.Functions
     {
         private readonly ILogger<PositionFunctions> _logger;
         private readonly IPositionRepository _repository;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ISettingsRepository _settingsRepository;
 
-        public PositionFunctions(ILogger<PositionFunctions> logger, IPositionRepository repository)
+        public PositionFunctions(ILogger<PositionFunctions> logger, IPositionRepository repository, 
+            IHttpClientFactory httpClientFactory, ISettingsRepository settingsRepository)
         {
             _logger = logger;
             _repository = repository;
+            _httpClientFactory = httpClientFactory;
+            _settingsRepository = settingsRepository;
         }
 
         [Function("GetPositions")]
@@ -163,7 +170,7 @@ namespace fmassman.Api.Functions
                 }
 
                 // Exchange code for tokens via Miro API
-                var httpClient = new HttpClient();
+                var httpClient = _httpClientFactory.CreateClient();
                 var values = new List<KeyValuePair<string, string>>
                 {
                     new KeyValuePair<string, string>("grant_type", "authorization_code"),
@@ -211,14 +218,10 @@ namespace fmassman.Api.Functions
                     ExpiresAt = DateTime.UtcNow.AddSeconds(tokenDto.expires_in)
                 };
 
-                // Note: PositionFunctions doesn't have ISettingsRepository injected
-                // We'll need to add it to the constructor
-                return new ContentResult 
-                { 
-                    Content = $"SUCCESS! Got tokens from Miro. Now need to save to Cosmos DB. Access token starts with: {tokens.AccessToken.Substring(0, 10)}...",
-                    ContentType = "text/plain",
-                    StatusCode = 200
-                };
+                await _settingsRepository.UpsertMiroTokensAsync(tokens);
+                _logger.LogInformation("Successfully saved Miro tokens to Cosmos DB");
+
+                return new RedirectResult("/admin/positions?status=success", false);
             }
             catch (Exception ex)
             {

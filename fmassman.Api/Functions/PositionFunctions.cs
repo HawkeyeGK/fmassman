@@ -49,8 +49,8 @@ namespace fmassman.Api.Functions
         public async Task<IActionResult> UpsertPosition([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "positions")] HttpRequest req)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var position = JsonSerializer.Deserialize<PositionDefinition>(requestBody, options);
+            var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var position = System.Text.Json.JsonSerializer.Deserialize<PositionDefinition>(requestBody, options);
 
             if (position == null)
             {

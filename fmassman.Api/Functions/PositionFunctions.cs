@@ -79,23 +79,54 @@ namespace fmassman.Api.Functions
         [Function("MiroLoginDiagnostic")]
         public IActionResult MiroLoginDiagnostic([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "diagnostic/miro/login")] HttpRequest req)
         {
-            var clientId = Environment.GetEnvironmentVariable("MiroClientId");
-            var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
-
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(redirectUri))
+            try
             {
-                _logger.LogError("Missing Miro configuration (ClientId or RedirectUrl).");
+                _logger.LogInformation("Diagnostic Miro login called");
+                
+                string clientId = null;
+                string redirectUri = null;
+                
+                try
+                {
+                    clientId = Environment.GetEnvironmentVariable("MiroClientId");
+                    redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
+                }
+                catch (Exception envEx)
+                {
+                    return new ContentResult 
+                    { 
+                        Content = $"ERROR reading env vars: {envEx.Message}",
+                        ContentType = "text/plain",
+                        StatusCode = 500
+                    };
+                }
+
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(redirectUri))
+                {
+                    return new ContentResult 
+                    { 
+                        Content = $"Missing Miro config. ClientId: '{clientId ?? "NULL"}', RedirectUri: '{redirectUri ?? "NULL"}'",
+                        ContentType = "text/plain",
+                        StatusCode = 200
+                    };
+                }
+
                 return new ContentResult 
                 { 
-                    Content = $"Missing Miro config. ClientId null: {clientId == null}, RedirectUri null: {redirectUri == null}",
+                    Content = $"SUCCESS! Would redirect to Miro with ClientId: {clientId.Substring(0, 5)}...",
+                    ContentType = "text/plain",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ContentResult 
+                { 
+                    Content = $"CAUGHT EXCEPTION: {ex.GetType().Name}: {ex.Message}\n\nStack: {ex.StackTrace}",
                     ContentType = "text/plain",
                     StatusCode = 500
                 };
             }
-
-            var miroAuthUrl = $"https://miro.com/oauth/authorize?response_type=code&client_id={clientId}&redirect_uri={System.Net.WebUtility.UrlEncode(redirectUri)}";
-            
-            return new RedirectResult(miroAuthUrl, false);
         }
     }
 }

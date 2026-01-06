@@ -6,5 +6,6 @@ namespace fmassman.Shared.Interfaces
     public interface ISettingsRepository
     {
         Task UpsertMiroTokensAsync(MiroTokenSet tokens);
+        Task<MiroTokenSet?> GetMiroTokensAsync();
     }
 }

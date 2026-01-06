@@ -37,5 +37,19 @@ namespace fmassman.Api.Repositories
             // Partition key is /id, and the id of the document is tokens.Id ("miro_tokens")
             await container.UpsertItemAsync(tokens, new PartitionKey(tokens.Id));
         }
+
+        public async Task<MiroTokenSet?> GetMiroTokensAsync()
+        {
+            var container = await GetContainerAsync();
+            try
+            {
+                var response = await container.ReadItemAsync<MiroTokenSet>("miro_tokens", new PartitionKey("miro_tokens"));
+                return response.Resource;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+        }
     }
 }

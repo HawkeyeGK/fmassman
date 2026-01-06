@@ -3,6 +3,7 @@
 @using fmassman.Client.Services
 @inject IPositionService PositionService
 @inject IJSRuntime JSRuntime
+@inject HttpClient Http
 
 <PageTitle>Position Configuration</PageTitle>
 
@@ -123,12 +124,33 @@ else
     </div>
 }
 
+<hr />
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">Miro Debug</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-warning" @onclick="RegisterSchema">Register Schema</button>
+            <button class="btn btn-info" @onclick="SendTestCard">Send Test Card</button>
+        </div>
+        @if (!string.IsNullOrEmpty(debugMessage))
+        {
+            <div class="alert alert-secondary">
+                <pre>@debugMessage</pre>
+            </div>
+        }
+    </div>
+</div>
+
 @code {
     private List<PositionDefinition>? positions;
     private PositionDefinition? editingPosition;
     private string? errorMessage;
     private string? successMessage;
     private bool isNewPosition = false;
+    private string? debugMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -227,6 +249,36 @@ else
             {
                 errorMessage = $"Error deleting position: {ex.Message}";
             }
+        }
+    }
+
+    private async Task RegisterSchema()
+    {
+        try
+        {
+            debugMessage = "Registering schema...";
+            var response = await Http.GetAsync("api/miro/schema/register");
+            var content = await response.Content.ReadAsStringAsync();
+            debugMessage = $"Status: {response.StatusCode}\nContent: {content}";
+        }
+        catch (Exception ex)
+        {
+            debugMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task SendTestCard()
+    {
+        try
+        {
+            debugMessage = "Sending test card...";
+            var response = await Http.PostAsync("api/miro/card/test", null);
+            var content = await response.Content.ReadAsStringAsync();
+            debugMessage = $"Status: {response.StatusCode}\nContent: {content}";
+        }
+        catch (Exception ex)
+        {
+            debugMessage = $"Error: {ex.Message}";
         }
     }
 }

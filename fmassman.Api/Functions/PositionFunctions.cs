@@ -67,5 +67,12 @@ namespace fmassman.Api.Functions
                 return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
         }
+
+        [Function("TestInPositions")]
+        public IActionResult TestInPositions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "positionstest")] HttpRequest req)
+        {
+            _logger.LogInformation("Test in PositionFunctions called!");
+            return new OkObjectResult("Test in existing file successful!");
+        }
     }
 }

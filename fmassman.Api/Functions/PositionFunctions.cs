@@ -110,8 +110,16 @@ namespace fmassman.Api.Functions
             }
             catch (Exception ex) { results["Newtonsoft.Json"] = ex.Message; }
 
-            // 5. Test SettingsRepository implementation (if possible, safe call?)
-            // We can't easily call Upsert without side effects, but let's assume if it injected, it's ok for now.
+            // 5. Test Request Object (CRITICAL DIAGNOSTIC)
+            try
+            {
+                var testQuery = req.Query["test"].ToString();
+                results["RequestQuery"] = $"Accessed OK. Value: {testQuery ?? "NULL"}";
+            }
+            catch (Exception ex)
+            {
+                results["RequestQuery"] = $"CRITICAL FAILURE: {ex.GetType().Name} - {ex.Message}";
+            }
 
             return new OkObjectResult(results);
         }

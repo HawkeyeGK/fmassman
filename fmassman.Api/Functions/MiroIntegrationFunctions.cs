@@ -49,8 +49,12 @@ namespace fmassman.Api.Functions
         {
             try
             {
-                _logger.LogInformation("MiroCallback called");
+                _logger.LogInformation("MiroCallback called - EXTREME MINIMUM");
                 
+                // DIAGNOSTIC STEP 2: No Env Vars, No Query Parsing. Just verification of entry.
+                return new OkObjectResult("STEP 2 PASSED. The function was invoked successfully. The crash is in Env Vars or Query access.");
+
+                /* COMMENTED OUT FOR BINARY SEARCH 
                 string code = req.Query["code"];
                 if (string.IsNullOrEmpty(code)) return new BadRequestObjectResult("No code provided");
 
@@ -63,6 +67,7 @@ namespace fmassman.Api.Functions
                                           $"ClientId Found: {!string.IsNullOrEmpty(clientId)} \n" +
                                           $"ClientSecret Found: {!string.IsNullOrEmpty(clientSecret)} \n" +
                                           $"RedirectUri Found: {!string.IsNullOrEmpty(redirectUri)}");
+                */
 
                 /* COMMENTED OUT FOR BINARY SEARCH 
                 var client = _httpClientFactory.CreateClient("MiroAuth");

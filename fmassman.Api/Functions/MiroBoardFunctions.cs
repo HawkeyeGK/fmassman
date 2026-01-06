@@ -104,19 +104,19 @@ namespace fmassman.Api.Functions
                     data = new
                     {
                         title = "Test Player (Pep Guardiola)",
-                        status = "connected"
+                        status = "connected",
+                        fields = new object[]
+                        {
+                            new { value = "GK", tooltip = "Position" },
+                            new { value = "24", tooltip = "Age" }, // Value must be string? API docs say string. Let's force string to be safe.
+                            new { value = "2026-06-30", tooltip = "Contract Exp" },
+                            new { value = "Sweeper Keeper", tooltip = "Best Role" },
+                            new { value = "98%", tooltip = "Fit %" }
+                        }
                     },
                     style = new
                     {
                         fillColor = "#0099FF"
-                    },
-                    fields = new object[]
-                    {
-                        new { value = "GK", tooltip = "Position" },
-                        new { value = "24", tooltip = "Age" }, // Value must be string? API docs say string. Let's force string to be safe.
-                        new { value = "2026-06-30", tooltip = "Contract Exp" },
-                        new { value = "Sweeper Keeper", tooltip = "Best Role" },
-                        new { value = "98%", tooltip = "Fit %" }
                     }
                 };
                 

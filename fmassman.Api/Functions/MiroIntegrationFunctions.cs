@@ -29,7 +29,7 @@ namespace fmassman.Api.Functions
         }
 
         [Function("MiroLogin")]
-        public IActionResult MiroLogin([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "diagnostic/miro/login")] HttpRequest req)
+        public IActionResult MiroLogin([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/login")] HttpRequest req)
         {
             _logger.LogInformation("MiroLogin called");
             var clientId = Environment.GetEnvironmentVariable("MiroClientId");

@@ -124,66 +124,7 @@ namespace fmassman.Api.Functions
             return new OkObjectResult(results);
         }
 
-        // DIAGNOSTIC: Testing if Miro Login works when in existing file
-        [Function("MiroLoginDiagnostic")]
-        public IActionResult MiroLoginDiagnostic([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "diagnostic/miro/login")] HttpRequest req)
-        {
-            try
-            {
-                _logger.LogInformation("Diagnostic Miro login called");
-                
-                string clientId = null;
-                string redirectUri = null;
-                
-                try
-                {
-                    clientId = Environment.GetEnvironmentVariable("MiroClientId");
-                    redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
-                }
-                catch (Exception envEx)
-                {
-                    return new ContentResult 
-                    { 
-                        Content = $"ERROR reading env vars: {envEx.Message}",
-                        ContentType = "text/plain",
-                        StatusCode = 500
-                    };
-                }
 
-                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(redirectUri))
-                {
-                    return new ContentResult 
-                    { 
-                        Content = $"Missing Miro config. ClientId: '{clientId ?? "NULL"}', RedirectUri: '{redirectUri ?? "NULL"}'",
-                        ContentType = "text/plain",
-                        StatusCode = 200
-                    };
-                }
-
-                var miroAuthUrl = $"https://miro.com/oauth/authorize?response_type=code&client_id={clientId}&redirect_uri={System.Net.WebUtility.UrlEncode(redirectUri)}";
-                
-                _logger.LogInformation($"Redirecting to Miro: {miroAuthUrl}");
-                return new RedirectResult(miroAuthUrl, false);
-            }
-            catch (Exception ex)
-            {
-                return new ContentResult 
-                { 
-                    Content = $"CAUGHT EXCEPTION: {ex.GetType().Name}: {ex.Message}\n\nStack: {ex.StackTrace}",
-                    ContentType = "text/plain",
-                    StatusCode = 500
-                };
-            }
-        }
-
-        [Function("MiroAuthCallbackFinal")]
-        public IActionResult MiroAuthCallbackFinal([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/finalize")] HttpRequest req)
-        {
-            // SYNC execution - no 'async', no 'await'
-            _logger.LogInformation("ENTERING MiroAuthCallbackFinal - Diagnostic (SYNC DUMB MODE)");
-            
-            return new OkObjectResult("Callback V3 (SYNC) on 'miro/finalize' reached! If you see this, the Async State Machine was the crasher.");
-        }
 
         public class MiroTokenResponse
         {

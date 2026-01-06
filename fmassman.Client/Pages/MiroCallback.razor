@@ -1,0 +1,79 @@
+@page "/miro/finalize"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body text-center">
+            <h3 class="card-title">Connecting to Miro...</h3>
+            
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error:</strong> @_errorMessage
+                </div>
+                <button class="btn btn-secondary mt-2" @onclick="GoBack">Return to Admin</button>
+            }
+            else
+            {
+                <div class="spinner-border text-primary mt-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Finalizing authorization, please wait...</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            
+            // Manual query parsing to avoid dependencies if QueryHelpers isn't available
+            // But QueryHelpers is standard in Client usually. Let's try explicit manual parse to be safe.
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var code = query["code"];
+            var error = query["error"];
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                _errorMessage = $"Miro returned an error: {error}";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(code))
+            {
+                _errorMessage = "No authorization code found in the response.";
+                return;
+            }
+
+            // Send code to backend
+            var response = await Http.PostAsJsonAsync("api/miro/exchange", new { Code = code });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/admin/positions?status=success");
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Server failed to exchange token ({response.StatusCode}): {content}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Unexpected error: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin/positions");
+    }
+}

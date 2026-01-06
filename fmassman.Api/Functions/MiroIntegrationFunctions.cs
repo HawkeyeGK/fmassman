@@ -44,32 +44,26 @@ namespace fmassman.Api.Functions
             return new RedirectResult(url, false);
         }
 
-        [Function("MiroCallback")]
-        public async Task<IActionResult> MiroCallback([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/finalize")] HttpRequest req)
+        [Function("MiroExchange")]
+        public async Task<IActionResult> MiroExchange([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "miro/exchange")] HttpRequest req)
         {
             try
             {
-                _logger.LogInformation("MiroCallback called - EXTREME MINIMUM");
+                _logger.LogInformation("MiroExchange POST called");
                 
-                // DIAGNOSTIC STEP 2: No Env Vars, No Query Parsing. Just verification of entry.
-                return new OkObjectResult("STEP 2 PASSED. The function was invoked successfully. The crash is in Env Vars or Query access.");
+                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                var data = JsonConvert.DeserializeObject<MiroExchangeRequest>(requestBody);
+                string code = data?.Code;
 
-                /* COMMENTED OUT FOR BINARY SEARCH 
-                string code = req.Query["code"];
-                if (string.IsNullOrEmpty(code)) return new BadRequestObjectResult("No code provided");
+                if (string.IsNullOrEmpty(code)) return new BadRequestObjectResult("No code provided in body");
 
                 var clientId = Environment.GetEnvironmentVariable("MiroClientId");
                 var clientSecret = Environment.GetEnvironmentVariable("MiroClientSecret");
+                // IMPORTANT: This must match the URI registered in Miro and the one the Client used.
+                // Since we are now using the Client-Side route, the Env Var should be updated to:
+                // https://www.fmassman.com/miro/finalize
                 var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
 
-                // DIAGNOSTIC STEP 1: Verify we got here and have config
-                return new OkObjectResult($"STEP 1 COMPLETED. Code: {code.Substring(0, 5)}... \n" +
-                                          $"ClientId Found: {!string.IsNullOrEmpty(clientId)} \n" +
-                                          $"ClientSecret Found: {!string.IsNullOrEmpty(clientSecret)} \n" +
-                                          $"RedirectUri Found: {!string.IsNullOrEmpty(redirectUri)}");
-                */
-
-                /* COMMENTED OUT FOR BINARY SEARCH 
                 var client = _httpClientFactory.CreateClient("MiroAuth");
                 var values = new List<KeyValuePair<string, string>>
                 {
@@ -100,14 +94,18 @@ namespace fmassman.Api.Functions
 
                 await _settingsRepository.UpsertMiroTokensAsync(tokens);
 
-                return new RedirectResult("/admin/positions?status=success", false);
-                */
+                return new OkObjectResult(new { status = "success" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Miro Callback Failed");
+                _logger.LogError(ex, "Miro Exchange Failed");
                 return new ObjectResult($"Exception: {ex.Message}\nStack: {ex.StackTrace}") { StatusCode = 500 };
             }
+        }
+
+        public class MiroExchangeRequest
+        {
+            public string Code { get; set; }
         }
 
         public class MiroTokenResponse

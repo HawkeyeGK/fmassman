@@ -4,10 +4,16 @@
     },
     "routes": [
         {
-            "route": "/api/*",
+            "route": "/api/miro/*",
             "allowedRoles": [
                 "anonymous",
                 "authenticated"
+            ]
+        },
+        {
+            "route": "/api/*",
+            "allowedRoles": [
+                "admin"
             ]
         },
         {

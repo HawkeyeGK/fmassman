@@ -64,43 +64,28 @@ namespace fmassman.Api.Functions
                 var client = await GetAuthenticatedClientAsync();
                 var boardId = Environment.GetEnvironmentVariable("MiroBoardId") ?? "uXjVGUR-CSw=";
 
-                // 1. Get Team ID (Optional check, but good for validation if needed, mostly we just need boardId for the URL)
-                // The spec says "Get the Team ID... to find the teamId". Actually creating app_card_schemas is usually done on the team level OR board level?
-                // Miro V2 Docs: POST https://api.miro.com/v2/boards/{board_id}/app_card_schemas
-                // So we assume we just post to the board.
-
-                var schemaPayload = new
-                {
-                    fields = new[]
-                    {
-                        new { key = "position", type = "string", label = "Position" },
-                        new { key = "age", type = "number", label = "Age" },
-                        new { key = "contract", type = "string", label = "Contract Exp" },
-                        new { key = "role", type = "string", label = "Best Role" },
-                        new { key = "fit", type = "string", label = "Fit %" }
-                    }
-                };
-
-                var response = await client.PostAsJsonAsync($"v2/boards/{boardId}/app_card_schemas", schemaPayload);
+                // V2 App Cards do not require explicit schema registration in the same way as V1 or Web SDK.
+                // Instead of registering a schema (which returns 405), we will verify connection to the board.
                 
-                if (response.StatusCode == HttpStatusCode.Conflict)
-                {
-                   return new OkObjectResult(new { message = "Schema already exists." });
-                }
-
+                var response = await client.GetAsync($"v2/boards/{boardId}");
+                
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("Failed to register schema: {StatusCode} {Content}", response.StatusCode, errorContent);
-                    return new BadRequestObjectResult(new { error = $"Failed to register schema: {response.StatusCode}", details = errorContent });
+                    _logger.LogError("Failed to access board: {StatusCode} {Content}", response.StatusCode, errorContent);
+                    return new BadRequestObjectResult(new { error = $"Failed to access board: {response.StatusCode}", details = errorContent });
                 }
 
-                var result = await response.Content.ReadFromJsonAsync<object>();
-                return new OkObjectResult(result);
+                var board = await response.Content.ReadFromJsonAsync<object>();
+                return new OkObjectResult(new 
+                { 
+                    message = "Connection successful. Schema registration is not required/supported for V2 App Cards; using ad-hoc fields.",
+                    boardDetails = board
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating Miro schema");
+                _logger.LogError(ex, "Error checking Miro connection");
                 return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
             }
         }
@@ -127,17 +112,13 @@ namespace fmassman.Api.Functions
                     },
                     fields = new object[]
                     {
-                        new { value = "GK", key = "position" },
-                        new { value = 24, key = "age" }, // Sent as number to match schema type
-                        new { value = "2026-06-30", key = "contract" },
-                        new { value = "Sweeper Keeper", key = "role" },
-                        new { value = "98%", key = "fit" }
+                        new { value = "GK", tooltip = "Position" },
+                        new { value = "24", tooltip = "Age" }, // Value must be string? API docs say string. Let's force string to be safe.
+                        new { value = "2026-06-30", tooltip = "Contract Exp" },
+                        new { value = "Sweeper Keeper", tooltip = "Best Role" },
+                        new { value = "98%", tooltip = "Fit %" }
                     }
                 };
-                
-                // Note: 'fields' in the specific card creation payload is array of objects {value, key} 
-                // ONLY IF the schema is registered. If using basic app cards without schema, fields might be different,
-                // but the goal here is to use the App Card Schema.
                 
                 var response = await client.PostAsJsonAsync($"v2/boards/{boardId}/app_cards", cardPayload);
 

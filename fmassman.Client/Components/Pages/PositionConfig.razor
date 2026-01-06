@@ -149,7 +149,6 @@ else
     private PositionDefinition? editingPosition;
     private string? errorMessage;
     private string? successMessage;
-    private bool isNewPosition = false;
     private string? debugMessage;
 
     protected override async Task OnInitializedAsync()
@@ -175,7 +174,6 @@ else
         errorMessage = null;
         successMessage = null;
         editingPosition = new PositionDefinition { Name = "New Position", Code = "NEW", ColorHex = "#0000FF" };
-        isNewPosition = true;
         positions?.Add(editingPosition);
     }
 
@@ -183,7 +181,6 @@ else
     {
         errorMessage = null;
         successMessage = null;
-        isNewPosition = false;
         editingPosition = new PositionDefinition
         {
             Id = position.Id,
@@ -213,7 +210,6 @@ else
 
             await PositionService.UpsertAsync(editingPosition);
 
-            isNewPosition = false;
             editingPosition = null;
             errorMessage = null;
             successMessage = "Position saved successfully.";

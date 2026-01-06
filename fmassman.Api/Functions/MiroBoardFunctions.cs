@@ -125,7 +125,7 @@ namespace fmassman.Api.Functions
                     {
                         fillColor = "#0099FF"
                     },
-                    fields = new[]
+                    fields = new object[]
                     {
                         new { value = "GK", key = "position" },
                         new { value = 24, key = "age" }, // Sent as number to match schema type

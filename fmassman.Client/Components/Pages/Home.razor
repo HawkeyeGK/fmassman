@@ -35,17 +35,15 @@ else if (rosterItems != null)
             <TemplateColumn Title="Name" SortBy="@nameSort">
                 <div style="white-space:nowrap; overflow: hidden; text-overflow: ellipsis;" title="@context.Name">
                     <a href="/player/@context.Name" class="text-decoration-none fw-bold @GetNameClass(context)">@context.Name</a>
-                </div>
-            </TemplateColumn>
-            <TemplateColumn Title="Pos">
-                @if (!string.IsNullOrEmpty(context.PositionId))
-                {
-                    var pos = GetPosition(context.PositionId);
-                    if (pos != null)
+                    @if (!string.IsNullOrEmpty(context.PositionId))
                     {
-                        <span class="badge" style="background-color: @pos.ColorHex" title="@pos.Name">@pos.Code</span>
+                        var pos = GetPosition(context.PositionId);
+                        if (pos != null)
+                        {
+                            <span class="badge ms-2" style="background-color: @pos.ColorHex" title="@pos.Name">@pos.Code</span>
+                        }
                     }
-                }
+                </div>
             </TemplateColumn>
             <PropertyColumn Property="@(p => p.Age)" Sortable="true" />
             <TemplateColumn Title="Personality" SortBy="@personalitySort">

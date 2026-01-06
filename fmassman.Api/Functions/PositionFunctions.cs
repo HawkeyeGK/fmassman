@@ -111,12 +111,10 @@ namespace fmassman.Api.Functions
                     };
                 }
 
-                return new ContentResult 
-                { 
-                    Content = $"SUCCESS! Would redirect to Miro with ClientId: {clientId.Substring(0, 5)}...",
-                    ContentType = "text/plain",
-                    StatusCode = 200
-                };
+                var miroAuthUrl = $"https://miro.com/oauth/authorize?response_type=code&client_id={clientId}&redirect_uri={System.Net.WebUtility.UrlEncode(redirectUri)}";
+                
+                _logger.LogInformation($"Redirecting to Miro: {miroAuthUrl}");
+                return new RedirectResult(miroAuthUrl, false);
             }
             catch (Exception ex)
             {

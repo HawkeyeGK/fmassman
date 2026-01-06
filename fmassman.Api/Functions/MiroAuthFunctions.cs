@@ -1,4 +1,7 @@
 using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 using fmassman.Shared.Interfaces;
 using fmassman.Shared.Models;
 using Microsoft.Azure.Functions.Worker;
@@ -102,9 +105,9 @@ namespace fmassman.Api.Functions
             
             var tokenDto = JsonConvert.DeserializeObject<MiroTokenResponse>(jsonContent);
 
-            if (tokenDto == null)
+            if (tokenDto == null || string.IsNullOrEmpty(tokenDto.access_token))
             {
-                _logger.LogError("Failed to deserialize Miro token response.");
+                _logger.LogError($"Failed to deserialize Miro token response or empty access token. Response: {jsonContent}");
                 var errorResponse = req.CreateResponse(HttpStatusCode.BadGateway);
                  errorResponse.WriteString("Invalid response from Miro.");
                 return errorResponse;
@@ -118,17 +121,28 @@ namespace fmassman.Api.Functions
                 ExpiresAt = DateTime.UtcNow.AddSeconds(tokenDto.expires_in)
             };
 
-            await _settingsRepository.UpsertMiroTokensAsync(tokens);
+            try 
+            {
+                await _settingsRepository.UpsertMiroTokensAsync(tokens);
+                _logger.LogInformation("Successfully upserted Miro tokens to Cosmos DB.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upsert Miro tokens to Cosmos DB.");
+                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                errorResponse.WriteString("Database error while saving tokens.");
+                return errorResponse;
+            }
 
             // Redirect to success page
             var response = req.CreateResponse(HttpStatusCode.Found);
             // Assuming the client runs at the origin. We might need a config for ClientUrl if it differs.
             // For now, redirect to root/admin/integrations as requested.
-            response.Headers.Add("Location", "/admin/integrations?status=success");
+            response.Headers.Add("Location", "/admin/positions?status=success");
             return response;
         }
 
-        private class MiroTokenResponse
+        public class MiroTokenResponse
         {
             public string access_token { get; set; } = "";
             public string refresh_token { get; set; } = "";

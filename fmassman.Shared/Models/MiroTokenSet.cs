@@ -6,7 +6,7 @@ namespace fmassman.Shared.Models
     public class MiroTokenSet
     {
         [JsonProperty("id")]
-        public string Id => "miro_tokens";
+        public string Id { get; set; } = "miro_tokens";
 
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;

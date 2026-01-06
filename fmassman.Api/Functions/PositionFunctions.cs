@@ -79,8 +79,41 @@ namespace fmassman.Api.Functions
         [Function("TestInPositions")]
         public IActionResult TestInPositions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "positionstest")] HttpRequest req)
         {
-            _logger.LogInformation("Test in PositionFunctions called!");
-            return new OkObjectResult("Test in existing file successful!");
+            var results = new Dictionary<string, string>();
+            
+            // 1. Test Logger
+            try { _logger.LogInformation("Test in PositionFunctions called!"); results["Logger"] = "OK"; }
+            catch (Exception ex) { results["Logger"] = ex.Message; }
+
+            // 2. Test HttpClientFactory
+            try 
+            { 
+                var client = _httpClientFactory.CreateClient("MiroAuth"); 
+                results["HttpClientFactory"] = client != null ? "OK" : "Returned NULL";
+            }
+            catch (Exception ex) { results["HttpClientFactory"] = ex.Message; }
+
+            // 3. Test SettingsRepository
+            try 
+            { 
+                // Just check for null injection
+                results["SettingsRepository"] = _settingsRepository != null ? "OK (Injected)" : "NULL";
+            }
+            catch (Exception ex) { results["SettingsRepository"] = ex.Message; }
+
+             // 4. Test Newtonsoft.Json
+            try 
+            { 
+                var json = "{\"test\": \"value\"}";
+                var obj = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(json);
+                results["Newtonsoft.Json"] = obj != null ? "OK" : "Failed";
+            }
+            catch (Exception ex) { results["Newtonsoft.Json"] = ex.Message; }
+
+            // 5. Test SettingsRepository implementation (if possible, safe call?)
+            // We can't easily call Upsert without side effects, but let's assume if it injected, it's ok for now.
+
+            return new OkObjectResult(results);
         }
 
         // DIAGNOSTIC: Testing if Miro Login works when in existing file
@@ -135,8 +168,8 @@ namespace fmassman.Api.Functions
             }
         }
 
-        [Function("MiroCallbackDiagnostic")]
-        public async Task<IActionResult> MiroCallbackDiagnostic([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/callback")] HttpRequest req)
+        [Function("MiroAuthCallbackFinal")]
+        public async Task<IActionResult> MiroAuthCallbackFinal([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/callback")] HttpRequest req)
         {
             try
             {

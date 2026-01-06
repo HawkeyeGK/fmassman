@@ -1,11 +1,13 @@
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using fmassman.Shared.Interfaces;
 using fmassman.Shared.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -13,19 +15,19 @@ namespace fmassman.Api.Functions
 {
     public class MiroAuthFunctions
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<MiroAuthFunctions> _logger;
         private readonly ISettingsRepository _settingsRepository;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public MiroAuthFunctions(ILoggerFactory loggerFactory, ISettingsRepository settingsRepository, IHttpClientFactory httpClientFactory)
+        public MiroAuthFunctions(ILogger<MiroAuthFunctions> logger, ISettingsRepository settingsRepository, IHttpClientFactory httpClientFactory)
         {
-            _logger = loggerFactory.CreateLogger<MiroAuthFunctions>();
+            _logger = logger;
             _settingsRepository = settingsRepository;
             _httpClientFactory = httpClientFactory;
         }
 
         [Function("MiroLogin")]
-        public HttpResponseData Login([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/login")] HttpRequestData req)
+        public IActionResult Login([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/login")] HttpRequest req)
         {
             var clientId = Environment.GetEnvironmentVariable("MiroClientId");
             var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
@@ -33,49 +35,27 @@ namespace fmassman.Api.Functions
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(redirectUri))
             {
                 _logger.LogError("Missing Miro configuration (ClientId or RedirectUrl).");
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                errorResponse.WriteString("Server configuration error.");
-                return errorResponse;
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
 
             var miroAuthUrl = $"https://miro.com/oauth/authorize?response_type=code&client_id={clientId}&redirect_uri={WebUtility.UrlEncode(redirectUri)}";
-
-            var response = req.CreateResponse(HttpStatusCode.Found);
-            response.Headers.Add("Location", miroAuthUrl);
-            return response;
+            
+            return new RedirectResult(miroAuthUrl, false);
         }
 
         [Function("MiroCallback")]
-        public async Task<HttpResponseData> Callback([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/callback")] HttpRequestData req)
+        public async Task<IActionResult> Callback([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/callback")] HttpRequest req)
         {
             try
             {
-                _logger.LogInformation($"Miro callback received. Full URL: {req.Url}");
+                _logger.LogInformation($"Miro callback received. Query: {req.QueryString}");
                 
-                var queryString = req.Url.Query;
-                var code = string.Empty;
-                
-                // Parse query string manually since System.Web is not available
-                if (!string.IsNullOrEmpty(queryString))
-                {
-                    var queryParams = queryString.TrimStart('?').Split('&');
-                    foreach (var param in queryParams)
-                    {
-                        var keyValue = param.Split('=');
-                        if (keyValue.Length == 2 && keyValue[0] == "code")
-                        {
-                            code = WebUtility.UrlDecode(keyValue[1]);
-                            break;
-                        }
-                    }
-                }
+                var code = req.Query["code"].ToString();
 
                 if (string.IsNullOrEmpty(code))
                 {
-                    _logger.LogError($"Missing code parameter. Query string was: {queryString}");
-                    var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
-                    badRequest.WriteString("Missing code parameter.");
-                    return badRequest;
+                    _logger.LogError($"Missing code parameter. Query string was: {req.QueryString}");
+                    return new BadRequestObjectResult("Missing code parameter.");
                 }
 
                 var clientId = Environment.GetEnvironmentVariable("MiroClientId");
@@ -85,14 +65,11 @@ namespace fmassman.Api.Functions
                 if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(redirectUri))
                 {
                     _logger.LogError("Missing Miro configuration.");
-                    var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                    errorResponse.WriteString("Server configuration error.");
-                    return errorResponse;
+                    return new StatusCodeResult(StatusCodes.Status500InternalServerError);
                 }
 
                 var client = _httpClientFactory.CreateClient("MiroAuth");
 
-                // Prepare token request
                 var values = new List<KeyValuePair<string, string>>
                 {
                     new KeyValuePair<string, string>("grant_type", "authorization_code"),
@@ -109,21 +86,16 @@ namespace fmassman.Api.Functions
                 {
                     var errorContent = await tokenResponse.Content.ReadAsStringAsync();
                     _logger.LogError($"Error exchanging token: {tokenResponse.StatusCode} - {errorContent}");
-                    var errorResponse = req.CreateResponse(HttpStatusCode.BadGateway);
-                    errorResponse.WriteString("Failed to authenticate with Miro.");
-                    return errorResponse;
+                    return new StatusCodeResult(StatusCodes.Status502BadGateway);
                 }
 
                 var jsonContent = await tokenResponse.Content.ReadAsStringAsync();
-                
                 var tokenDto = JsonConvert.DeserializeObject<MiroTokenResponse>(jsonContent);
 
                 if (tokenDto == null || string.IsNullOrEmpty(tokenDto.access_token))
                 {
                     _logger.LogError($"Failed to deserialize Miro token response or empty access token. Response: {jsonContent}");
-                    var errorResponse = req.CreateResponse(HttpStatusCode.BadGateway);
-                     errorResponse.WriteString("Invalid response from Miro.");
-                    return errorResponse;
+                    return new StatusCodeResult(StatusCodes.Status502BadGateway);
                 }
 
                 var tokens = new MiroTokenSet
@@ -134,30 +106,15 @@ namespace fmassman.Api.Functions
                     ExpiresAt = DateTime.UtcNow.AddSeconds(tokenDto.expires_in)
                 };
 
-                try 
-                {
-                    await _settingsRepository.UpsertMiroTokensAsync(tokens);
-                    _logger.LogInformation("Successfully upserted Miro tokens to Cosmos DB.");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to upsert Miro tokens to Cosmos DB.");
-                    var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                    errorResponse.WriteString("Database error while saving tokens.");
-                    return errorResponse;
-                }
+                await _settingsRepository.UpsertMiroTokensAsync(tokens);
+                _logger.LogInformation("Successfully upserted Miro tokens to Cosmos DB.");
 
-                // Redirect to success page
-                var response = req.CreateResponse(HttpStatusCode.Found);
-                response.Headers.Add("Location", "/admin/positions?status=success");
-                return response;
+                return new RedirectResult("/admin/positions?status=success", false);
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "Unhandled exception in Miro callback");
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                errorResponse.WriteString($"Internal server error: {ex.Message}");
-                return errorResponse;
+                return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
         }
 

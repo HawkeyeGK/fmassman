@@ -177,14 +177,12 @@ namespace fmassman.Api.Functions
         }
 
         [Function("MiroAuthCallbackFinal")]
-        public async Task<IActionResult> MiroAuthCallbackFinal([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/finalize")] HttpRequest req)
+        public IActionResult MiroAuthCallbackFinal([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/finalize")] HttpRequest req)
         {
-            _logger.LogInformation("ENTERING MiroAuthCallbackFinal - Diagnostic (DUMB MODE)");
+            // SYNC execution - no 'async', no 'await'
+            _logger.LogInformation("ENTERING MiroAuthCallbackFinal - Diagnostic (SYNC DUMB MODE)");
             
-            // Force async execution to verify state machine
-            await Task.Delay(10); 
-            
-            return new OkObjectResult("Callback V2 on 'miro/finalize' reached! The route works. The crash is in the logic.");
+            return new OkObjectResult("Callback V3 (SYNC) on 'miro/finalize' reached! If you see this, the Async State Machine was the crasher.");
         }
 
         public class MiroTokenResponse

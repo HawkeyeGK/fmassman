@@ -8,9 +8,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Position Configuration</h1>
-    <button class="btn btn-primary" @onclick="CreatePosition" disabled="@(editingPosition != null)">
-        <i class="bi bi-plus-lg"></i> Add Position
-    </button>
+    <div class="d-flex gap-2">
+        <a href="/api/miro/auth/login" class="btn btn-outline-primary">
+            <i class="bi bi-cloud-arrow-up"></i> Connect to Miro
+        </a>
+        <button class="btn btn-primary" @onclick="CreatePosition" disabled="@(editingPosition != null)">
+            <i class="bi bi-plus-lg"></i> Add Position
+        </button>
+    </div>
 </div>
 
 @if (positions == null)

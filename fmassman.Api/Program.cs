@@ -62,11 +62,19 @@ var host = new HostBuilder()
             }
         });
 
+        // Register HttpClientFactory for Miro Auth
+        services.AddHttpClient("MiroAuth", client =>
+        {
+            client.BaseAddress = new Uri("https://api.miro.com/");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
+
         // Register Repositories/Services
         services.AddSingleton<IRosterRepository, CosmosRosterRepository>();
         services.AddScoped<fmassman.Shared.ITacticRepository, fmassman.Api.Repositories.CosmosTacticRepository>();
         services.AddScoped<ITagRepository, fmassman.Api.Repositories.CosmosTagRepository>();
         services.AddScoped<fmassman.Shared.Interfaces.IPositionRepository, fmassman.Api.Repositories.CosmosPositionRepository>();
+        services.AddScoped<fmassman.Shared.Interfaces.ISettingsRepository, fmassman.Api.Repositories.CosmosSettingsRepository>();
 
         services.AddSingleton<IRoleService>(sp =>
         {

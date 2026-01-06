@@ -58,6 +58,13 @@ namespace fmassman.Api.Functions
                 var clientSecret = Environment.GetEnvironmentVariable("MiroClientSecret");
                 var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
 
+                // DIAGNOSTIC STEP 1: Verify we got here and have config
+                return new OkObjectResult($"STEP 1 COMPLETED. Code: {code.Substring(0, 5)}... \n" +
+                                          $"ClientId Found: {!string.IsNullOrEmpty(clientId)} \n" +
+                                          $"ClientSecret Found: {!string.IsNullOrEmpty(clientSecret)} \n" +
+                                          $"RedirectUri Found: {!string.IsNullOrEmpty(redirectUri)}");
+
+                /* COMMENTED OUT FOR BINARY SEARCH 
                 var client = _httpClientFactory.CreateClient("MiroAuth");
                 var values = new List<KeyValuePair<string, string>>
                 {
@@ -76,11 +83,8 @@ namespace fmassman.Api.Functions
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                // Use dynamic to avoid custom DTO issues for now, or use the DTO if defined.
-                // Let's copy the DTO definition here to be safe and self-contained.
                 var tokenDto = JsonConvert.DeserializeObject<MiroTokenResponse>(json);
                  
-                 // Save tokens to Cosmos DB
                 var tokens = new MiroTokenSet
                 {
                     AccessToken = tokenDto.access_token,
@@ -92,6 +96,7 @@ namespace fmassman.Api.Functions
                 await _settingsRepository.UpsertMiroTokensAsync(tokens);
 
                 return new RedirectResult("/admin/positions?status=success", false);
+                */
             }
             catch (Exception ex)
             {

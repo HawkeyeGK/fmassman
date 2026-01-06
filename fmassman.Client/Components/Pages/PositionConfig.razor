@@ -134,6 +134,7 @@ else
         <div class="d-flex gap-2 mb-3">
             <button class="btn btn-warning" @onclick="RegisterSchema">Check Connection</button>
             <button class="btn btn-info" @onclick="SendTestCard">Send Test Card</button>
+            <button class="btn btn-secondary" @onclick="SendShapeTest">Send Shape Test</button>
         </div>
         @if (!string.IsNullOrEmpty(debugMessage))
         {
@@ -269,6 +270,21 @@ else
         {
             debugMessage = "Sending test card...";
             var response = await Http.PostAsync("api/miro/card/test", null);
+            var content = await response.Content.ReadAsStringAsync();
+            debugMessage = $"Status: {response.StatusCode}\nContent: {content}";
+        }
+        catch (Exception ex)
+        {
+            debugMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task SendShapeTest()
+    {
+        try
+        {
+            debugMessage = "Sending shape test...";
+            var response = await Http.PostAsync("api/miro/shape/test", null);
             var content = await response.Content.ReadAsStringAsync();
             debugMessage = $"Status: {response.StatusCode}\nContent: {content}";
         }

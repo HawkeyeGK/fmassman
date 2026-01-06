@@ -138,5 +138,48 @@ namespace fmassman.Api.Functions
                 return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
             }
         }
+        [Function("MiroCreateShapeTest")]
+        public async Task<IActionResult> CreateShapeTest(
+             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "miro/shape/test")] HttpRequestData req)
+        {
+            try
+            {
+                var client = await GetAuthenticatedClientAsync();
+                var boardId = Environment.GetEnvironmentVariable("MiroBoardId") ?? "uXjVGUR-CSw=";
+
+                var shapePayload = new
+                {
+                    data = new
+                    {
+                        shape = "rectangle",
+                        content = "<strong>Pep Guardiola</strong><br /><em>Manchester City</em><br /><br /><strong>Role:</strong> Sweeper Keeper<br /><strong>Fit:</strong> 98%<br /><strong>Age:</strong> 24"
+                    },
+                    style = new
+                    {
+                        fillColor = "#E6F7FF",
+                        borderColor = "#0099FF",
+                        textAlign = "left",
+                        textAlignVertical = "top"
+                    }
+                };
+                
+                var response = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", shapePayload);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Failed to create shape: {StatusCode} {Content}", response.StatusCode, errorContent);
+                    return new BadRequestObjectResult(new { error = $"Failed to create shape: {response.StatusCode}", details = errorContent });
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<object>();
+                return new OkObjectResult(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating Miro shape test");
+                return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
+            }
+        }
     }
 }

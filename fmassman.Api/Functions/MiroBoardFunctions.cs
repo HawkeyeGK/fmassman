@@ -35,151 +35,99 @@ namespace fmassman.Api.Functions
             var tokens = await _settingsRepository.GetMiroTokensAsync();
             if (tokens == null || string.IsNullOrEmpty(tokens.AccessToken))
             {
-                throw new UnauthorizedAccessException("Miro tokens not found.");
+                throw new UnauthorizedAccessException("Miro tokens not found. Please login via the admin dashboard.");
             }
 
-            if (tokens.ExpiresAt <= DateTime.UtcNow)
+            // Check if token is expired or about to expire (5 min buffer)
+            if (tokens.ExpiresAt <= DateTime.UtcNow.AddMinutes(5))
             {
-                _logger.LogWarning("Miro access token has expired at {Expiry}.", tokens.ExpiresAt);
-                // In a real scenario, we would refresh here. For now, strictly V2 or fail.
-                throw new UnauthorizedAccessException("Miro access token has expired.");
+                _logger.LogInformation("Miro access token expired (or expiring soon). refreshing...");
+
+                var clientId = Environment.GetEnvironmentVariable("MiroClientId");
+                var clientSecret = Environment.GetEnvironmentVariable("MiroClientSecret");
+
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    _logger.LogError("MiroClientId or MiroClientSecret not configured.");
+                    throw new UnauthorizedAccessException("Miro configuration missing on server.");
+                }
+
+                try
+                {
+                    var refreshClient = _httpClientFactory.CreateClient();
+                    var request = new HttpRequestMessage(HttpMethod.Post, "https://api.miro.com/v1/oauth/token");
+                    
+                    var kvp = new List<KeyValuePair<string, string>>
+                    {
+                        new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                        new KeyValuePair<string, string>("client_id", clientId),
+                        new KeyValuePair<string, string>("client_secret", clientSecret),
+                        new KeyValuePair<string, string>("refresh_token", tokens.RefreshToken)
+                    };
+
+                    request.Content = new FormUrlEncodedContent(kvp);
+
+                    var response = await refreshClient.SendAsync(request);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        _logger.LogError("Failed to refresh Miro token: {StatusCode} {Content}", response.StatusCode, errorContent);
+                        throw new UnauthorizedAccessException("Failed to refresh Miro token. Please login again.");
+                    }
+
+                    var json = await response.Content.ReadAsStringAsync();
+                    var tokenResponse = JsonSerializer.Deserialize<MiroRefreshTokenResponse>(json);
+
+                    if (tokenResponse != null && !string.IsNullOrEmpty(tokenResponse.AccessToken))
+                    {
+                        tokens.AccessToken = tokenResponse.AccessToken;
+                        // Miro might rotate the refresh token
+                        if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
+                        {
+                            tokens.RefreshToken = tokenResponse.RefreshToken;
+                        }
+                        // Update expiry
+                        tokens.ExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+
+                        await _settingsRepository.UpsertMiroTokensAsync(tokens);
+                        _logger.LogInformation("Miro token refreshed successfully.");
+                    }
+                    else
+                    {
+                        throw new UnauthorizedAccessException("Invalid response during token refresh.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error refreshing Miro token.");
+                    throw new UnauthorizedAccessException("Error refreshing Miro token.", ex);
+                }
             }
 
             var client = _httpClientFactory.CreateClient("MiroAuth");
-            // BaseAddress is already set to https://api.miro.com/ in Program.cs, but we want to ensure V2 usage.
-            // Program.cs has: client.BaseAddress = new Uri("https://api.miro.com/");
-            // We'll append v2/ segments in the requests.
+            // Ensure V2 usage for API calls
+            // Note: client.BaseAddress is likely https://api.miro.com/ from Program.cs, we will append v2/ segments
             
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokens.AccessToken);
             
             return client;
         }
 
-        [Function("MiroRegisterSchema")]
-        public async Task<IActionResult> RegisterSchema(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/schema/register")] HttpRequestData req)
+        // Helper class for deserializing the refresh response (snake_case)
+        private class MiroRefreshTokenResponse
         {
-            try
-            {
-                var client = await GetAuthenticatedClientAsync();
-                var boardId = Environment.GetEnvironmentVariable("MiroBoardId") ?? "uXjVGUR-CSw=";
+            [System.Text.Json.Serialization.JsonPropertyName("access_token")]
+            public string AccessToken { get; set; } = string.Empty;
 
-                // V2 App Cards do not require explicit schema registration in the same way as V1 or Web SDK.
-                // Instead of registering a schema (which returns 405), we will verify connection to the board.
-                
-                var response = await client.GetAsync($"v2/boards/{boardId}");
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("Failed to access board: {StatusCode} {Content}", response.StatusCode, errorContent);
-                    return new BadRequestObjectResult(new { error = $"Failed to access board: {response.StatusCode}", details = errorContent });
-                }
+            [System.Text.Json.Serialization.JsonPropertyName("refresh_token")]
+            public string? RefreshToken { get; set; }
 
-                var board = await response.Content.ReadFromJsonAsync<object>();
-                return new OkObjectResult(new 
-                { 
-                    message = "Connection successful. Schema registration is not required/supported for V2 App Cards; using ad-hoc fields.",
-                    boardDetails = board
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking Miro connection");
-                return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
-            }
-        }
-
-        [Function("MiroCreateTestCard")]
-        public async Task<IActionResult> CreateTestCard(
-             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "miro/card/test")] HttpRequestData req)
-        {
-            try
-            {
-                var client = await GetAuthenticatedClientAsync();
-                var boardId = Environment.GetEnvironmentVariable("MiroBoardId") ?? "uXjVGUR-CSw=";
-
-                var cardPayload = new
-                {
-                    data = new
-                    {
-                        title = "Test Player (Pep Guardiola)",
-                        status = "connected",
-                        fields = new object[]
-                        {
-                            new { value = "GK", tooltip = "Position" },
-                            new { value = "24", tooltip = "Age" }, // Value must be string? API docs say string. Let's force string to be safe.
-                            new { value = "2026-06-30", tooltip = "Contract Exp" },
-                            new { value = "Sweeper Keeper", tooltip = "Best Role" },
-                            new { value = "98%", tooltip = "Fit %" }
-                        }
-                    },
-                    style = new
-                    {
-                        fillColor = "#0099FF"
-                    }
-                };
-                
-                var response = await client.PostAsJsonAsync($"v2/boards/{boardId}/app_cards", cardPayload);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("Failed to create test card: {StatusCode} {Content}", response.StatusCode, errorContent);
-                    return new BadRequestObjectResult(new { error = $"Failed to create card: {response.StatusCode}", details = errorContent });
-                }
-
-                var result = await response.Content.ReadFromJsonAsync<object>();
-                return new OkObjectResult(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating Miro test card");
-                return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
-            }
-        }
-        [Function("MiroCreateShapeTest")]
-        public async Task<IActionResult> CreateShapeTest(
-             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "miro/shape/test")] HttpRequestData req)
-        {
-            try
-            {
-                var client = await GetAuthenticatedClientAsync();
-                var boardId = Environment.GetEnvironmentVariable("MiroBoardId") ?? "uXjVGUR-CSw=";
-
-                var shapePayload = new
-                {
-                    data = new
-                    {
-                        shape = "rectangle",
-                        content = "<strong>Pep Guardiola</strong><br /><em>Manchester City</em><br /><br /><strong>Role:</strong> Sweeper Keeper<br /><strong>Fit:</strong> 98%<br /><strong>Age:</strong> 24"
-                    },
-                    style = new
-                    {
-                        fillColor = "#E6F7FF",
-                        borderColor = "#0099FF",
-                        textAlign = "left",
-                        textAlignVertical = "top"
-                    }
-                };
-                
-                var response = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", shapePayload);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("Failed to create shape: {StatusCode} {Content}", response.StatusCode, errorContent);
-                    return new BadRequestObjectResult(new { error = $"Failed to create shape: {response.StatusCode}", details = errorContent });
-                }
-
-                var result = await response.Content.ReadFromJsonAsync<object>();
-                return new OkObjectResult(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating Miro shape test");
-                return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
-            }
+            [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+            
+            [System.Text.Json.Serialization.JsonPropertyName("scope")]
+            public string? Scope { get; set; }
         }
     }
 }

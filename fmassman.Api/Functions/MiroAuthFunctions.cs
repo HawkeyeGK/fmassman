@@ -48,11 +48,29 @@ namespace fmassman.Api.Functions
         [Function("MiroCallback")]
         public async Task<HttpResponseData> Callback([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/auth/callback")] HttpRequestData req)
         {
-            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
-            var code = query["code"];
+            _logger.LogInformation($"Miro callback received. Full URL: {req.Url}");
+            
+            var queryString = req.Url.Query;
+            var code = string.Empty;
+            
+            // Parse query string manually since System.Web is not available
+            if (!string.IsNullOrEmpty(queryString))
+            {
+                var queryParams = queryString.TrimStart('?').Split('&');
+                foreach (var param in queryParams)
+                {
+                    var keyValue = param.Split('=');
+                    if (keyValue.Length == 2 && keyValue[0] == "code")
+                    {
+                        code = WebUtility.UrlDecode(keyValue[1]);
+                        break;
+                    }
+                }
+            }
 
             if (string.IsNullOrEmpty(code))
             {
+                _logger.LogError($"Missing code parameter. Query string was: {queryString}");
                 var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
                 badRequest.WriteString("Missing code parameter.");
                 return badRequest;

@@ -9,6 +9,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using fmassman.Shared.Interfaces;
 using fmassman.Shared.Models;
+using fmassman.Shared;
 using System.Text.Json;
 using System.Collections.Generic;
 
@@ -121,7 +122,6 @@ namespace fmassman.Api.Functions
 
         private string BuildPlayerHtml(PlayerImportData p)
         {
-            var bestRoleDisplay = "N/A";
             if (p.Snapshot != null)
             {
                // This logic assumes PlayerAnalyzer has run and populated BestRole? 

@@ -52,7 +52,7 @@ namespace fmassman.Tests
         {
             // Arrange
             var context = new DefaultHttpContext();
-            var result = await _functions.UpdatePlayerTags(context.Request, null);
+            var result = await _functions.UpdatePlayerTags(context.Request, null!);
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -73,7 +73,7 @@ namespace fmassman.Tests
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-             Assert.Contains("Invalid payload", badRequestResult.Value.ToString());
+             Assert.Contains("Invalid payload", badRequestResult.Value?.ToString());
         }
     }
 }

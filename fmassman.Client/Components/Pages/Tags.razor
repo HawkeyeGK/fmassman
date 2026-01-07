@@ -154,10 +154,10 @@ else
 }
 
 @code {
-    private List<TagDefinition> tags;
-    private TagDefinition editingTag;
-    private string errorMessage;
-    private string successMessage;
+    private List<TagDefinition>? tags;
+    private TagDefinition? editingTag;
+    private string? errorMessage;
+    private string? successMessage;
     private bool isNewTag = false;
 
 
@@ -183,6 +183,7 @@ else
 
     private void CreateTag()
     {
+        if (tags == null) return;
         errorMessage = null; successMessage = null;
         int nextOrder = tags.Any() ? tags.Max(t => t.DisplayOrder) + 1 : 0;
         editingTag = new TagDefinition { Name = "New Tag", DisplayOrder = nextOrder };
@@ -214,6 +215,7 @@ else
     {
         try
         {
+            if (editingTag == null) return;
             if (string.IsNullOrWhiteSpace(editingTag.Name))
             {
                 errorMessage = "Tag name is required.";
@@ -269,6 +271,7 @@ else
 
     private async Task MoveTagUp(TagDefinition tag)
     {
+        if (tags == null) return;
         var paramsIndex = tags.IndexOf(tag);
         if (paramsIndex <= 0) return;
 
@@ -278,6 +281,7 @@ else
 
     private async Task MoveTagDown(TagDefinition tag)
     {
+         if (tags == null) return;
          var paramsIndex = tags.IndexOf(tag);
         if (paramsIndex < 0 || paramsIndex >= tags.Count - 1) return;
 
@@ -287,6 +291,7 @@ else
 
     private async Task SwapTags(TagDefinition tag1, TagDefinition tag2)
     {
+        if (tags == null) return;
         errorMessage = null; successMessage = null;
         try 
         {

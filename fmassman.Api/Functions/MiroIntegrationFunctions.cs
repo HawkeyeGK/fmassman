@@ -53,16 +53,18 @@ namespace fmassman.Api.Functions
                 
                 string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
                 var data = JsonConvert.DeserializeObject<MiroExchangeRequest>(requestBody);
-                string code = data?.Code;
+                string? code = data?.Code;
 
                 if (string.IsNullOrEmpty(code)) return new BadRequestObjectResult("No code provided in body");
 
                 var clientId = Environment.GetEnvironmentVariable("MiroClientId");
                 var clientSecret = Environment.GetEnvironmentVariable("MiroClientSecret");
-                // IMPORTANT: This must match the URI registered in Miro and the one the Client used.
-                // Since we are now using the Client-Side route, the Env Var should be updated to:
-                // https://www.fmassman.com/miro/finalize
                 var redirectUri = Environment.GetEnvironmentVariable("MiroRedirectUrl");
+
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(redirectUri))
+                {
+                     return new ObjectResult("Missing Miro Configuration") { StatusCode = 500 };
+                }
 
                 var client = _httpClientFactory.CreateClient("MiroAuth");
                 var values = new List<KeyValuePair<string, string>>
@@ -84,6 +86,8 @@ namespace fmassman.Api.Functions
                 var json = await response.Content.ReadAsStringAsync();
                 var tokenDto = JsonConvert.DeserializeObject<MiroTokenResponse>(json);
                  
+                if (tokenDto == null) return new ObjectResult("Failed to deserialize Miro response") { StatusCode = 502 };
+
                 var tokens = new MiroTokenSet
                 {
                     AccessToken = tokenDto.access_token,
@@ -105,7 +109,7 @@ namespace fmassman.Api.Functions
 
         public class MiroExchangeRequest
         {
-            public string Code { get; set; }
+            public string? Code { get; set; }
         }
 
         public class MiroTokenResponse

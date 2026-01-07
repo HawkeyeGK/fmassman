@@ -39,9 +39,12 @@ else
                         value="@context.PositionId" 
                         @onchange="@(e => UpdatePosition(context, e))">
                     <option value="">Select Position...</option>
-                    @foreach (var pos in positions)
+                    @if (positions != null)
                     {
-                        <option value="@pos.Id">@pos.Name</option>
+                        @foreach (var pos in positions)
+                        {
+                            <option value="@pos.Id">@pos.Name</option>
+                        }
                     }
                 </select>
             </TemplateColumn>
@@ -66,11 +69,11 @@ else
 }
 
 @code {
-    private List<PlayerImportData> allPlayers;
-    private List<TagDefinition> tags;
-    private List<PositionDefinition> positions;
+    private List<PlayerImportData>? allPlayers;
+    private List<TagDefinition>? tags;
+    private List<PositionDefinition>? positions;
     private List<string> filterTagIds = new();
-    private string errorMessage;
+    private string? errorMessage;
     private PaginationState pagination = new PaginationState { ItemsPerPage = 20 };
 
     // Sort rule for Player Name
@@ -136,8 +139,9 @@ else
         }
     }
 
-    private async Task ToggleTag(PlayerImportData player, string tagId, object checkedValue)
+    private async Task ToggleTag(PlayerImportData player, string tagId, object? checkedValue)
     {
+        if (checkedValue == null) return;
         bool isChecked = (bool)checkedValue;
         bool changed = false;
 

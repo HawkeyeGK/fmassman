@@ -10,7 +10,7 @@ namespace fmassman.Api.Repositories
 {
     public class CosmosTacticRepository : ITacticRepository
     {
-        private Container _container;
+        private Container? _container;
         private readonly CosmosClient _cosmosClient;
         private readonly CosmosSettings _settings;
         private readonly ILogger<CosmosTacticRepository> _logger;

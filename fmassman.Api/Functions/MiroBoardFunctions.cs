@@ -253,7 +253,7 @@ namespace fmassman.Api.Functions
                     return new BadRequestObjectResult(new { error = "Failed to create background", details = await bgResponse.Content.ReadAsStringAsync() });
                 
                 var bgJson = await bgResponse.Content.ReadFromJsonAsync<JsonElement>();
-                string bgId = bgJson.GetProperty("id").GetString();
+                string bgId = bgJson.GetProperty("id").GetString()!;
 
                 // B. Header (Text)
                 var headerPayload = new
@@ -263,7 +263,7 @@ namespace fmassman.Api.Functions
                     position = new { x = posX, y = posY - 80 }
                 };
                 var headerResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", headerPayload, jsonOptions);
-                string headerId = (await headerResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+                string headerId = (await headerResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
 
                 // C. Body (Text)
                 var age = player.Snapshot?.Age.ToString() ?? "?";
@@ -279,7 +279,7 @@ namespace fmassman.Api.Functions
                     position = new { x = posX, y = posY + 20 }
                 };
                 var bodyResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", bodyPayload, jsonOptions);
-                string bodyId = (await bodyResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
+                string bodyId = (await bodyResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
 
                 _logger.LogInformation("Created items - BG: {BgId}, Header: {HeaderId}, Body: {BodyId}", bgId, headerId, bodyId);
 
@@ -305,7 +305,7 @@ namespace fmassman.Api.Functions
                     var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
                     if (groupJson.TryGetProperty("id", out var gId))
                     {
-                        groupId = gId.GetString();
+                        groupId = gId.GetString()!;
                         groupCreated = true;
                     }
                 }

@@ -158,6 +158,20 @@
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(diagnosticMessage))
+    {
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Miro Push Diagnostics</h5>
+                <button class="btn btn-sm btn-light" @onclick="() => diagnosticMessage = null">Close</button>
+            </div>
+            <div class="card-body">
+                <textarea class="form-control bg-dark text-white" rows="15" readonly style="font-family: monospace; font-size: 12px;">@diagnosticMessage</textarea>
+            </div>
+        </div>
+    }
+
+
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-end">
              <div class="btn-group" role="group">
@@ -250,27 +264,66 @@ else
         await VM.DeletePlayerAsync();
     }
 
+    private string? diagnosticMessage = null;
+
     private async Task PushToMiro()
     {
         if (VM.Player == null) return;
+        diagnosticMessage = null;
         
         try
         {
             var result = await Http.PostAsync($"api/miro/push/{Uri.EscapeDataString(VM.Player.PlayerName)}", null);
+            var responseBody = await result.Content.ReadAsStringAsync();
+            
             if (result.IsSuccessStatusCode)
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Player pushed to Miro successfully!");
+                // Parse the response to extract diagnostics
+                var response = System.Text.Json.JsonDocument.Parse(responseBody);
+                var root = response.RootElement;
+                
+                if (root.TryGetProperty("diagnostics", out var diag))
+                {
+                    var bgId = diag.GetProperty("bgId").GetString();
+                    var headerId = diag.GetProperty("headerId").GetString();
+                    var bodyId = diag.GetProperty("bodyId").GetString();
+                    var groupPayload = diag.GetProperty("groupPayload").GetString();
+                    var groupStatus = diag.GetProperty("groupResponseStatus").GetString();
+                    var groupBody = diag.GetProperty("groupResponseBody").GetString();
+                    
+                    var groupIdLine = "";
+                    if (root.TryGetProperty("groupId", out var gid))
+                    {
+                        groupIdLine = "\n✅ Group ID: " + gid.GetString();
+                    }
+                    
+                    diagnosticMessage = "✅ SUCCESS - Player pushed to Miro!\n\n" +
+                        "CREATED ITEMS:\n" +
+                        $"- Background ID: {bgId}\n" +
+                        $"- Header ID: {headerId}\n" +
+                        $"- Body ID: {bodyId}\n\n" +
+                        "GROUP CREATION:\n" +
+                        $"- Payload: {groupPayload}\n" +
+                        $"- Response Status: {groupStatus}\n" +
+                        $"- Response Body: {groupBody}\n" +
+                        groupIdLine;
+                }
+                else
+                {
+                    diagnosticMessage = "✅ Player pushed to Miro successfully!\n(No diagnostics available)";
+                }
             }
             else
             {
-                var error = await result.Content.ReadAsStringAsync();
-                await JSRuntime.InvokeVoidAsync("alert", $"Failed to push to Miro: {result.StatusCode} - {error}");
+                diagnosticMessage = $"❌ FAILED - Status: {result.StatusCode}\n\nResponse Body:\n{responseBody}";
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Error pushing to Miro: {ex.Message}");
+            diagnosticMessage = $"❌ ERROR: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
         }
+        
+        StateHasChanged();
     }
 
     private void SetMode(bool inPossession)

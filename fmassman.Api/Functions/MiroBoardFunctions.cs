@@ -240,30 +240,56 @@ namespace fmassman.Api.Functions
                 var bodyResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", bodyPayload, jsonOptions);
                 string bodyId = (await bodyResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
 
+                _logger.LogInformation("Created items - BG: {BgId}, Header: {HeaderId}, Body: {BodyId}", bgId, headerId, bodyId);
+
                 // STEP 3: CREATE GROUP (The Fix)
                 var groupPayload = new
                 {
                     data = new { items = new[] { bgId, headerId, bodyId } }
                 };
 
+                var payloadJson = System.Text.Json.JsonSerializer.Serialize(groupPayload, jsonOptions);
+                _logger.LogInformation("Attempting to create group with payload: {Payload}", payloadJson);
                 var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/groups", groupPayload, jsonOptions);
+                
+                var groupResponseBody = await groupResponse.Content.ReadAsStringAsync();
+                _logger.LogInformation("Group API Response - Status: {Status}, Body: {Body}", groupResponse.StatusCode, groupResponseBody);
                 
                 // STEP 4 & 5: PERSIST & HANDLING
                 if (groupResponse.IsSuccessStatusCode)
                 {
                     var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
+                    _logger.LogInformation("Group response JSON: {Json}", groupJson.ToString());
+                    
                     if (groupJson.TryGetProperty("id", out var gId))
                     {
                         // Success: Save Group ID
-                        player.MiroWidgetId = gId.GetString();
+                        var groupId = gId.GetString();
+                        _logger.LogInformation("Successfully created group with ID: {GroupId}", groupId);
+                        player.MiroWidgetId = groupId;
                         await _rosterRepository.UpsertAsync(player);
-                        return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
+                        return new OkObjectResult(new { 
+                            status = "success", 
+                            widgetId = player.MiroWidgetId,
+                            diagnostics = new {
+                                bgId,
+                                headerId,
+                                bodyId,
+                                groupId,
+                                groupPayload = payloadJson,
+                                groupResponseStatus = groupResponse.StatusCode.ToString(),
+                                groupResponseBody
+                            }
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogError("Group response successful but no 'id' property found. Full response: {Response}", groupJson.ToString());
                     }
                 }
                 
                 // FALLBACK: Grouping Failed
-                var groupError = await groupResponse.Content.ReadAsStringAsync();
-                _logger.LogError("Grouping failed. Fallback to saving Background ID. Status: {Status} Error: {Error}", groupResponse.StatusCode, groupError);
+                _logger.LogError("Grouping failed. Fallback to saving Background ID. Status: {Status} Error: {Error}", groupResponse.StatusCode, groupResponseBody);
                 
                 // Save Background ID so next time we at least delete the background
                 player.MiroWidgetId = bgId;
@@ -272,7 +298,15 @@ namespace fmassman.Api.Functions
                 return new ObjectResult(new { 
                     status = "partial_success", 
                     message = "Card created but grouping failed. Saved Background ID.", 
-                    details = groupError 
+                    details = groupResponseBody,
+                    diagnostics = new {
+                        bgId,
+                        headerId,
+                        bodyId,
+                        groupPayload = payloadJson,
+                        groupResponseStatus = groupResponse.StatusCode.ToString(),
+                        groupResponseBody
+                    }
                 }) { StatusCode = 206 };
             }
             catch (Exception ex)

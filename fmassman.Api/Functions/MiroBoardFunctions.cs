@@ -281,36 +281,71 @@ namespace fmassman.Api.Functions
                 _logger.LogInformation("Group API Response - Status: {Status}, Body: {Body}", groupResponse.StatusCode, groupResponseBody);
                 
                 // STEP 4 & 5: PERSIST & HANDLING
+                // STEP 4 & 5: Verify group creation and persist appropriate widget ID
                 if (groupResponse.IsSuccessStatusCode)
                 {
                     var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
                     _logger.LogInformation("Group response JSON: {Json}", groupJson.ToString());
-                    
+
                     if (groupJson.TryGetProperty("id", out var gId))
                     {
-                        // Success: Save Group ID
                         var groupId = gId.GetString();
-                        _logger.LogInformation("Successfully created group with ID: {GroupId}", groupId);
-                        player.MiroWidgetId = groupId;
+                        // Give Miro a moment to finalize the group
+                        await Task.Delay(1000);
+                        var getGroupResponse = await client.GetAsync($"v2/boards/{boardId}/groups/{groupId}");
+                        var groupExists = getGroupResponse.IsSuccessStatusCode;
+                        var getGroupStatus = getGroupResponse.StatusCode.ToString();
+                        
+                        if (groupExists)
+                        {
+                            _logger.LogInformation("Verified group {GroupId} exists.", groupId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Created group {GroupId} not found on verification GET. Status: {Status}", groupId, getGroupStatus);
+                        }
+
+                        // Persist the appropriate widget ID (Group ID if verified, else fallback to Background ID)
+                        player.MiroWidgetId = groupExists ? groupId : bgId;
                         await _rosterRepository.UpsertAsync(player);
-                        return new OkObjectResult(new { 
-                            status = "success", 
-                            widgetId = player.MiroWidgetId,
-                            retrievedWidgetId = oldWidgetId,
-                            diagnostics = new {
-                                oldWidgetId,
-                                deleteAttempted,
-                                deleteSuccess,
-                                deleteDetails,
-                                bgId,
-                                headerId,
-                                bodyId,
-                                groupId,
-                                groupPayload = payloadJson,
-                                groupResponseStatus = groupResponse.StatusCode.ToString(),
-                                groupResponseBody
-                            }
-                        });
+
+                        var diagnostics = new
+                        {
+                            oldWidgetId,
+                            deleteAttempted,
+                            deleteSuccess,
+                            deleteDetails,
+                            bgId,
+                            headerId,
+                            bodyId,
+                            groupId,
+                            groupExists,
+                            getGroupStatus,
+                            groupPayload = payloadJson,
+                            groupResponseStatus = groupResponse.StatusCode.ToString(),
+                            groupResponseBody
+                        };
+
+                        if (groupExists)
+                        {
+                             return new OkObjectResult(new { 
+                                status = "success", 
+                                widgetId = player.MiroWidgetId, 
+                                retrievedWidgetId = oldWidgetId, 
+                                diagnostics 
+                            });
+                        }
+                        else
+                        {
+                            return new ObjectResult(new
+                            {
+                                status = "partial_success",
+                                message = "Card created but grouping failed verification. Saved Background ID.",
+                                details = groupResponseBody,
+                                retrievedWidgetId = oldWidgetId,
+                                diagnostics
+                            }) { StatusCode = 200 };
+                        }
                     }
                     else
                     {

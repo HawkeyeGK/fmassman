@@ -302,6 +302,12 @@ else
                     var groupStatus = diag.GetProperty("groupResponseStatus").GetString();
                     var groupBody = diag.GetProperty("groupResponseBody").GetString();
                     
+                    var groupExists = "N/A";
+                    if(diag.TryGetProperty("groupExists", out var ge)) groupExists = ge.GetBoolean().ToString();
+
+                    var verificationStatus = "N/A";
+                    if(diag.TryGetProperty("getGroupStatus", out var ggs)) verificationStatus = ggs.GetString();
+                    
                     var groupIdLine = "";
                     if (root.TryGetProperty("groupId", out var gid))
                     {
@@ -322,6 +328,8 @@ else
                         "GROUP CREATION:\n" +
                         $"- Payload: {groupPayload}\n" +
                         $"- Response Status: {groupStatus}\n" +
+                        $"- Verification GET Status: {verificationStatus}\n" +
+                        $"- Group Exists (Verified): {groupExists}\n" +
                         $"- Response Body: {groupBody}\n" +
                         groupIdLine;
                 }

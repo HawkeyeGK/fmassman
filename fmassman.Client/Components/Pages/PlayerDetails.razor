@@ -284,6 +284,12 @@ else
                 
                 if (root.TryGetProperty("diagnostics", out var diag))
                 {
+                    var retrievedId = "";
+                    if (root.TryGetProperty("retrievedWidgetId", out var retId))
+                    {
+                        retrievedId = retId.GetString() ?? "(null)";
+                    }
+                    
                     var oldWidgetId = diag.GetProperty("oldWidgetId").GetString();
                     var deleteAttempted = diag.GetProperty("deleteAttempted").GetBoolean().ToString();
                     var deleteSuccess = diag.GetProperty("deleteSuccess").GetBoolean().ToString();
@@ -303,6 +309,7 @@ else
                     }
                     
                     diagnosticMessage = "✅ SUCCESS - Player pushed to Miro!\n\n" +
+                        $"🔍 RETRIEVED WIDGET ID FROM DB: {retrievedId}\n\n" +
                         "SMART DELETE:\n" +
                         $"- Old Widget ID: {oldWidgetId ?? "(none)"}\n" +
                         $"- Delete Attempted: {deleteAttempted}\n" +

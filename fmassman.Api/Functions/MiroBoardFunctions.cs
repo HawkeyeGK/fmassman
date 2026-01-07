@@ -133,6 +133,11 @@ namespace fmassman.Api.Functions
                     return new NotFoundObjectResult(new { error = "Player not found" });
                 }
 
+                // DEBUG: Log what we retrieved
+                _logger.LogInformation("Retrieved player {PlayerName} with MiroWidgetId: {MiroWidgetId}", 
+                    player.PlayerName, 
+                    player.MiroWidgetId ?? "(null)");
+
                 var client = await GetAuthenticatedClientAsync();
                 var boardId = Environment.GetEnvironmentVariable("MiroBoardId");
 
@@ -291,6 +296,7 @@ namespace fmassman.Api.Functions
                         return new OkObjectResult(new { 
                             status = "success", 
                             widgetId = player.MiroWidgetId,
+                            retrievedWidgetId = oldWidgetId,
                             diagnostics = new {
                                 oldWidgetId,
                                 deleteAttempted,
@@ -323,6 +329,7 @@ namespace fmassman.Api.Functions
                     status = "partial_success", 
                     message = "Card created but grouping failed. Saved Background ID.", 
                     details = groupResponseBody,
+                    retrievedWidgetId = oldWidgetId,
                     diagnostics = new {
                         oldWidgetId,
                         deleteAttempted,

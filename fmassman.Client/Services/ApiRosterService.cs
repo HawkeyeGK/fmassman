@@ -85,6 +85,23 @@ namespace fmassman.Client.Services
                  var errorBody = await response.Content.ReadAsStringAsync();
                  throw new HttpRequestException($"Update position failed ({response.StatusCode}): {errorBody}");
             }
+            if (!response.IsSuccessStatusCode)
+            {
+                 var errorBody = await response.Content.ReadAsStringAsync();
+                 throw new HttpRequestException($"Update position failed ({response.StatusCode}): {errorBody}");
+            }
+        }
+
+        public async Task<PlayerImportData?> GetByIdAsync(string id)
+        {
+             try
+             {
+                 return await _http.GetFromJsonAsync<PlayerImportData>($"api/roster/{Uri.EscapeDataString(id)}", _jsonOptions);
+             }
+             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+             {
+                 return null;
+             }
         }
     }
 }

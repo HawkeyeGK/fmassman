@@ -27,6 +27,20 @@ namespace fmassman.Api.Functions
             return new OkObjectResult(roster);
         }
 
+        [Function("GetPlayer")]
+        public async Task<IActionResult> GetPlayer(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "roster/{playerName}")] HttpRequest req,
+            string playerName)
+        {
+            _logger.LogInformation("Processing GetPlayer request for '{PlayerName}'.", playerName);
+            var player = await _repository.GetByIdAsync(playerName);
+            if (player == null)
+            {
+                return new NotFoundResult();
+            }
+            return new OkObjectResult(player);
+        }
+
         [Function("SaveRoster")]
         public async Task<IActionResult> SaveRoster(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = "roster")] HttpRequest req)

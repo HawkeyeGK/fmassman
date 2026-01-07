@@ -158,11 +158,12 @@ namespace fmassman.Api.Functions
                     }
                 }
 
-                // 2. Smart Delete (The "Kill")
+                // STEP 1: SMART DELETE (The "Kill")
                 if (!string.IsNullOrEmpty(player.MiroWidgetId))
                 {
                     try
                     {
+                        // Get Location
                         var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
                         if (getResponse.IsSuccessStatusCode)
                         {
@@ -178,14 +179,15 @@ namespace fmassman.Api.Functions
                         }
                         else if (getResponse.StatusCode == HttpStatusCode.NotFound)
                         {
-                             _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Using default position.", player.MiroWidgetId);
+                             _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Resetting to 0,0.", player.MiroWidgetId);
+                             posX = 0; 
+                             posY = 0;
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error during Smart Delete of widget {WidgetId}", player.MiroWidgetId);
-                        // Proceed with default pos if delete fails/errors? Or abort? 
-                        // We'll proceed to ensure the new card is created.
+                        // Proceed to create new anyway
                     }
                 }
 
@@ -195,11 +197,11 @@ namespace fmassman.Api.Functions
                     DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
                 };
 
-                // 3. Composition (The "Fill")
+                // STEP 2: BULK CREATE (The "Fill")
                 // A. Background (Shape)
                 var bgPayload = new
                 {
-                    data = new { shape = "rectangle" }, // No content in BG
+                    data = new { shape = "rectangle" },
                     style = new { fillColor = color, borderOpacity = 0 },
                     geometry = new { width = 300, height = 240 },
                     position = new { x = posX, y = posY }
@@ -207,15 +209,12 @@ namespace fmassman.Api.Functions
 
                 var bgResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", bgPayload, jsonOptions);
                 if (!bgResponse.IsSuccessStatusCode)
-                {
-                     var err = await bgResponse.Content.ReadAsStringAsync();
-                     return new BadRequestObjectResult(new { error = "Failed to create background", details = err });
-                }
+                    return new BadRequestObjectResult(new { error = "Failed to create background", details = await bgResponse.Content.ReadAsStringAsync() });
+                
                 var bgJson = await bgResponse.Content.ReadFromJsonAsync<JsonElement>();
                 string bgId = bgJson.GetProperty("id").GetString();
 
-                // B. Header (Text) - Name
-                // Position: Top of card (approx y - 80)
+                // B. Header (Text)
                 var headerPayload = new
                 {
                     data = new { content = $"<h3>{player.PlayerName}</h3>" },
@@ -223,11 +222,9 @@ namespace fmassman.Api.Functions
                     position = new { x = posX, y = posY - 80 }
                 };
                 var headerResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", headerPayload, jsonOptions);
-                var headerJson = await headerResponse.Content.ReadFromJsonAsync<JsonElement>();
-                string headerId = headerJson.GetProperty("id").GetString();
+                string headerId = (await headerResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
 
-                // C. Body (Text) - Stats
-                // Position: Middle/Bottom (approx y + 20)
+                // C. Body (Text)
                 var age = player.Snapshot?.Age.ToString() ?? "?";
                 var contract = player.Snapshot?.ContractExpiry ?? "?";
                 var bodyString = $"<p><strong>Role:</strong> {roleName}</p>" +
@@ -241,11 +238,9 @@ namespace fmassman.Api.Functions
                     position = new { x = posX, y = posY + 20 }
                 };
                 var bodyResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", bodyPayload, jsonOptions);
-                var bodyJson = await bodyResponse.Content.ReadFromJsonAsync<JsonElement>();
-                string bodyId = bodyJson.GetProperty("id").GetString();
+                string bodyId = (await bodyResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString();
 
-                // 4. Grouping
-                // V2 API Endpoint for Grouping: POST https://api.miro.com/v2/boards/{board_id}/groups
+                // STEP 3: CREATE GROUP (The Fix)
                 var groupPayload = new
                 {
                     data = new { items = new[] { bgId, headerId, bodyId } }
@@ -253,44 +248,32 @@ namespace fmassman.Api.Functions
 
                 var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/groups", groupPayload, jsonOptions);
                 
-                if (!groupResponse.IsSuccessStatusCode)
+                // STEP 4 & 5: PERSIST & HANDLING
+                if (groupResponse.IsSuccessStatusCode)
                 {
-                    var groupError = await groupResponse.Content.ReadAsStringAsync();
-                    _logger.LogError("Failed to group items: {Status} {Error}", groupResponse.StatusCode, groupError);
-                    
-                    // Cleanup: Delete the loose items so we don't leave mess/duplicates
-                    try 
+                    var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
+                    if (groupJson.TryGetProperty("id", out var gId))
                     {
-                        var tasks = new List<Task>
-                        {
-                            client.DeleteAsync($"v2/boards/{boardId}/shapes/{bgId}"),
-                            client.DeleteAsync($"v2/boards/{boardId}/texts/{headerId}"),
-                            client.DeleteAsync($"v2/boards/{boardId}/texts/{bodyId}")
-                        };
-                        await Task.WhenAll(tasks);
+                        // Success: Save Group ID
+                        player.MiroWidgetId = gId.GetString();
+                        await _rosterRepository.UpsertAsync(player);
+                        return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
                     }
-                    catch (Exception cleanupEx)
-                    {
-                        _logger.LogError(cleanupEx, "Failed to clean up loose items after grouping failure.");
-                    }
-
-                    return new ObjectResult(new { error = "Created items but failed to group them. Cleaned up items.", details = groupError }) { StatusCode = 500 };
                 }
                 
-                var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
-                if (groupJson.TryGetProperty("id", out var gId))
-                {
-                    player.MiroWidgetId = gId.GetString();
-                    await _rosterRepository.UpsertAsync(player);
-                }
-                else
-                {
-                     // If we got success but no ID (weird), assume failure?
-                     _logger.LogError("Grouping succeeded but returned no ID.");
-                     return new ObjectResult(new { error = "Grouping succeeded but returned no ID." }) { StatusCode = 500 };
-                }
+                // FALLBACK: Grouping Failed
+                var groupError = await groupResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Grouping failed. Fallback to saving Background ID. Status: {Status} Error: {Error}", groupResponse.StatusCode, groupError);
+                
+                // Save Background ID so next time we at least delete the background
+                player.MiroWidgetId = bgId;
+                await _rosterRepository.UpsertAsync(player);
 
-                return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
+                return new ObjectResult(new { 
+                    status = "partial_success", 
+                    message = "Card created but grouping failed. Saved Background ID.", 
+                    details = groupError 
+                }) { StatusCode = 206 };
             }
             catch (Exception ex)
             {

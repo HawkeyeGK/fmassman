@@ -120,22 +120,6 @@ namespace fmassman.Api.Functions
             return client;
         }
 
-        private string BuildPlayerHtml(PlayerImportData p, string roleName)
-        {
-            var age = p.Snapshot?.Age.ToString() ?? "?";
-            var contract = p.Snapshot?.ContractExpiry ?? "?";
-            var fit = ""; 
-            
-            // Format: Role Name (Fit) - but only show fit if we have it? 
-            // Currently we don't avail fit score here easily. Cleaning up the display.
-            
-            return $"<p><strong>{p.PlayerName}</strong></p>" +
-                   $"<hr>" +
-                   $"<p><strong>Role:</strong> {roleName} {fit}</p>" +
-                   $"<p><strong>Age:</strong> {age}</p>" +
-                   $"<p><strong>Contract:</strong> {contract}</p>";
-        }
-
         [Function("MiroPushPlayer")]
         public async Task<IActionResult> PushPlayerToMiro(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "miro/push/{playerId}")] HttpRequestData req,
@@ -143,92 +127,166 @@ namespace fmassman.Api.Functions
         {
             try
             {
-                 var player = await _rosterRepository.GetByIdAsync(playerId);
-                 if (player == null)
-                 {
-                     return new NotFoundObjectResult(new { error = "Player not found" });
-                 }
+                var player = await _rosterRepository.GetByIdAsync(playerId);
+                if (player == null)
+                {
+                    return new NotFoundObjectResult(new { error = "Player not found" });
+                }
 
-                 var client = await GetAuthenticatedClientAsync();
-                 
-                 // Resolve Position Details
-                 string color = "#E0E0E0";
-                 string roleName = "Unknown";
-                 
-                 if (!string.IsNullOrEmpty(player.PositionId))
-                 {
-                     var position = await _positionRepository.GetByIdAsync(player.PositionId);
-                     if (position != null)
+                var client = await GetAuthenticatedClientAsync();
+                var boardId = Environment.GetEnvironmentVariable("MiroBoardId");
+
+                if (string.IsNullOrEmpty(boardId))
+                {
+                    _logger.LogError("MiroBoardId environment variable not set.");
+                    return new ObjectResult(new { error = "Server configuration error" }) { StatusCode = 500 };
+                }
+
+                // 1. Setup & Defaults
+                double posX = 0;
+                double posY = 0;
+                string color = "#E0E0E0";
+                string roleName = "Unknown";
+
+                if (!string.IsNullOrEmpty(player.PositionId))
+                {
+                    var position = await _positionRepository.GetByIdAsync(player.PositionId);
+                    if (position != null)
+                    {
+                        color = position.ColorHex;
+                        roleName = position.Name;
+                    }
+                }
+
+                // 2. Smart Delete (The "Kill")
+                if (!string.IsNullOrEmpty(player.MiroWidgetId))
+                {
+                    try
+                    {
+                        var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
+                        if (getResponse.IsSuccessStatusCode)
+                        {
+                            var itemJson = await getResponse.Content.ReadFromJsonAsync<JsonElement>();
+                            if (itemJson.TryGetProperty("position", out var posElement))
+                            {
+                                if (posElement.TryGetProperty("x", out var xVal)) posX = xVal.GetDouble();
+                                if (posElement.TryGetProperty("y", out var yVal)) posY = yVal.GetDouble();
+                            }
+                            
+                            // Delete the old item/group
+                            await client.DeleteAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
+                        }
+                        else if (getResponse.StatusCode == HttpStatusCode.NotFound)
+                        {
+                             _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Using default position.", player.MiroWidgetId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during Smart Delete of widget {WidgetId}", player.MiroWidgetId);
+                        // Proceed with default pos if delete fails/errors? Or abort? 
+                        // We'll proceed to ensure the new card is created.
+                    }
+                }
+
+                JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                };
+
+                // 3. Composition (The "Fill")
+                // A. Background (Shape)
+                var bgPayload = new
+                {
+                    data = new { shape = "rectangle" }, // No content in BG
+                    style = new { fillColor = color, borderOpacity = 0 },
+                    geometry = new { width = 300, height = 240 },
+                    position = new { x = posX, y = posY }
+                };
+
+                var bgResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", bgPayload, jsonOptions);
+                if (!bgResponse.IsSuccessStatusCode)
+                {
+                     var err = await bgResponse.Content.ReadAsStringAsync();
+                     return new BadRequestObjectResult(new { error = "Failed to create background", details = err });
+                }
+                var bgJson = await bgResponse.Content.ReadFromJsonAsync<JsonElement>();
+                string bgId = bgJson.GetProperty("id").GetString();
+
+                // B. Header (Text) - Name
+                // Position: Top of card (approx y - 80)
+                var headerPayload = new
+                {
+                    data = new { content = $"<h3>{player.PlayerName}</h3>" },
+                    style = new { textAlign = "center", fontSize = 20 },
+                    position = new { x = posX, y = posY - 80 }
+                };
+                var headerResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", headerPayload, jsonOptions);
+                var headerJson = await headerResponse.Content.ReadFromJsonAsync<JsonElement>();
+                string headerId = headerJson.GetProperty("id").GetString();
+
+                // C. Body (Text) - Stats
+                // Position: Middle/Bottom (approx y + 20)
+                var age = player.Snapshot?.Age.ToString() ?? "?";
+                var contract = player.Snapshot?.ContractExpiry ?? "?";
+                var bodyString = $"<p><strong>Role:</strong> {roleName}</p>" +
+                                 $"<p><strong>Age:</strong> {age}</p>" +
+                                 $"<p><strong>Contract:</strong> {contract}</p>";
+
+                var bodyPayload = new
+                {
+                    data = new { content = bodyString },
+                    style = new { textAlign = "center", fontSize = 14 },
+                    position = new { x = posX, y = posY + 20 }
+                };
+                var bodyResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", bodyPayload, jsonOptions);
+                var bodyJson = await bodyResponse.Content.ReadFromJsonAsync<JsonElement>();
+                string bodyId = bodyJson.GetProperty("id").GetString();
+
+                // 4. Grouping
+                var groupPayload = new
+                {
+                    data = new { items = new[] { bgId, headerId, bodyId } },
+                    type = "group"
+                    // Note: Groups don't typically have absolute positions set on creation via this endpoint, 
+                    // they take the bounding box of items.
+                };
+
+                // Try generic items creation with type='group' which is standard for V2
+                var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/items", groupPayload, jsonOptions);
+                
+                if (!groupResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Failed to group items: {Status}", groupResponse.StatusCode);
+                    // Even if grouping fails, we have the items. We might return a warning or partial success?
+                    // For now, let's treat it as a failure of the full "Kill and Fill" contract.
+                    // But we already created items... leaving them ungrouped is messy but safer than crashing.
+                }
+                else 
+                {
+                    var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
+                     if (groupJson.TryGetProperty("id", out var gId))
                      {
-                         color = position.ColorHex;
-                         roleName = position.Name;
+                         player.MiroWidgetId = gId.GetString();
                      }
-                 }
-                 
-                 var htmlContent = BuildPlayerHtml(player, roleName);
-                 var boardId = Environment.GetEnvironmentVariable("MiroBoardId");
+                }
 
-                 if (string.IsNullOrEmpty(boardId))
-                 {
-                     _logger.LogError("MiroBoardId environment variable not set.");
-                     return new ObjectResult(new { error = "Server configuration error" }) { StatusCode = 500 };
-                 }
-
-                 JsonSerializerOptions jsonOptions = new JsonSerializerOptions
-                 {
-                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                     DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                 };
-
-                 HttpResponseMessage? response = null;
-                 bool isNew = string.IsNullOrEmpty(player.MiroWidgetId);
-
-                 // Try Update if ID exists
-                 if (!isNew)
-                 {
-                     var updatePayload = new
-                     {
-                         data = new { content = htmlContent },
-                         style = new { fillColor = color }
-                     };
-                     response = await client.PatchAsJsonAsync($"v2/boards/{boardId}/shapes/{player.MiroWidgetId}", updatePayload, jsonOptions);
-
-                     // If not found, treat as new
-                     if (response.StatusCode == HttpStatusCode.NotFound)
-                     {
-                         _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Creating new.", player.MiroWidgetId);
-                         isNew = true;
-                         player.MiroWidgetId = null; 
-                     }
-                 }
-
-                 // Create New (either originally new or fallback from 404)
-                 if (isNew)
-                 {
-                     var createPayload = new
-                     {
-                         data = new { shape = "rectangle", content = htmlContent },
-                         style = new { fillColor = color, textAlign = "left", textAlignVertical = "top", fontSize = 14 },
-                         geometry = new { width = 300, height = 220 }
-                     };
-                     response = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", createPayload, jsonOptions);
-                 }
-
-                 if (response == null || !response.IsSuccessStatusCode)
-                 {
-                     var errorContent = await (response?.Content.ReadAsStringAsync() ?? Task.FromResult("No response"));
-                     _logger.LogError("Failed to push to Miro: {StatusCode} {Content}", response?.StatusCode, errorContent);
-                     return new BadRequestObjectResult(new { error = $"Miro API error: {response?.StatusCode}", details = errorContent });
-                 }
-
-                 var resultJson = await response.Content.ReadFromJsonAsync<JsonElement>();
-                 if (resultJson.TryGetProperty("id", out var idElement))
-                 {
-                     player.MiroWidgetId = idElement.GetString();
-                     await _rosterRepository.UpsertAsync(player);
-                 }
-
-                 return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
+                // 5. Persist
+                // If grouping failed, we might still want to save the BG id or just null it out?
+                // The spec says "Store the returned groupId". If grouping failed, we're in a weird state. 
+                // Let's assume grouping worked or we fall back to BG ID if absolutely necessary, 
+                // but ideally we want the Group ID.
+                
+                if (groupResponse.IsSuccessStatusCode)
+                {
+                    await _rosterRepository.UpsertAsync(player);
+                    return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
+                }
+                else 
+                {
+                    return new ObjectResult(new { error = "Created items but failed to group them.", details = await groupResponse.Content.ReadAsStringAsync() }) { StatusCode = 206 };
+                }
             }
             catch (Exception ex)
             {

@@ -174,46 +174,49 @@ namespace fmassman.Api.Functions
                 if (!string.IsNullOrEmpty(player.MiroWidgetId))
                 {
                     deleteAttempted = true;
-                    // Detect Compound ID vs Single ID
-                    var idsToDelete = player.MiroWidgetId.Split('|');
-                    // Use the first non-empty ID (Group or Background) for position check
-                    var primaryId = idsToDelete.FirstOrDefault(x => !string.IsNullOrEmpty(x)); 
-
+                    var idsToDelete = player.MiroWidgetId.Split('|').Where(x => !string.IsNullOrEmpty(x)).ToArray();
+                    
                     try
                     {
-                        if (primaryId != null) 
-                        {
-                        // Get Location from Primary ID (Background)
-                        deleteDetails = $"Getting position from {primaryId}...";
-                        var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{primaryId}");
-                        
-                        if (getResponse.IsSuccessStatusCode)
-                        {
-                            var itemJson = await getResponse.Content.ReadFromJsonAsync<JsonElement>();
-                            if (itemJson.TryGetProperty("position", out var posElement))
-                            {
-                                if (posElement.TryGetProperty("x", out var xVal)) posX = xVal.GetDouble();
-                                if (posElement.TryGetProperty("y", out var yVal)) posY = yVal.GetDouble();
-                            }
-                            deleteDetails = $"Found at ({posX}, {posY}). Deleting {idsToDelete.Length} items...";
-                        }
-                        else if (getResponse.StatusCode == HttpStatusCode.NotFound)
-                        {
-                             _logger.LogWarning("Primary Miro widget {WidgetId} not found. Resetting to 0,0.", primaryId);
-                             deleteDetails = "Primary item not found (404) - resetting position";
-                             posX = 0; 
-                             posY = 0;
-                        }
-
-                        // Delete ALL tracked IDs (Background, Header, Body, etc.)
+                        // PHASE 1: FIND POSITION
+                        // Try every ID until we find one that exists and gives us a position
+                        var positionFound = false;
                         foreach (var id in idsToDelete)
                         {
-                            if (string.IsNullOrWhiteSpace(id)) continue;
+                            deleteDetails = $"Checking for position on {id}...";
+                            var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{id}");
                             
+                            if (getResponse.IsSuccessStatusCode)
+                            {
+                                var itemJson = await getResponse.Content.ReadFromJsonAsync<JsonElement>();
+                                if (itemJson.TryGetProperty("position", out var posElement))
+                                {
+                                    if (posElement.TryGetProperty("x", out var xVal)) posX = xVal.GetDouble();
+                                    if (posElement.TryGetProperty("y", out var yVal)) posY = yVal.GetDouble();
+                                    positionFound = true;
+                                    _logger.LogInformation("Found valid position from item {Id}: ({X}, {Y})", id, posX, posY);
+                                    deleteDetails = $"Position found at ({posX}, {posY}) from {id}";
+                                    break; // Stop looking, we found our anchor
+                                }
+                            }
+                        }
+
+                        if (!positionFound)
+                        {
+                            _logger.LogWarning("No existing items found for position. Resetting to 0,0.");
+                            deleteDetails += " - Not found (404/Error), defaulting to 0,0";
+                            posX = 0;
+                            posY = 0;
+                        }
+
+                        // PHASE 2: SCORCHED EARTH DELETION
+                        // Delete everything we know about
+                        foreach (var id in idsToDelete)
+                        {
                             var delResp = await client.DeleteAsync($"v2/boards/{boardId}/items/{id}");
                             if (delResp.IsSuccessStatusCode)
                             {
-                                deleteSuccess = true; // At least one success
+                                deleteSuccess = true;
                                 _logger.LogInformation("Deleted Miro item {ItemId}", id);
                             }
                             else
@@ -221,7 +224,6 @@ namespace fmassman.Api.Functions
                                 _logger.LogWarning("Failed to delete Miro item {ItemId}: {Status}", id, delResp.StatusCode);
                             }
                         }
-                    }
                     }
                     catch (Exception ex)
                     {

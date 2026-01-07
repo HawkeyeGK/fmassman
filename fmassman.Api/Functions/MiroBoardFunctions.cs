@@ -180,41 +180,45 @@ namespace fmassman.Api.Functions
                      DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
                  };
 
-                 HttpResponseMessage response;
+                 HttpResponseMessage? response = null;
                  bool isNew = string.IsNullOrEmpty(player.MiroWidgetId);
 
+                 // Try Update if ID exists
+                 if (!isNew)
+                 {
+                     var updatePayload = new
+                     {
+                         data = new { content = htmlContent },
+                         style = new { fillColor = color }
+                     };
+                     response = await client.PatchAsJsonAsync($"v2/boards/{boardId}/shapes/{player.MiroWidgetId}", updatePayload, jsonOptions);
+
+                     // If not found, treat as new
+                     if (response.StatusCode == HttpStatusCode.NotFound)
+                     {
+                         _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Creating new.", player.MiroWidgetId);
+                         isNew = true;
+                         player.MiroWidgetId = null; 
+                     }
+                 }
+
+                 // Create New (either originally new or fallback from 404)
                  if (isNew)
                  {
-                     var payload = new
+                     var createPayload = new
                      {
                          data = new { shape = "rectangle", content = htmlContent },
                          style = new { fillColor = color, textAlign = "left", textAlignVertical = "top", fontSize = 14 },
                          geometry = new { width = 300, height = 220 }
                      };
-                     response = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", payload, jsonOptions);
-                 }
-                 else
-                 {
-                     var payload = new
-                     {
-                         data = new { content = htmlContent },
-                         style = new { fillColor = color }
-                     };
-                     response = await client.PatchAsJsonAsync($"v2/boards/{boardId}/shapes/{player.MiroWidgetId}", payload, jsonOptions);
+                     response = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", createPayload, jsonOptions);
                  }
 
-                 if (!response.IsSuccessStatusCode)
+                 if (response == null || !response.IsSuccessStatusCode)
                  {
-                     if (!isNew && response.StatusCode == HttpStatusCode.NotFound)
-                     {
-                         _logger.LogWarning("Miro widget {WidgetId} not found. Creating new.", player.MiroWidgetId);
-                         player.MiroWidgetId = null; // Reset
-                         return await PushPlayerToMiro(req, playerId); // Retry as new
-                     }
-
-                     var errorContent = await response.Content.ReadAsStringAsync();
-                     _logger.LogError("Failed to push to Miro: {StatusCode} {Content}", response.StatusCode, errorContent);
-                     return new BadRequestObjectResult(new { error = $"Miro API error: {response.StatusCode}", details = errorContent });
+                     var errorContent = await (response?.Content.ReadAsStringAsync() ?? Task.FromResult("No response"));
+                     _logger.LogError("Failed to push to Miro: {StatusCode} {Content}", response?.StatusCode, errorContent);
+                     return new BadRequestObjectResult(new { error = $"Miro API error: {response?.StatusCode}", details = errorContent });
                  }
 
                  var resultJson = await response.Content.ReadFromJsonAsync<JsonElement>();

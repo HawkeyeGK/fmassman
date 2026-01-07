@@ -27,8 +27,16 @@
                 }
             </h3>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-info me-2" @onclick="PushToMiro">
-                    <i class="bi bi-broadcast"></i> Push to Miro
+                <button class="btn btn-outline-info me-2" @onclick="PushToMiro" disabled="@isPushing">
+                    @if (isPushing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        <span>Pushing...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-broadcast"></i> <span>Push to Miro</span>
+                    }
                 </button>
                 <a href="/player/@(Uri.EscapeDataString(Name))/edit" class="btn btn-outline-secondary me-2">Edit</a>
                 
@@ -263,11 +271,13 @@ else
 
     private string? notificationMessage;
     private string notificationClass = "alert-info";
+    private bool isPushing = false;
 
     private async Task PushToMiro()
     {
         if (VM.Player == null) return;
         notificationMessage = null;
+        isPushing = true;
         
         try
         {
@@ -290,8 +300,11 @@ else
             notificationMessage = $"❌ Error: {ex.Message}";
             notificationClass = "alert-danger";
         }
-        
-        StateHasChanged();
+        finally
+        {
+            isPushing = false;
+            StateHasChanged();
+        }
     }
 
     private void SetMode(bool inPossession)

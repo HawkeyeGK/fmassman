@@ -302,16 +302,18 @@ else
                     var groupStatus = diag.GetProperty("groupResponseStatus").GetString();
                     var groupBody = diag.GetProperty("groupResponseBody").GetString();
                     
-                    var groupExists = "N/A";
-                    if(diag.TryGetProperty("groupExists", out var ge)) groupExists = ge.GetBoolean().ToString();
+                    var groupCreated = "N/A";
+                    if(diag.TryGetProperty("groupCreated", out var gc)) groupCreated = gc.GetBoolean().ToString();
 
-                    var verificationStatus = "N/A";
-                    if(diag.TryGetProperty("getGroupStatus", out var ggs)) verificationStatus = ggs.GetString();
+                    var compoundId = "N/A";
+                    if(diag.TryGetProperty("compoundId", out var cid)) compoundId = cid.GetString();
                     
                     var groupIdLine = "";
-                    if (root.TryGetProperty("groupId", out var gid))
+                    if (diag.TryGetProperty("groupId", out var gid))
                     {
-                        groupIdLine = "\n✅ Group ID: " + gid.GetString();
+                        var gVal = gid.GetString();
+                        if(!string.IsNullOrEmpty(gVal)) groupIdLine = gVal;
+                        else groupIdLine = "(none)";
                     }
                     
                     diagnosticMessage = "✅ SUCCESS - Player pushed to Miro!\n\n" +
@@ -321,17 +323,18 @@ else
                         $"- Delete Attempted: {deleteAttempted}\n" +
                         $"- Delete Success: {deleteSuccess}\n" +
                         $"- Details: {deleteDetails}\n\n" +
+                        "PERSISTENCE:\n" +
+                        $"- Compound ID Saved: {compoundId}\n\n" +
                         "CREATED ITEMS:\n" +
                         $"- Background ID: {bgId}\n" +
                         $"- Header ID: {headerId}\n" +
-                        $"- Body ID: {bodyId}\n\n" +
-                        "GROUP CREATION:\n" +
+                        $"- Body ID: {bodyId}\n" +
+                        $"- Group ID: {groupIdLine}\n\n" +
+                        "GROUP CREATION (UX Only):\n" +
                         $"- Payload: {groupPayload}\n" +
                         $"- Response Status: {groupStatus}\n" +
-                        $"- Verification GET Status: {verificationStatus}\n" +
-                        $"- Group Exists (Verified): {groupExists}\n" +
-                        $"- Response Body: {groupBody}\n" +
-                        groupIdLine;
+                        $"- Group Created: {groupCreated}\n" +
+                        $"- Response Body: {groupBody}\n";
                 }
                 else
                 {

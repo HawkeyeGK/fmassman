@@ -170,15 +170,22 @@ namespace fmassman.Api.Functions
                 var deleteDetails = "Not attempted (no existing MiroWidgetId)";
 
                 // STEP 1: SMART DELETE (The "Kill")
+                // STEP 1: SMART DELETE (The "Kill")
                 if (!string.IsNullOrEmpty(player.MiroWidgetId))
                 {
                     deleteAttempted = true;
+                    // Detect Compound ID vs Single ID
+                    var idsToDelete = player.MiroWidgetId.Split('|');
+                    // Use the first non-empty ID (Group or Background) for position check
+                    var primaryId = idsToDelete.FirstOrDefault(x => !string.IsNullOrEmpty(x)); 
+
                     try
                     {
-                        // Get Location
-                        deleteDetails = $"Attempting to GET item {player.MiroWidgetId}...";
-                        var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
-                        deleteDetails = $"GET Status: {getResponse.StatusCode}";
+                        if (primaryId != null) 
+                        {
+                        // Get Location from Primary ID (Background)
+                        deleteDetails = $"Getting position from {primaryId}...";
+                        var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{primaryId}");
                         
                         if (getResponse.IsSuccessStatusCode)
                         {
@@ -188,31 +195,37 @@ namespace fmassman.Api.Functions
                                 if (posElement.TryGetProperty("x", out var xVal)) posX = xVal.GetDouble();
                                 if (posElement.TryGetProperty("y", out var yVal)) posY = yVal.GetDouble();
                             }
-                            
-                            deleteDetails = $"Found at ({posX}, {posY}). Deleting...";
-                            
-                            // Delete the old item/group
-                            var deleteResponse = await client.DeleteAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
-                            deleteSuccess = deleteResponse.IsSuccessStatusCode;
-                            deleteDetails = $"GET: {getResponse.StatusCode}, DELETE: {deleteResponse.StatusCode}, Position: ({posX}, {posY})";
+                            deleteDetails = $"Found at ({posX}, {posY}). Deleting {idsToDelete.Length} items...";
                         }
                         else if (getResponse.StatusCode == HttpStatusCode.NotFound)
                         {
-                             _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Resetting to 0,0.", player.MiroWidgetId);
-                             deleteDetails = "Item not found (404) - may have been deleted externally";
+                             _logger.LogWarning("Primary Miro widget {WidgetId} not found. Resetting to 0,0.", primaryId);
+                             deleteDetails = "Primary item not found (404) - resetting position";
                              posX = 0; 
                              posY = 0;
                         }
-                        else
+
+                        // Delete ALL tracked IDs (Background, Header, Body, etc.)
+                        foreach (var id in idsToDelete)
                         {
-                            deleteDetails = $"GET failed with status {getResponse.StatusCode}";
+                            if (string.IsNullOrWhiteSpace(id)) continue;
+                            
+                            var delResp = await client.DeleteAsync($"v2/boards/{boardId}/items/{id}");
+                            if (delResp.IsSuccessStatusCode)
+                            {
+                                deleteSuccess = true; // At least one success
+                                _logger.LogInformation("Deleted Miro item {ItemId}", id);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Failed to delete Miro item {ItemId}: {Status}", id, delResp.StatusCode);
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error during Smart Delete of widget {WidgetId}", player.MiroWidgetId);
+                        _logger.LogError(ex, "Error during Smart Delete of widgets {WidgetId}", player.MiroWidgetId);
                         deleteDetails = $"Exception: {ex.Message}";
-                        // Proceed to create new anyway
                     }
                 }
 
@@ -267,117 +280,62 @@ namespace fmassman.Api.Functions
 
                 _logger.LogInformation("Created items - BG: {BgId}, Header: {HeaderId}, Body: {BodyId}", bgId, headerId, bodyId);
 
-                // STEP 3: CREATE GROUP (The Fix)
+                // PERSISTENCE STRATEGY: Hybrid "Scorched Earth"
+                // We save "groupId|bgId|headerId|bodyId" to ensure we can delete everything.
+                // If Group exists, deleting it (index 0) works. 
+                // If Group is ghost/404, deleting it fails, but we proceed to delete children.
+                
+                string groupId = "";
+                var groupCreated = false;
                 var groupPayload = new
                 {
                     data = new { items = new[] { bgId, headerId, bodyId } }
                 };
-
+                
                 var payloadJson = System.Text.Json.JsonSerializer.Serialize(groupPayload, jsonOptions);
-                _logger.LogInformation("Attempting to create group with payload: {Payload}", payloadJson);
                 var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/groups", groupPayload, jsonOptions);
-                
                 var groupResponseBody = await groupResponse.Content.ReadAsStringAsync();
-                _logger.LogInformation("Group API Response - Status: {Status}, Body: {Body}", groupResponse.StatusCode, groupResponseBody);
-                
-                // STEP 4 & 5: PERSIST & HANDLING
-                // STEP 4 & 5: Verify group creation and persist appropriate widget ID
+                var groupStatus = groupResponse.StatusCode.ToString();
+
                 if (groupResponse.IsSuccessStatusCode)
                 {
                     var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
-                    _logger.LogInformation("Group response JSON: {Json}", groupJson.ToString());
-
                     if (groupJson.TryGetProperty("id", out var gId))
                     {
-                        var groupId = gId.GetString();
-                        // Give Miro a moment to finalize the group
-                        await Task.Delay(1000);
-                        var getGroupResponse = await client.GetAsync($"v2/boards/{boardId}/groups/{groupId}");
-                        var groupExists = getGroupResponse.IsSuccessStatusCode;
-                        var getGroupStatus = getGroupResponse.StatusCode.ToString();
-                        
-                        if (groupExists)
-                        {
-                            _logger.LogInformation("Verified group {GroupId} exists.", groupId);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Created group {GroupId} not found on verification GET. Status: {Status}", groupId, getGroupStatus);
-                        }
-
-                        // Persist the appropriate widget ID (Group ID if verified, else fallback to Background ID)
-                        player.MiroWidgetId = groupExists ? groupId : bgId;
-                        await _rosterRepository.UpsertAsync(player);
-
-                        var diagnostics = new
-                        {
-                            oldWidgetId,
-                            deleteAttempted,
-                            deleteSuccess,
-                            deleteDetails,
-                            bgId,
-                            headerId,
-                            bodyId,
-                            groupId,
-                            groupExists,
-                            getGroupStatus,
-                            groupPayload = payloadJson,
-                            groupResponseStatus = groupResponse.StatusCode.ToString(),
-                            groupResponseBody
-                        };
-
-                        if (groupExists)
-                        {
-                             return new OkObjectResult(new { 
-                                status = "success", 
-                                widgetId = player.MiroWidgetId, 
-                                retrievedWidgetId = oldWidgetId, 
-                                diagnostics 
-                            });
-                        }
-                        else
-                        {
-                            return new ObjectResult(new
-                            {
-                                status = "partial_success",
-                                message = "Card created but grouping failed verification. Saved Background ID.",
-                                details = groupResponseBody,
-                                retrievedWidgetId = oldWidgetId,
-                                diagnostics
-                            }) { StatusCode = 200 };
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogError("Group response successful but no 'id' property found. Full response: {Response}", groupJson.ToString());
+                        groupId = gId.GetString();
+                        groupCreated = true;
                     }
                 }
-                
-                // FALLBACK: Grouping Failed
-                _logger.LogError("Grouping failed. Fallback to saving Background ID. Status: {Status} Error: {Error}", groupResponse.StatusCode, groupResponseBody);
-                
-                // Save Background ID so next time we at least delete the background
-                player.MiroWidgetId = bgId;
+
+                // Save Compound ID (Group first, then children)
+                var compoundId = $"{groupId}|{bgId}|{headerId}|{bodyId}";
+                player.MiroWidgetId = compoundId;
                 await _rosterRepository.UpsertAsync(player);
 
-                return new ObjectResult(new { 
-                    status = "partial_success", 
-                    message = "Card created but grouping failed. Saved Background ID.", 
-                    details = groupResponseBody,
-                    retrievedWidgetId = oldWidgetId,
-                    diagnostics = new {
-                        oldWidgetId,
-                        deleteAttempted,
-                        deleteSuccess,
-                        deleteDetails,
-                        bgId,
-                        headerId,
-                        bodyId,
-                        groupPayload = payloadJson,
-                        groupResponseStatus = groupResponse.StatusCode.ToString(),
-                        groupResponseBody
-                    }
-                }) { StatusCode = 206 };
+                // DIAGNOSTICS
+                var diagnostics = new
+                {
+                    oldWidgetId,
+                    deleteAttempted,
+                    deleteSuccess,
+                    deleteDetails,
+                    bgId,
+                    headerId,
+                    bodyId,
+                    groupId,
+                    compoundId,
+                    groupCreated,
+                    groupStatus,
+                    groupPayload = payloadJson,
+                    groupResponseBody
+                };
+
+                return new OkObjectResult(new { 
+                    status = "success", 
+                    widgetId = player.MiroWidgetId, 
+                    retrievedWidgetId = oldWidgetId, 
+                    diagnostics 
+                });
             }
             catch (Exception ex)
             {

@@ -2,6 +2,8 @@
 @using fmassman.Client.Models
 
 @inject PlayerDetailsViewModel VM
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Player Details: @Name</PageTitle>
 
@@ -17,6 +19,9 @@
                 }
             </h3>
             <div class="d-flex gap-2">
+                <button class="btn btn-outline-info me-2" @onclick="PushToMiro">
+                    <i class="bi bi-broadcast"></i> Push to Board
+                </button>
                 <a href="/player/@(Uri.EscapeDataString(Name))/edit" class="btn btn-sm btn-light">Edit</a>
                 
                 @if (!confirmDelete)
@@ -243,6 +248,29 @@ else
     private async Task ExecuteDelete()
     {
         await VM.DeletePlayerAsync();
+    }
+
+    private async Task PushToMiro()
+    {
+        if (VM.Player == null) return;
+        
+        try
+        {
+            var result = await Http.PostAsync($"api/miro/push/{Uri.EscapeDataString(VM.Player.PlayerName)}", null);
+            if (result.IsSuccessStatusCode)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Player pushed to Miro successfully!");
+            }
+            else
+            {
+                var error = await result.Content.ReadAsStringAsync();
+                await JSRuntime.InvokeVoidAsync("alert", $"Failed to push to Miro: {result.StatusCode} - {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error pushing to Miro: {ex.Message}");
+        }
     }
 
     private void SetMode(bool inPossession)

@@ -96,5 +96,18 @@ namespace fmassman.Shared
                 patchOperations: patchOperations
             );
         }
+
+        public async Task<PlayerImportData?> GetByIdAsync(string id)
+        {
+            try
+            {
+                var response = await _container.ReadItemAsync<PlayerImportData>(id, new PartitionKey(id));
+                return response.Resource;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+        }
     }
 }

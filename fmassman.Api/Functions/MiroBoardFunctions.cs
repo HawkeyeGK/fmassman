@@ -120,57 +120,20 @@ namespace fmassman.Api.Functions
             return client;
         }
 
-        private string BuildPlayerHtml(PlayerImportData p)
+        private string BuildPlayerHtml(PlayerImportData p, string roleName)
         {
-            if (p.Snapshot != null)
-            {
-               // This logic assumes PlayerAnalyzer has run and populated BestRole? 
-               // Actually the Model doesn't have BestRole property directly stringified easily accessible here without logic.
-               // Re-reading spec: "BestRole" property on Player? 
-               // The PlayerImportData model doesn't have BestRole. It has Snapshot. 
-               // But usually the client calculates BestRole. 
-               // However, `PlayerAnalyzer` in Shared might have static helpers, or I might need to replicate simple logic.
-               // Let's look at `PlayerImportData` again. It has no Role property.
-               // Wait, the user request says: `p.BestRole ?? "N/A"`.
-               // I see `PlayerAnalysis` class in Shared. Maybe I should use that?
-               // But I only have `PlayerImportData` from repository.
-               // I will check if I can use `PlayerAnalyzer.Analyze(p).BestInPossessionRole?.RoleName`.
-               // This requires valid `RoleDefinition` list which I don't have injected here easily (CosmosTacticRepository?).
-               // To keep it simple and safe for now based on available data:
-               // I will just put "N/A" if I can't easily calculate it, OR I will just print the PositionId.
-               // Actually, `PlayerAnalyzer` is static. But it needs Roles.
-               // Let's simplify and just use Position for now as "Role" or "Best Role" placeholder if no analysis data is persisted.
-               // Wait, the spec says `p.BestRoleFit`. 
-               // I suspect the user *thinks* I have that property. 
-               // I will compromise: Use `p.PositionId` for now.
-               // And `p.Snapshot?.Age` for Age.
-            }
-            
-            // To properly implement "Best Role", I'd need to run the analyzer.
-            // Let's try to do it properly if possible, but I don't want to load all roles every time.
-            // I'll stick to basic data for now to ensure robustness.
-            
-            var role = p.PositionId ?? "Unknown";
             var age = p.Snapshot?.Age.ToString() ?? "?";
             var contract = p.Snapshot?.ContractExpiry ?? "?";
-            var fit = "?"; // We don't store the calculated fit score in the DB model `PlayerImportData`.
+            var fit = ""; 
             
-            // If the user REALLY wants BestRole from the server side, I'd need to load roles.
-            // Given the constraint of the current task, I'll format what I have.
+            // Format: Role Name (Fit) - but only show fit if we have it? 
+            // Currently we don't avail fit score here easily. Cleaning up the display.
             
             return $"<p><strong>{p.PlayerName}</strong></p>" +
                    $"<hr>" +
-                   $"<p><strong>Role:</strong> {role} ({fit})</p>" +
+                   $"<p><strong>Role:</strong> {roleName} {fit}</p>" +
                    $"<p><strong>Age:</strong> {age}</p>" +
                    $"<p><strong>Contract:</strong> {contract}</p>";
-        }
-
-        private async Task<string> GetPositionColor(PlayerImportData p)
-        {
-            if (string.IsNullOrEmpty(p.PositionId)) return "#E0E0E0";
-            
-            var position = await _positionRepository.GetByIdAsync(p.PositionId);
-            return position?.ColorHex ?? "#E0E0E0";
         }
 
         [Function("MiroPushPlayer")]
@@ -180,10 +143,6 @@ namespace fmassman.Api.Functions
         {
             try
             {
-                 // Decode playerId in case it has special chars, though route params usually handled.
-                 // Actually Cosmos IDs might need decoding if passed in URL.
-                 // But let's assume simple string match for now.
-                 
                  var player = await _rosterRepository.GetByIdAsync(playerId);
                  if (player == null)
                  {
@@ -191,8 +150,22 @@ namespace fmassman.Api.Functions
                  }
 
                  var client = await GetAuthenticatedClientAsync();
-                 var color = await GetPositionColor(player);
-                 var htmlContent = BuildPlayerHtml(player);
+                 
+                 // Resolve Position Details
+                 string color = "#E0E0E0";
+                 string roleName = "Unknown";
+                 
+                 if (!string.IsNullOrEmpty(player.PositionId))
+                 {
+                     var position = await _positionRepository.GetByIdAsync(player.PositionId);
+                     if (position != null)
+                     {
+                         color = position.ColorHex;
+                         roleName = position.Name;
+                     }
+                 }
+                 
+                 var htmlContent = BuildPlayerHtml(player, roleName);
                  var boardId = Environment.GetEnvironmentVariable("MiroBoardId");
 
                  if (string.IsNullOrEmpty(boardId))

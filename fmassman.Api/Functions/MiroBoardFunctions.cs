@@ -222,6 +222,7 @@ namespace fmassman.Api.Functions
                             }
                         }
                     }
+                    }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error during Smart Delete of widgets {WidgetId}", player.MiroWidgetId);

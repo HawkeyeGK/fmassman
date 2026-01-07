@@ -133,7 +133,6 @@ namespace fmassman.Api.Functions
                     return new NotFoundObjectResult(new { error = "Player not found" });
                 }
 
-                // DEBUG: Log what we retrieved
                 _logger.LogInformation("Retrieved player {PlayerName} with MiroWidgetId: {MiroWidgetId}", 
                     player.PlayerName, 
                     player.MiroWidgetId ?? "(null)");
@@ -147,11 +146,15 @@ namespace fmassman.Api.Functions
                     return new ObjectResult(new { error = "Server configuration error" }) { StatusCode = 500 };
                 }
 
-                // 1. Setup & Defaults
+                // 0. Prepare Data & Helpers
+                // Calculate analysis fits
+                var analysis = PlayerAnalyzer.Analyze(player.Snapshot);
+
                 double posX = 0;
                 double posY = 0;
                 string color = "#E0E0E0";
                 string roleName = "Unknown";
+                string positionCode = "";
 
                 if (!string.IsNullOrEmpty(player.PositionId))
                 {
@@ -160,26 +163,21 @@ namespace fmassman.Api.Functions
                     {
                         color = position.ColorHex;
                         roleName = position.Name;
+                        positionCode = position.Code;
                     }
                 }
 
-                // Track diagnostics
-                var deleteAttempted = false;
-                var deleteSuccess = false;
-                var oldWidgetId = player.MiroWidgetId;
                 var deleteDetails = "Not attempted (no existing MiroWidgetId)";
+                var oldWidgetId = player.MiroWidgetId;
 
-                // STEP 1: SMART DELETE (The "Kill")
-                // STEP 1: SMART DELETE (The "Kill")
+                // STEP 1: SMART DELETE (Keep existing logic)
                 if (!string.IsNullOrEmpty(player.MiroWidgetId))
                 {
-                    deleteAttempted = true;
                     var idsToDelete = player.MiroWidgetId.Split('|').Where(x => !string.IsNullOrEmpty(x)).ToArray();
                     
                     try
                     {
                         // PHASE 1: FIND POSITION
-                        // Try every ID until we find one that exists and gives us a position
                         var positionFound = false;
                         foreach (var id in idsToDelete)
                         {
@@ -194,40 +192,26 @@ namespace fmassman.Api.Functions
                                     if (posElement.TryGetProperty("x", out var xVal)) posX = xVal.GetDouble();
                                     if (posElement.TryGetProperty("y", out var yVal)) posY = yVal.GetDouble();
                                     positionFound = true;
-                                    _logger.LogInformation("Found valid position from item {Id}: ({X}, {Y})", id, posX, posY);
                                     deleteDetails = $"Position found at ({posX}, {posY}) from {id}";
-                                    break; // Stop looking, we found our anchor
+                                    break; 
                                 }
                             }
                         }
 
                         if (!positionFound)
                         {
-                            _logger.LogWarning("No existing items found for position. Resetting to 0,0.");
-                            deleteDetails += " - Not found (404/Error), defaulting to 0,0";
-                            posX = 0;
-                            posY = 0;
+                            deleteDetails += " - Not found, defaulting to 0,0";
                         }
 
-                        // PHASE 2: SCORCHED EARTH DELETION
-                        // Delete everything we know about
+                        // PHASE 2: DELETE
                         foreach (var id in idsToDelete)
                         {
-                            var delResp = await client.DeleteAsync($"v2/boards/{boardId}/items/{id}");
-                            if (delResp.IsSuccessStatusCode)
-                            {
-                                deleteSuccess = true;
-                                _logger.LogInformation("Deleted Miro item {ItemId}", id);
-                            }
-                            else
-                            {
-                                _logger.LogWarning("Failed to delete Miro item {ItemId}: {Status}", id, delResp.StatusCode);
-                            }
+                            await client.DeleteAsync($"v2/boards/{boardId}/items/{id}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error during Smart Delete of widgets {WidgetId}", player.MiroWidgetId);
+                        _logger.LogError(ex, "Error during Smart Delete");
                         deleteDetails = $"Exception: {ex.Message}";
                     }
                 }
@@ -238,113 +222,172 @@ namespace fmassman.Api.Functions
                     DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
                 };
 
-                // STEP 2: BULK CREATE (The "Fill")
-                // A. Background (Shape)
+                // STEP 2: BULK CREATE (The Composition)
+                // Dimensions: 420x300.
+                // Offsets: Header Y: -120. Body Y: +10. Center is (posX, posY).
+                
+                // 1. Background (Rectangle)
                 var bgPayload = new
                 {
                     data = new { shape = "rectangle" },
                     style = new { fillColor = color, borderOpacity = 0 },
-                    geometry = new { width = 300, height = 240 },
+                    geometry = new { width = 420, height = 300 },
                     position = new { x = posX, y = posY }
                 };
+                var bgResp = await PostMiroItem(client, boardId, "shapes", bgPayload, jsonOptions);
+                string bgId = bgResp.Id;
 
-                var bgResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/shapes", bgPayload, jsonOptions);
-                if (!bgResponse.IsSuccessStatusCode)
-                    return new BadRequestObjectResult(new { error = "Failed to create background", details = await bgResponse.Content.ReadAsStringAsync() });
-                
-                var bgJson = await bgResponse.Content.ReadFromJsonAsync<JsonElement>();
-                string bgId = bgJson.GetProperty("id").GetString()!;
-
-                // B. Header (Text)
-                var headerPayload = new
+                // 2. Header Name (Text) - Left
+                // x: -100, y: -120. Width 200. Align Left.
+                // Content: <b>Name</b>
+                var headerNamePayload = new
                 {
-                    data = new { content = $"<h3>{player.PlayerName}</h3>" },
-                    style = new { textAlign = "center", fontSize = 20 },
-                    position = new { x = posX, y = posY - 80 }
+                    data = new { content = $"<b>{player.PlayerName}</b>" },
+                    style = new { textAlign = "left", fontSize = 24 },
+                    geometry = new { width = 200 },
+                    position = new { x = posX - 100, y = posY - 120 }
                 };
-                var headerResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", headerPayload, jsonOptions);
-                string headerId = (await headerResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+                var nameResp = await PostMiroItem(client, boardId, "texts", headerNamePayload, jsonOptions);
+                string nameId = nameResp.Id;
 
-                // C. Body (Text)
-                var age = player.Snapshot?.Age.ToString() ?? "?";
-                var contract = player.Snapshot?.ContractExpiry ?? "?";
-                var bodyString = $"<p><strong>Role:</strong> {roleName}</p>" +
-                                 $"<p><strong>Age:</strong> {age}</p>" +
-                                 $"<p><strong>Contract:</strong> {contract}</p>";
-
-                var bodyPayload = new
+                // 3. Header Code (Text) - Right
+                // x: +150, y: -120. Width 80. Align Right.
+                var headerCodePayload = new
                 {
-                    data = new { content = bodyString },
-                    style = new { textAlign = "center", fontSize = 14 },
-                    position = new { x = posX, y = posY + 20 }
+                    data = new { content = $"<b>{positionCode}</b>" }, // Bolding code for visibility
+                    style = new { textAlign = "right", fontSize = 14 },
+                    geometry = new { width = 80 },
+                    position = new { x = posX + 150, y = posY - 120 }
                 };
-                var bodyResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/texts", bodyPayload, jsonOptions);
-                string bodyId = (await bodyResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetString()!;
+                var codeResp = await PostMiroItem(client, boardId, "texts", headerCodePayload, jsonOptions);
+                string codeId = codeResp.Id;
 
-                _logger.LogInformation("Created items - BG: {BgId}, Header: {HeaderId}, Body: {BodyId}", bgId, headerId, bodyId);
+                // 4. Body Roles (Text) - Left
+                // x: -70, y: +10. Width 260. Align Left.
+                // Content: 2 In Possession + 2 Out Possession lines
+                var rolesHtml = GetTopRoles(analysis, true) + GetTopRoles(analysis, false);
+                var bodyRolesPayload = new
+                {
+                    data = new { content = rolesHtml },
+                    style = new { textAlign = "left", fontSize = 12 }, // Keeping smaller for list
+                    geometry = new { width = 260 },
+                    position = new { x = posX - 70, y = posY + 10 }
+                };
+                var rolesResp = await PostMiroItem(client, boardId, "texts", bodyRolesPayload, jsonOptions);
+                string rolesId = rolesResp.Id;
 
-                // PERSISTENCE STRATEGY: Hybrid "Scorched Earth"
-                // We save "groupId|bgId|headerId|bodyId" to ensure we can delete everything.
-                // If Group exists, deleting it (index 0) works. 
-                // If Group is ghost/404, deleting it fails, but we proceed to delete children.
-                
+                // 5. Body Bio (Text) - Right
+                // x: +140, y: +10. Width 100. Align Right.
+                var bioHtml = BuildBioHtml(player);
+                var bodyBioPayload = new
+                {
+                    data = new { content = bioHtml },
+                    style = new { textAlign = "right", fontSize = 12 },
+                    geometry = new { width = 100 },
+                    position = new { x = posX + 140, y = posY + 10 }
+                };
+                var bioResp = await PostMiroItem(client, boardId, "texts", bodyBioPayload, jsonOptions);
+                string bioId = bioResp.Id;
+
+                // STEP 3: GROUPING
                 string groupId = "";
-                var groupCreated = false;
                 var groupPayload = new
                 {
-                    data = new { items = new[] { bgId, headerId, bodyId } }
+                    data = new { items = new[] { bgId, nameId, codeId, rolesId, bioId } }
                 };
                 
-                var payloadJson = System.Text.Json.JsonSerializer.Serialize(groupPayload, jsonOptions);
                 var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/groups", groupPayload, jsonOptions);
-                var groupResponseBody = await groupResponse.Content.ReadAsStringAsync();
-                var groupStatus = groupResponse.StatusCode.ToString();
-
                 if (groupResponse.IsSuccessStatusCode)
                 {
-                    var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
-                    if (groupJson.TryGetProperty("id", out var gId))
+                    var gJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
+                    if (gJson.TryGetProperty("id", out var gIdProp))
                     {
-                        groupId = gId.GetString()!;
-                        groupCreated = true;
+                        groupId = gIdProp.GetString()!;
                     }
                 }
 
-                // Save Compound ID (Group first, then children)
-                var compoundId = $"{groupId}|{bgId}|{headerId}|{bodyId}";
+                // Save Compound ID
+                var compoundId = $"{groupId}|{bgId}|{nameId}|{codeId}|{rolesId}|{bioId}";
                 player.MiroWidgetId = compoundId;
                 await _rosterRepository.UpsertAsync(player);
 
-                // DIAGNOSTICS
-                var diagnostics = new
-                {
-                    oldWidgetId,
-                    deleteAttempted,
-                    deleteSuccess,
-                    deleteDetails,
-                    bgId,
-                    headerId,
-                    bodyId,
-                    groupId,
-                    compoundId,
-                    groupCreated,
-                    groupStatus,
-                    groupPayload = payloadJson,
-                    groupResponseBody
-                };
-
-                return new OkObjectResult(new { 
-                    status = "success", 
-                    widgetId = player.MiroWidgetId, 
-                    retrievedWidgetId = oldWidgetId, 
-                    diagnostics 
-                });
+                return new OkObjectResult(new { status = "success", widgetId = compoundId });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error pushing player to Miro");
                 return new ObjectResult(new { error = ex.Message }) { StatusCode = 500 };
             }
+        }
+
+        private async Task<(string Id, bool Success)> PostMiroItem(HttpClient client, string boardId, string type, object payload, JsonSerializerOptions options)
+        {
+            var response = await client.PostAsJsonAsync($"v2/boards/{boardId}/{type}", payload, options);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+                return (json.GetProperty("id").GetString()!, true);
+            }
+            return (string.Empty, false);
+        }
+
+        private string FormatCurrencyK(int? value)
+        {
+            if (!value.HasValue || value.Value == 0) return "-";
+            var k = Math.Ceiling(value.Value / 1000.0);
+            return $"${k}k";
+        }
+
+        private string GetTopRoles(PlayerAnalysis analysis, bool inPossession)
+        {
+            var fits = inPossession ? analysis.InPossessionFits : analysis.OutPossessionFits;
+            if (fits == null || !fits.Any()) return string.Empty;
+
+            var top = fits.OrderByDescending(f => f.Score).Take(2);
+            var result = "";
+            var color = inPossession ? "blue" : "red"; // Subtle visual distinction if needed, or just plain
+            // Spec says "Role Name - 99%"
+            foreach (var r in top)
+            {
+                // Simple HTML lines
+                result += $"<p>{r.RoleName} - {r.Score}%</p>";
+            }
+            return result;
+        }
+
+        private string BuildBioHtml(PlayerImportData p)
+        {
+            // Line 1: Wage (FormatCurrencyK)
+            // Line 2: Contract Expiration (Year only)
+            // Line 3: Transfer Value High (FormatCurrencyK)
+            // Line 4: Age
+            
+            // Wage Logic
+            int? wageVal = null;
+            if (int.TryParse(p.Snapshot?.Wage?.Replace(",", "")?.Replace("£", "")?.Replace("$", "")?.Replace("p/w", "")?.Trim(), out int w))
+            {
+                wageVal = w;
+            }
+            var wageStr = FormatCurrencyK(wageVal); 
+
+            // Contract Logic
+            var contractStr = p.Snapshot?.ContractExpiry ?? "-";
+            if (DateTime.TryParse(contractStr, out var d))
+            {
+                contractStr = d.Year.ToString();
+            }
+            else if (contractStr.Length >= 4 && int.TryParse(contractStr.Substring(contractStr.Length - 4), out int y))
+            {
+                 // Handle cases like "30/06/2026" manually if Date Parse fails? 
+                 // Assuming standard date format or Year. 
+                 // If parse fails, just keep as is, but maybe try to grab last 4 chars?
+            }
+
+            var transferVal = FormatCurrencyK(p.Snapshot?.TransferValueHigh);
+            var age = p.Snapshot?.Age.ToString() ?? "-";
+
+            // Using simple paragraphs. Miro Text item handles alignment if we set textAlign: right in the payload.
+            return $"<p>{wageStr}</p><p>{contractStr}</p><p>{transferVal}</p><p>{age}</p>";
         }
 
         // Helper class for deserializing the refresh response (snake_case)

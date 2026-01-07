@@ -4,7 +4,7 @@ namespace fmassman.Shared
 {
     public static class PlayerAnalyzer
     {
-        public static PlayerAnalysis Analyze(PlayerSnapshot player)
+        public static PlayerAnalysis Analyze(PlayerSnapshot? player)
         {
             if (player == null)
             {

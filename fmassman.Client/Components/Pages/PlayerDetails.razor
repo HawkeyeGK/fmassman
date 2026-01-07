@@ -299,8 +299,13 @@ else
                     var headerId = diag.GetProperty("headerId").GetString();
                     var bodyId = diag.GetProperty("bodyId").GetString();
                     var groupPayload = diag.GetProperty("groupPayload").GetString();
-                    var groupStatus = diag.GetProperty("groupResponseStatus").GetString();
-                    var groupBody = diag.GetProperty("groupResponseBody").GetString();
+                    
+                    var groupStatus = "N/A";
+                    if(diag.TryGetProperty("groupStatus", out var gs)) groupStatus = gs.GetString();
+                    else if(diag.TryGetProperty("groupResponseStatus", out var grs)) groupStatus = grs.GetString();
+                    
+                    var groupBody = "N/A";
+                    if(diag.TryGetProperty("groupResponseBody", out var grb)) groupBody = grb.GetString();
                     
                     var groupCreated = "N/A";
                     if(diag.TryGetProperty("groupCreated", out var gc)) groupCreated = gc.GetBoolean().ToString();

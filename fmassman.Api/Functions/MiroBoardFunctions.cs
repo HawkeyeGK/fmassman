@@ -245,48 +245,52 @@ namespace fmassman.Api.Functions
                 string bodyId = bodyJson.GetProperty("id").GetString();
 
                 // 4. Grouping
+                // V2 API Endpoint for Grouping: POST https://api.miro.com/v2/boards/{board_id}/groups
                 var groupPayload = new
                 {
-                    data = new { items = new[] { bgId, headerId, bodyId } },
-                    type = "group"
-                    // Note: Groups don't typically have absolute positions set on creation via this endpoint, 
-                    // they take the bounding box of items.
+                    data = new { items = new[] { bgId, headerId, bodyId } }
                 };
 
-                // Try generic items creation with type='group' which is standard for V2
-                var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/items", groupPayload, jsonOptions);
+                var groupResponse = await client.PostAsJsonAsync($"v2/boards/{boardId}/groups", groupPayload, jsonOptions);
                 
                 if (!groupResponse.IsSuccessStatusCode)
                 {
-                    _logger.LogError("Failed to group items: {Status}", groupResponse.StatusCode);
-                    // Even if grouping fails, we have the items. We might return a warning or partial success?
-                    // For now, let's treat it as a failure of the full "Kill and Fill" contract.
-                    // But we already created items... leaving them ungrouped is messy but safer than crashing.
+                    var groupError = await groupResponse.Content.ReadAsStringAsync();
+                    _logger.LogError("Failed to group items: {Status} {Error}", groupResponse.StatusCode, groupError);
+                    
+                    // Cleanup: Delete the loose items so we don't leave mess/duplicates
+                    try 
+                    {
+                        var tasks = new List<Task>
+                        {
+                            client.DeleteAsync($"v2/boards/{boardId}/shapes/{bgId}"),
+                            client.DeleteAsync($"v2/boards/{boardId}/texts/{headerId}"),
+                            client.DeleteAsync($"v2/boards/{boardId}/texts/{bodyId}")
+                        };
+                        await Task.WhenAll(tasks);
+                    }
+                    catch (Exception cleanupEx)
+                    {
+                        _logger.LogError(cleanupEx, "Failed to clean up loose items after grouping failure.");
+                    }
+
+                    return new ObjectResult(new { error = "Created items but failed to group them. Cleaned up items.", details = groupError }) { StatusCode = 500 };
                 }
-                else 
+                
+                var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
+                if (groupJson.TryGetProperty("id", out var gId))
                 {
-                    var groupJson = await groupResponse.Content.ReadFromJsonAsync<JsonElement>();
-                     if (groupJson.TryGetProperty("id", out var gId))
-                     {
-                         player.MiroWidgetId = gId.GetString();
-                     }
+                    player.MiroWidgetId = gId.GetString();
+                    await _rosterRepository.UpsertAsync(player);
+                }
+                else
+                {
+                     // If we got success but no ID (weird), assume failure?
+                     _logger.LogError("Grouping succeeded but returned no ID.");
+                     return new ObjectResult(new { error = "Grouping succeeded but returned no ID." }) { StatusCode = 500 };
                 }
 
-                // 5. Persist
-                // If grouping failed, we might still want to save the BG id or just null it out?
-                // The spec says "Store the returned groupId". If grouping failed, we're in a weird state. 
-                // Let's assume grouping worked or we fall back to BG ID if absolutely necessary, 
-                // but ideally we want the Group ID.
-                
-                if (groupResponse.IsSuccessStatusCode)
-                {
-                    await _rosterRepository.UpsertAsync(player);
-                    return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
-                }
-                else 
-                {
-                    return new ObjectResult(new { error = "Created items but failed to group them.", details = await groupResponse.Content.ReadAsStringAsync() }) { StatusCode = 206 };
-                }
+                return new OkObjectResult(new { status = "success", widgetId = player.MiroWidgetId });
             }
             catch (Exception ex)
             {

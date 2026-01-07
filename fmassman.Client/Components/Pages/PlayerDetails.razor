@@ -284,6 +284,11 @@ else
                 
                 if (root.TryGetProperty("diagnostics", out var diag))
                 {
+                    var oldWidgetId = diag.GetProperty("oldWidgetId").GetString();
+                    var deleteAttempted = diag.GetProperty("deleteAttempted").GetBoolean().ToString();
+                    var deleteSuccess = diag.GetProperty("deleteSuccess").GetBoolean().ToString();
+                    var deleteDetails = diag.GetProperty("deleteDetails").GetString();
+                    
                     var bgId = diag.GetProperty("bgId").GetString();
                     var headerId = diag.GetProperty("headerId").GetString();
                     var bodyId = diag.GetProperty("bodyId").GetString();
@@ -298,6 +303,11 @@ else
                     }
                     
                     diagnosticMessage = "✅ SUCCESS - Player pushed to Miro!\n\n" +
+                        "SMART DELETE:\n" +
+                        $"- Old Widget ID: {oldWidgetId ?? "(none)"}\n" +
+                        $"- Delete Attempted: {deleteAttempted}\n" +
+                        $"- Delete Success: {deleteSuccess}\n" +
+                        $"- Details: {deleteDetails}\n\n" +
                         "CREATED ITEMS:\n" +
                         $"- Background ID: {bgId}\n" +
                         $"- Header ID: {headerId}\n" +

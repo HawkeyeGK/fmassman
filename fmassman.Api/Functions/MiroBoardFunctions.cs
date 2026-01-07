@@ -158,13 +158,23 @@ namespace fmassman.Api.Functions
                     }
                 }
 
+                // Track diagnostics
+                var deleteAttempted = false;
+                var deleteSuccess = false;
+                var oldWidgetId = player.MiroWidgetId;
+                var deleteDetails = "Not attempted (no existing MiroWidgetId)";
+
                 // STEP 1: SMART DELETE (The "Kill")
                 if (!string.IsNullOrEmpty(player.MiroWidgetId))
                 {
+                    deleteAttempted = true;
                     try
                     {
                         // Get Location
+                        deleteDetails = $"Attempting to GET item {player.MiroWidgetId}...";
                         var getResponse = await client.GetAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
+                        deleteDetails = $"GET Status: {getResponse.StatusCode}";
+                        
                         if (getResponse.IsSuccessStatusCode)
                         {
                             var itemJson = await getResponse.Content.ReadFromJsonAsync<JsonElement>();
@@ -174,19 +184,29 @@ namespace fmassman.Api.Functions
                                 if (posElement.TryGetProperty("y", out var yVal)) posY = yVal.GetDouble();
                             }
                             
+                            deleteDetails = $"Found at ({posX}, {posY}). Deleting...";
+                            
                             // Delete the old item/group
-                            await client.DeleteAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
+                            var deleteResponse = await client.DeleteAsync($"v2/boards/{boardId}/items/{player.MiroWidgetId}");
+                            deleteSuccess = deleteResponse.IsSuccessStatusCode;
+                            deleteDetails = $"GET: {getResponse.StatusCode}, DELETE: {deleteResponse.StatusCode}, Position: ({posX}, {posY})";
                         }
                         else if (getResponse.StatusCode == HttpStatusCode.NotFound)
                         {
                              _logger.LogWarning("Miro widget {WidgetId} not found (deleted externally). Resetting to 0,0.", player.MiroWidgetId);
+                             deleteDetails = "Item not found (404) - may have been deleted externally";
                              posX = 0; 
                              posY = 0;
+                        }
+                        else
+                        {
+                            deleteDetails = $"GET failed with status {getResponse.StatusCode}";
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error during Smart Delete of widget {WidgetId}", player.MiroWidgetId);
+                        deleteDetails = $"Exception: {ex.Message}";
                         // Proceed to create new anyway
                     }
                 }
@@ -272,6 +292,10 @@ namespace fmassman.Api.Functions
                             status = "success", 
                             widgetId = player.MiroWidgetId,
                             diagnostics = new {
+                                oldWidgetId,
+                                deleteAttempted,
+                                deleteSuccess,
+                                deleteDetails,
                                 bgId,
                                 headerId,
                                 bodyId,
@@ -300,6 +324,10 @@ namespace fmassman.Api.Functions
                     message = "Card created but grouping failed. Saved Background ID.", 
                     details = groupResponseBody,
                     diagnostics = new {
+                        oldWidgetId,
+                        deleteAttempted,
+                        deleteSuccess,
+                        deleteDetails,
                         bgId,
                         headerId,
                         bodyId,

@@ -249,60 +249,60 @@ namespace fmassman.Api.Functions
                 {
                     data = new { shape = "rectangle" },
                     style = new { fillColor = color, borderOpacity = 0 },
-                    geometry = new { width = 420, height = 300 },
+                    geometry = new { width = 460, height = 300 },
                     position = new { x = posX, y = posY }
                 };
                 var bgResp = await PostMiroItem(client, boardId, "shapes", bgPayload, jsonOptions);
                 string bgId = bgResp.Id;
 
                 // 2. Header Name (Text) - Left
-                // x: -50, y: -120. Width 300 (approx 3/4). Align Left.
+                // x: -50, y: -120. Width 340. Align Left.
                 // Content: <b>Name</b>
                 var headerNamePayload = new
                 {
                     data = new { content = $"<b>{player.PlayerName}</b>" },
                     style = new { textAlign = "left", fontSize = 36 },
-                    geometry = new { width = 300 },
+                    geometry = new { width = 340 },
                     position = new { x = posX - 50, y = posY - 120 }
                 };
                 var nameResp = await PostMiroItem(client, boardId, "texts", headerNamePayload, jsonOptions);
                 string nameId = nameResp.Id;
 
                 // 3. Header Code (Text) - Right
-                // x: +155, y: -120. Width 90. Align Right.
+                // x: +175, y: -120. Width 90. Align Right.
                 var headerCodePayload = new
                 {
                     data = new { content = $"<b>{positionCode}</b>" }, // Bolding code for visibility
                     style = new { textAlign = "right", fontSize = 18 },
                     geometry = new { width = 90 },
-                    position = new { x = posX + 155, y = posY - 120 }
+                    position = new { x = posX + 175, y = posY - 120 }
                 };
                 var codeResp = await PostMiroItem(client, boardId, "texts", headerCodePayload, jsonOptions);
                 string codeId = codeResp.Id;
 
                 // 4. Body Roles (Text) - Left
-                // x: -50, y: +10. Width 300. Align Left.
+                // x: -50, y: +10. Width 340. Align Left.
                 // Content: 2 In Possession + 2 Out Possession lines
                 var rolesHtml = GetTopRoles(analysis, true) + GetTopRoles(analysis, false);
                 var bodyRolesPayload = new
                 {
                     data = new { content = rolesHtml },
                     style = new { textAlign = "left", fontSize = 18 }, // Keeping smaller for list
-                    geometry = new { width = 300 },
+                    geometry = new { width = 340 },
                     position = new { x = posX - 50, y = posY + 10 }
                 };
                 var rolesResp = await PostMiroItem(client, boardId, "texts", bodyRolesPayload, jsonOptions);
                 string rolesId = rolesResp.Id;
 
                 // 5. Body Bio (Text) - Right
-                // x: +155, y: +10. Width 90. Align Right.
+                // x: +175, y: +10. Width 90. Align Right.
                 var bioHtml = BuildBioHtml(player);
                 var bodyBioPayload = new
                 {
                     data = new { content = bioHtml },
                     style = new { textAlign = "right", fontSize = 18 },
                     geometry = new { width = 90 },
-                    position = new { x = posX + 155, y = posY + 10 }
+                    position = new { x = posX + 175, y = posY + 10 }
                 };
                 var bioResp = await PostMiroItem(client, boardId, "texts", bodyBioPayload, jsonOptions);
                 string bioId = bioResp.Id;

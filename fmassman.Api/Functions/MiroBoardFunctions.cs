@@ -261,7 +261,7 @@ namespace fmassman.Api.Functions
                 var headerNamePayload = new
                 {
                     data = new { content = $"<b>{player.PlayerName}</b>" },
-                    style = new { textAlign = "left", fontSize = 24 },
+                    style = new { textAlign = "left", fontSize = 36 },
                     geometry = new { width = 200 },
                     position = new { x = posX - 100, y = posY - 120 }
                 };
@@ -273,7 +273,7 @@ namespace fmassman.Api.Functions
                 var headerCodePayload = new
                 {
                     data = new { content = $"<b>{positionCode}</b>" }, // Bolding code for visibility
-                    style = new { textAlign = "right", fontSize = 14 },
+                    style = new { textAlign = "right", fontSize = 18 },
                     geometry = new { width = 80 },
                     position = new { x = posX + 150, y = posY - 120 }
                 };
@@ -287,7 +287,7 @@ namespace fmassman.Api.Functions
                 var bodyRolesPayload = new
                 {
                     data = new { content = rolesHtml },
-                    style = new { textAlign = "left", fontSize = 12 }, // Keeping smaller for list
+                    style = new { textAlign = "left", fontSize = 18 }, // Keeping smaller for list
                     geometry = new { width = 260 },
                     position = new { x = posX - 70, y = posY + 10 }
                 };
@@ -300,7 +300,7 @@ namespace fmassman.Api.Functions
                 var bodyBioPayload = new
                 {
                     data = new { content = bioHtml },
-                    style = new { textAlign = "right", fontSize = 12 },
+                    style = new { textAlign = "right", fontSize = 18 },
                     geometry = new { width = 100 },
                     position = new { x = posX + 140, y = posY + 10 }
                 };

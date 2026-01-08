@@ -4,11 +4,25 @@
 /* This file only contains page-specific overrides if needed */
 
 /* Flip sort indicators for: Name (1), Personality (3), Playing Time (4), Best Role In (16), Best Role Out (17) */
-::deep th:nth-child(1) .sort-indicator,
-::deep th:nth-child(3) .sort-indicator,
-::deep th:nth-child(4) .sort-indicator,
-::deep th:nth-child(16) .sort-indicator,
-::deep th:nth-child(17) .sort-indicator {
-    display: inline-block; /* Required for transform to work on inline elements usually, though indicator might already be block-like */
-    transform: scaleY(-1);
+
+/* ASCENDING state: Logic flipped, so show DOWN arrow (flip default Up) */
+::deep th:nth-child(1)[aria-sort="ascending"] .sort-indicator,
+::deep th:nth-child(3)[aria-sort="ascending"] .sort-indicator,
+::deep th:nth-child(4)[aria-sort="ascending"] .sort-indicator,
+::deep th:nth-child(16)[aria-sort="ascending"] .sort-indicator,
+::deep th:nth-child(17)[aria-sort="ascending"] .sort-indicator {
+    transform: scaleY(-1) !important;
+}
+
+/* DESCENDING state: Logic flipped, so show UP arrow (reset default Down or force Up) */
+::deep th:nth-child(1)[aria-sort="descending"] .sort-indicator,
+::deep th:nth-child(3)[aria-sort="descending"] .sort-indicator,
+::deep th:nth-child(4)[aria-sort="descending"] .sort-indicator,
+::deep th:nth-child(16)[aria-sort="descending"] .sort-indicator,
+::deep th:nth-child(17)[aria-sort="descending"] .sort-indicator {
+    transform: scaleY(1) !important;
+    /* scaleY(1) restores original orientation. If component used rotate(180deg) for descending, 
+       we might need `transform: none !important` or `rotate(0deg)` to force it Up. 
+       Let's try `transform: none !important` which covers both. */
+    transform: none !important;
 }

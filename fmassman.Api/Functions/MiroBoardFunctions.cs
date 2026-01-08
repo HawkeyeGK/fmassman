@@ -281,7 +281,7 @@ namespace fmassman.Api.Functions
                 string codeId = codeResp.Id;
 
                 // 4. Body Roles (Text) - Left
-                // x: -50, y: -60 (Moved Up). Width 340. Align Left.
+                // x: -50, y: -40 (Moved Down for spacing). Width 340. Align Left.
                 // Content: 2 In Possession + 2 Out Possession lines
                 var rolesHtml = GetTopRoles(analysis, true) + GetTopRoles(analysis, false);
                 var bodyRolesPayload = new
@@ -289,20 +289,20 @@ namespace fmassman.Api.Functions
                     data = new { content = rolesHtml },
                     style = new { textAlign = "left", fontSize = 18 }, // Keeping smaller for list
                     geometry = new { width = 340 },
-                    position = new { x = posX - 50, y = posY - 60 }
+                    position = new { x = posX - 50, y = posY - 40 }
                 };
                 var rolesResp = await PostMiroItem(client, boardId, "texts", bodyRolesPayload, jsonOptions);
                 string rolesId = rolesResp.Id;
 
                 // 5. Body Bio (Text) - Right
-                // x: +175, y: -60 (Moved Up). Width 90. Align Right.
+                // x: +175, y: -40 (Moved Down for spacing). Width 90. Align Right.
                 var bioHtml = BuildBioHtml(player);
                 var bodyBioPayload = new
                 {
                     data = new { content = bioHtml },
                     style = new { textAlign = "right", fontSize = 18 },
                     geometry = new { width = 90 },
-                    position = new { x = posX + 175, y = posY - 60 }
+                    position = new { x = posX + 175, y = posY - 40 }
                 };
                 var bioResp = await PostMiroItem(client, boardId, "texts", bodyBioPayload, jsonOptions);
                 string bioId = bioResp.Id;

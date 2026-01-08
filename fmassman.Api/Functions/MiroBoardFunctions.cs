@@ -256,26 +256,26 @@ namespace fmassman.Api.Functions
                 string bgId = bgResp.Id;
 
                 // 2. Header Name (Text) - Left
-                // x: -100, y: -120. Width 200. Align Left.
+                // x: -70 (aligned with Roles), y: -120. Width 260. Align Left.
                 // Content: <b>Name</b>
                 var headerNamePayload = new
                 {
                     data = new { content = $"<b>{player.PlayerName}</b>" },
                     style = new { textAlign = "left", fontSize = 36 },
-                    geometry = new { width = 200 },
-                    position = new { x = posX - 100, y = posY - 120 }
+                    geometry = new { width = 260 },
+                    position = new { x = posX - 70, y = posY - 120 }
                 };
                 var nameResp = await PostMiroItem(client, boardId, "texts", headerNamePayload, jsonOptions);
                 string nameId = nameResp.Id;
 
                 // 3. Header Code (Text) - Right
-                // x: +150, y: -120. Width 80. Align Right.
+                // x: +140 (aligned with Bio), y: -120. Width 100. Align Right.
                 var headerCodePayload = new
                 {
                     data = new { content = $"<b>{positionCode}</b>" }, // Bolding code for visibility
                     style = new { textAlign = "right", fontSize = 18 },
-                    geometry = new { width = 80 },
-                    position = new { x = posX + 150, y = posY - 120 }
+                    geometry = new { width = 100 },
+                    position = new { x = posX + 140, y = posY - 120 }
                 };
                 var codeResp = await PostMiroItem(client, boardId, "texts", headerCodePayload, jsonOptions);
                 string codeId = codeResp.Id;

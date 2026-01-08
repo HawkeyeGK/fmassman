@@ -181,23 +181,32 @@ else
 
 
                         
-                        @if (_activeTab == 1 && VM.Player.Snapshot?.Technical != null)
+                        @if (_activeTab == 2 && VM.Player.Snapshot?.Technical != null)
                         {
                             <div class="row row-cols-2 row-cols-md-4 g-3">
-                                <AttributeInput Label="Crossing" @bind-Value="VM.Player.Snapshot.Technical.Crossing" />
-                                <AttributeInput Label="Dribbling" @bind-Value="VM.Player.Snapshot.Technical.Dribbling" />
-                                <AttributeInput Label="Finishing" @bind-Value="VM.Player.Snapshot.Technical.Finishing" />
-                                <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Technical.FirstTouch" />
-                                <AttributeInput Label="Heading" @bind-Value="VM.Player.Snapshot.Technical.Heading" />
-                                <AttributeInput Label="Long Shots" @bind-Value="VM.Player.Snapshot.Technical.LongShots" />
-                                <AttributeInput Label="Marking" @bind-Value="VM.Player.Snapshot.Technical.Marking" />
-                                <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Technical.Passing" />
-                                <AttributeInput Label="Tackling" @bind-Value="VM.Player.Snapshot.Technical.Tackling" />
-                                <AttributeInput Label="Technique" @bind-Value="VM.Player.Snapshot.Technical.Technique" />
+                                @if (IsGoalkeeper)
+                                {
+                                    <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Technical.FirstTouch" />
+                                    <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Technical.Passing" />
+                                    <AttributeInput Label="Technique" @bind-Value="VM.Player.Snapshot.Technical.Technique" />
+                                }
+                                else
+                                {
+                                    <AttributeInput Label="Crossing" @bind-Value="VM.Player.Snapshot.Technical.Crossing" />
+                                    <AttributeInput Label="Dribbling" @bind-Value="VM.Player.Snapshot.Technical.Dribbling" />
+                                    <AttributeInput Label="Finishing" @bind-Value="VM.Player.Snapshot.Technical.Finishing" />
+                                    <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Technical.FirstTouch" />
+                                    <AttributeInput Label="Heading" @bind-Value="VM.Player.Snapshot.Technical.Heading" />
+                                    <AttributeInput Label="Long Shots" @bind-Value="VM.Player.Snapshot.Technical.LongShots" />
+                                    <AttributeInput Label="Marking" @bind-Value="VM.Player.Snapshot.Technical.Marking" />
+                                    <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Technical.Passing" />
+                                    <AttributeInput Label="Tackling" @bind-Value="VM.Player.Snapshot.Technical.Tackling" />
+                                    <AttributeInput Label="Technique" @bind-Value="VM.Player.Snapshot.Technical.Technique" />
+                                }
                             </div>
                         }
 
-                        @if (_activeTab == 2 && VM.Player.Snapshot?.Mental != null)
+                        @if (_activeTab == 3 && VM.Player.Snapshot?.Mental != null)
                         {
                             <div class="row row-cols-2 row-cols-md-4 g-3">
                                 <AttributeInput Label="Aggression" @bind-Value="VM.Player.Snapshot.Mental.Aggression" />
@@ -217,7 +226,7 @@ else
                             </div>
                         }
 
-                        @if (_activeTab == 3 && VM.Player.Snapshot?.Physical != null)
+                        @if (_activeTab == 4 && VM.Player.Snapshot?.Physical != null)
                         {
                             <div class="row row-cols-2 row-cols-md-4 g-3">
                                 <AttributeInput Label="Acceleration" @bind-Value="VM.Player.Snapshot.Physical.Acceleration" />
@@ -231,33 +240,58 @@ else
                             </div>
                         }
 
-                        @if (_activeTab == 4 && VM.Player.Snapshot?.SetPieces != null)
+                        @if (_activeTab == 5 && VM.Player.Snapshot?.SetPieces != null)
                         {
                             <div class="row row-cols-2 row-cols-md-4 g-3">
-                                <AttributeInput Label="Corners" @bind-Value="VM.Player.Snapshot.SetPieces.Corners" />
-                                <AttributeInput Label="Free Kick Taking" @bind-Value="VM.Player.Snapshot.SetPieces.FreeKickTaking" />
-                                <AttributeInput Label="Long Throws" @bind-Value="VM.Player.Snapshot.SetPieces.LongThrows" />
-                                <AttributeInput Label="Penalty Taking" @bind-Value="VM.Player.Snapshot.SetPieces.PenaltyTaking" />
+                                @if (IsGoalkeeper)
+                                {
+                                    <AttributeInput Label="Free Kick Taking" @bind-Value="VM.Player.Snapshot.SetPieces.FreeKickTaking" />
+                                    <AttributeInput Label="Penalty Taking" @bind-Value="VM.Player.Snapshot.SetPieces.PenaltyTaking" />
+                                }
+                                else
+                                {
+                                    <AttributeInput Label="Corners" @bind-Value="VM.Player.Snapshot.SetPieces.Corners" />
+                                    <AttributeInput Label="Free Kick Taking" @bind-Value="VM.Player.Snapshot.SetPieces.FreeKickTaking" />
+                                    <AttributeInput Label="Long Throws" @bind-Value="VM.Player.Snapshot.SetPieces.LongThrows" />
+                                    <AttributeInput Label="Penalty Taking" @bind-Value="VM.Player.Snapshot.SetPieces.PenaltyTaking" />
+                                }
                             </div>
                         }
 
-                        @if (_activeTab == 5 && VM.Player.Snapshot?.Goalkeeping != null)
+                        @if (_activeTab == 6)
                         {
-                            <div class="row row-cols-2 row-cols-md-4 g-3">
-                                <AttributeInput Label="Aerial Reach" @bind-Value="VM.Player.Snapshot.Goalkeeping.AerialReach" />
-                                <AttributeInput Label="Command of Area" @bind-Value="VM.Player.Snapshot.Goalkeeping.CommandOfArea" />
-                                <AttributeInput Label="Communication" @bind-Value="VM.Player.Snapshot.Goalkeeping.Communication" />
-                                <AttributeInput Label="Eccentricity" @bind-Value="VM.Player.Snapshot.Goalkeeping.Eccentricity" />
-                                <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Goalkeeping.FirstTouch" />
-                                <AttributeInput Label="Handling" @bind-Value="VM.Player.Snapshot.Goalkeeping.Handling" />
-                                <AttributeInput Label="Kicking" @bind-Value="VM.Player.Snapshot.Goalkeeping.Kicking" />
-                                <AttributeInput Label="One On Ones" @bind-Value="VM.Player.Snapshot.Goalkeeping.OneOnOnes" />
-                                <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Goalkeeping.Passing" />
-                                <AttributeInput Label="Punching" @bind-Value="VM.Player.Snapshot.Goalkeeping.Punching" />
-                                <AttributeInput Label="Reflexes" @bind-Value="VM.Player.Snapshot.Goalkeeping.Reflexes" />
-                                <AttributeInput Label="Rushing Out" @bind-Value="VM.Player.Snapshot.Goalkeeping.RushingOut" />
-                                <AttributeInput Label="Throwing" @bind-Value="VM.Player.Snapshot.Goalkeeping.Throwing" />
-                            </div>
+                            @if (IsGoalkeeper)
+                            {
+                                @if (VM.Player.Snapshot?.Goalkeeping == null && VM.Player?.Snapshot != null)
+                                {
+                                     VM.Player.Snapshot.Goalkeeping = new();
+                                }
+
+                                @if (VM.Player.Snapshot?.Goalkeeping != null)
+                                {
+                                    <div class="row row-cols-2 row-cols-md-4 g-3">
+                                        <AttributeInput Label="Aerial Reach" @bind-Value="VM.Player.Snapshot.Goalkeeping.AerialReach" />
+                                        <AttributeInput Label="Command of Area" @bind-Value="VM.Player.Snapshot.Goalkeeping.CommandOfArea" />
+                                        <AttributeInput Label="Communication" @bind-Value="VM.Player.Snapshot.Goalkeeping.Communication" />
+                                        <AttributeInput Label="Eccentricity" @bind-Value="VM.Player.Snapshot.Goalkeeping.Eccentricity" />
+                                        <AttributeInput Label="First Touch" @bind-Value="VM.Player.Snapshot.Goalkeeping.FirstTouch" />
+                                        <AttributeInput Label="Handling" @bind-Value="VM.Player.Snapshot.Goalkeeping.Handling" />
+                                        <AttributeInput Label="Kicking" @bind-Value="VM.Player.Snapshot.Goalkeeping.Kicking" />
+                                        <AttributeInput Label="One On Ones" @bind-Value="VM.Player.Snapshot.Goalkeeping.OneOnOnes" />
+                                        <AttributeInput Label="Passing" @bind-Value="VM.Player.Snapshot.Goalkeeping.Passing" />
+                                        <AttributeInput Label="Punching" @bind-Value="VM.Player.Snapshot.Goalkeeping.Punching" />
+                                        <AttributeInput Label="Reflexes" @bind-Value="VM.Player.Snapshot.Goalkeeping.Reflexes" />
+                                        <AttributeInput Label="Rushing Out" @bind-Value="VM.Player.Snapshot.Goalkeeping.RushingOut" />
+                                        <AttributeInput Label="Throwing" @bind-Value="VM.Player.Snapshot.Goalkeeping.Throwing" />
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    Goalkeeping attributes are only applicable to Goalkeepers.
+                                </div>
+                            }
                         }
                     </div>
                 </div>
@@ -322,6 +356,16 @@ else
         await Task.WhenAll(playerTask, tagsTask, positionsTask);
         _availableTags = tagsTask.Result.OrderBy(t => t.Name).ToList();
         _availablePositions = positionsTask.Result.OrderBy(p => p.Name).ToList();
+    }
+
+    private bool IsGoalkeeper
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(VM.Player?.PositionId) || _availablePositions == null) return false;
+            var pos = _availablePositions.FirstOrDefault(p => p.Id == VM.Player.PositionId);
+            return pos?.Code == "GK";
+        }
     }
 
     private bool IsTagSelected(string tagId)

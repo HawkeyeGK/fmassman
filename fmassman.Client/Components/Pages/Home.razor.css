@@ -2,3 +2,13 @@
 
 /* NOTE: The main grid styling comes from app.css via .grid-scroll-container class */
 /* This file only contains page-specific overrides if needed */
+
+/* Flip sort indicators for: Name (1), Personality (3), Playing Time (4), Best Role In (16), Best Role Out (17) */
+::deep th:nth-child(1) .sort-indicator,
+::deep th:nth-child(3) .sort-indicator,
+::deep th:nth-child(4) .sort-indicator,
+::deep th:nth-child(16) .sort-indicator,
+::deep th:nth-child(17) .sort-indicator {
+    display: inline-block; /* Required for transform to work on inline elements usually, though indicator might already be block-like */
+    transform: scaleY(-1);
+}

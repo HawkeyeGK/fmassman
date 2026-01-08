@@ -42,7 +42,7 @@ namespace fmassman.Client.Models
         {
             if (player.Snapshot == null) return new RosterItemViewModel { Name = player.PlayerName };
 
-            var analysis = fmassman.Shared.PlayerAnalyzer.Analyze(player.Snapshot);
+            var analysis = new fmassman.Shared.PlayerAnalyzer().Analyze(player.Snapshot);
             var bestIn = analysis.InPossessionFits.OrderByDescending(r => r.Score).FirstOrDefault();
             var bestOut = analysis.OutPossessionFits.OrderByDescending(r => r.Score).FirstOrDefault();
 

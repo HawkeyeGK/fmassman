@@ -76,6 +76,9 @@ var host = new HostBuilder()
         services.AddScoped<fmassman.Shared.Interfaces.IPositionRepository, fmassman.Api.Repositories.CosmosPositionRepository>();
         services.AddScoped<fmassman.Shared.Interfaces.ISettingsRepository, fmassman.Api.Repositories.CosmosSettingsRepository>();
 
+        services.AddScoped<fmassman.Shared.Interfaces.ISettingsRepository, fmassman.Api.Repositories.CosmosSettingsRepository>(); // Only one registration
+        services.AddScoped<PlayerAnalyzer>(); // Bugfix: Register Analyzer
+
         services.AddSingleton<IRoleService>(sp =>
         {
             var cosmosClient = sp.GetRequiredService<CosmosClient>();

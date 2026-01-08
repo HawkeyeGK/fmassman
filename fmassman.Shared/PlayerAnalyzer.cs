@@ -2,9 +2,9 @@ using System;
 
 namespace fmassman.Shared
 {
-    public static class PlayerAnalyzer
+    public class PlayerAnalyzer
     {
-        public static PlayerAnalysis Analyze(PlayerSnapshot? player)
+        public PlayerAnalysis Analyze(PlayerSnapshot? player)
         {
             if (player == null)
             {
@@ -70,7 +70,7 @@ namespace fmassman.Shared
             return analysis;
         }
 
-        private static double CalculatePercentage(params int[] attributes)
+        private double CalculatePercentage(params int[] attributes)
         {
             if (attributes == null || attributes.Length == 0)
                 return 0;

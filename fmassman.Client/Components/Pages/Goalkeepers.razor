@@ -91,7 +91,7 @@ else if (matrixItems != null)
             
             foreach (var p in goalkeepers)
             {
-                analyzedPlayers.Add((p.PlayerName, p.TagIds, p.PositionId, PlayerAnalyzer.Analyze(p.Snapshot!)));
+                analyzedPlayers.Add((p.PlayerName, p.TagIds, p.PositionId, new PlayerAnalyzer().Analyze(p.Snapshot!)));
             }
             
             // Generate Columns from the first player

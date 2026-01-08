@@ -95,7 +95,7 @@ else if (matrixItems != null)
             // Filter out goalkeepers as per original logic
             var analyzedPlayers = roster
                 .Where(p => p.Snapshot != null && p.Snapshot.Goalkeeping == null)
-                .Select(p => new { Name = p.PlayerName, TagIds = p.TagIds, PositionId = p.PositionId, Analysis = PlayerAnalyzer.Analyze(p.Snapshot!) })
+                .Select(p => new { Name = p.PlayerName, TagIds = p.TagIds, PositionId = p.PositionId, Analysis = new PlayerAnalyzer().Analyze(p.Snapshot!) })
                 .ToList();
 
             if (analyzedPlayers.Count == 0) 

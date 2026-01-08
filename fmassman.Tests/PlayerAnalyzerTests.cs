@@ -17,7 +17,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert
             // (10 + 10) / (2 * 20) * 100 = 20 / 40 * 100 = 50
@@ -47,7 +47,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert
             // Group 1 Sum: 10 * 5 = 50. Weighted: 50 * 2 = 100.
@@ -60,7 +60,7 @@ namespace fmassman.Tests
         [Fact]
         public void Analyze_HandlesNullSnapshot()
         {
-            var result = PlayerAnalyzer.Analyze(null!);
+            var result = new PlayerAnalyzer().Analyze(null!);
             Assert.NotNull(result);
             Assert.Equal(0, result.Speed);
         }
@@ -69,7 +69,7 @@ namespace fmassman.Tests
         public void Analyze_HandlesNullAttributes()
         {
             var player = new PlayerSnapshot(); // Attributes are null by default
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
             Assert.NotNull(result);
             Assert.Equal(0, result.Speed);
         }
@@ -86,7 +86,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert
             // 5 * 10 = 50. Max = 5 * 20 = 100. 50/100 = 50%.
@@ -109,7 +109,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert
             Assert.Equal(50.0, result.DirectAttack);
@@ -130,7 +130,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert
             Assert.Equal(50.0, result.PossessionAttack);
@@ -148,7 +148,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert: 6 attrs * 10 = 60. Max = 6 * 20 = 120. 60/120 = 50%
             Assert.Equal(50.0, result.AggressiveDefense);
@@ -167,7 +167,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert: 4 attrs * 10 = 40. Max = 4 * 20 = 80. 40/80 = 50%
             Assert.Equal(50.0, result.CautiousDefense);
@@ -186,7 +186,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(player);
+            var result = new PlayerAnalyzer().Analyze(player);
 
             // Assert - all metrics should be 0, not NaN or negative
             Assert.Equal(0.0, result.Speed);
@@ -227,7 +227,7 @@ namespace fmassman.Tests
             };
 
             // Act - Should not throw
-            var result = PlayerAnalyzer.Analyze(gkPlayer);
+            var result = new PlayerAnalyzer().Analyze(gkPlayer);
 
             // Assert - Field player metrics should be 0 (no crash)
             Assert.NotNull(result);
@@ -269,7 +269,7 @@ namespace fmassman.Tests
             };
 
             // Act
-            var result = PlayerAnalyzer.Analyze(gkPlayer);
+            var result = new PlayerAnalyzer().Analyze(gkPlayer);
 
             // Assert: Should have role fit results for goalkeeper
             Assert.NotNull(result.InPossessionFits);

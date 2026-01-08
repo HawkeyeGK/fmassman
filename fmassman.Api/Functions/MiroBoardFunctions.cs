@@ -21,6 +21,7 @@ namespace fmassman.Api.Functions
         private readonly IRosterRepository _rosterRepository;
         private readonly IPositionRepository _positionRepository;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly PlayerAnalyzer _playerAnalyzer;
         private readonly ILogger<MiroBoardFunctions> _logger;
 
         public MiroBoardFunctions(
@@ -28,12 +29,14 @@ namespace fmassman.Api.Functions
             IRosterRepository rosterRepository,
             IPositionRepository positionRepository,
             IHttpClientFactory httpClientFactory,
+            PlayerAnalyzer playerAnalyzer,
             ILogger<MiroBoardFunctions> logger)
         {
             _settingsRepository = settingsRepository;
             _rosterRepository = rosterRepository;
             _positionRepository = positionRepository;
             _httpClientFactory = httpClientFactory;
+            _playerAnalyzer = playerAnalyzer;
             _logger = logger;
         }
 
@@ -147,8 +150,17 @@ namespace fmassman.Api.Functions
                 }
 
                 // 0. Prepare Data & Helpers
-                // Calculate analysis fits
-                var analysis = PlayerAnalyzer.Analyze(player.Snapshot);
+                // BUGFIX: Check for missing analysis
+                if (player.Analysis == null || (player.Analysis.InPossessionFits.Count == 0 && player.Analysis.OutPossessionFits.Count == 0))
+                {
+                    _logger.LogInformation("Analysis missing for player {PlayerName}. Calculating now...", player.PlayerName);
+                    player.Analysis = _playerAnalyzer.Analyze(player.Snapshot);
+                    
+                    // Critical: Save it
+                    await _rosterRepository.UpsertAsync(player);
+                }
+
+                var analysis = player.Analysis!; // Should be safe now
 
                 double posX = 0;
                 double posY = 0;

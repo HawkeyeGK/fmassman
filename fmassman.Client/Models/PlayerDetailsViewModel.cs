@@ -139,7 +139,7 @@ namespace fmassman.Client.Models
                         // Ensure roles are loaded before calculating fits
                         try { await _roleService.LoadLocalRolesAsync(); } catch { }
                         
-                        Analysis = PlayerAnalyzer.Analyze(Player.Snapshot);
+                        Analysis = new PlayerAnalyzer().Analyze(Player.Snapshot);
                         HeaderData = RosterItemViewModel.FromPlayer(Player);
                         
                         BuildMatrix();
@@ -157,7 +157,7 @@ namespace fmassman.Client.Models
                 {
                     var globalAnalyses = allPlayers
                         .Where(p => p.Snapshot != null)
-                        .Select(p => PlayerAnalyzer.Analyze(p.Snapshot!))
+                        .Select(p => new PlayerAnalyzer().Analyze(p.Snapshot!))
                         .ToList();
 
                     if (globalAnalyses.Any())

@@ -20,6 +20,7 @@ namespace fmassman.Api.Functions
         private readonly ISettingsRepository _settingsRepository;
         private readonly IRosterRepository _rosterRepository;
         private readonly IPositionRepository _positionRepository;
+        private readonly fmassman.Shared.Services.IRoleService _roleService; // Inject RoleService
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly PlayerAnalyzer _playerAnalyzer;
         private readonly ILogger<MiroBoardFunctions> _logger;
@@ -28,6 +29,7 @@ namespace fmassman.Api.Functions
             ISettingsRepository settingsRepository,
             IRosterRepository rosterRepository,
             IPositionRepository positionRepository,
+            fmassman.Shared.Services.IRoleService roleService,
             IHttpClientFactory httpClientFactory,
             PlayerAnalyzer playerAnalyzer,
             ILogger<MiroBoardFunctions> logger)
@@ -35,6 +37,7 @@ namespace fmassman.Api.Functions
             _settingsRepository = settingsRepository;
             _rosterRepository = rosterRepository;
             _positionRepository = positionRepository;
+            _roleService = roleService;
             _httpClientFactory = httpClientFactory;
             _playerAnalyzer = playerAnalyzer;
             _logger = logger;
@@ -130,6 +133,9 @@ namespace fmassman.Api.Functions
         {
             try
             {
+                // CRITICAL: Initialize Roles so Calculator works
+                await _roleService.InitializeAsync();
+
                 var player = await _rosterRepository.GetByIdAsync(playerId);
                 if (player == null)
                 {

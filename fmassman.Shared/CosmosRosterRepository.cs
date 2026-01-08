@@ -109,5 +109,9 @@ namespace fmassman.Shared
                 return null;
             }
         }
+        public Task<bool> PushToMiroAsync(string playerId)
+        {
+            throw new System.NotImplementedException("This method is only for client-side API calls.");
+        }
     }
 }

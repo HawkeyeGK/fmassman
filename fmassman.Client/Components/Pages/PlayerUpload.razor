@@ -1,6 +1,9 @@
 @page "/upload"
 @inject fmassman.Client.Services.ApiRosterService RosterService
 @inject ITagRepository TagRepository
+@inject IPositionService PositionService
+@using fmassman.Client.Services
+@using fmassman.Shared.Models
 @using System.Net.Http.Headers
 @using fmassman.Shared
 
@@ -25,9 +28,20 @@
             <InputFile OnChange="@LoadFiles" multiple accept=".png,.jpg,.jpeg" class="form-control" id="formFile" />
         </div>
         
+       <div class="mb-3">
+             <label class="form-label">Position:</label>
+             <select class="form-select" @bind="_selectedPositionId">
+                 <option value="">-- Select Position --</option>
+                 @foreach (var pos in _positions)
+                 {
+                     <option value="@pos.Id">@pos.Name (@pos.Code)</option>
+                 }
+             </select>
+        </div>
+
         <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" role="switch" id="gkToggle" @bind="_isGoalkeeper">
-            <label class="form-check-label" for="gkToggle">Is Goalkeeper?</label>
+            <input class="form-check-input" type="checkbox" role="switch" id="miroToggle" @bind="_pushToMiro" disabled="@string.IsNullOrEmpty(_selectedPositionId)">
+            <label class="form-check-label" for="miroToggle">Push to Miro</label>
         </div>
     </div>
 </div>
@@ -98,7 +112,7 @@
 
 @code {
     private List<FileUploadState> _uploadQueue = new();
-    private bool _isGoalkeeper = false;
+    private bool _pushToMiro = false;
     private long maxFileSize = 1024 * 1024 * 10; // 10MB
     private int maxAllowedFiles = 50;
     
@@ -106,12 +120,21 @@
     private List<TagDefinition> _tags = new();
     private string _selectedTagId = string.Empty;
 
+    // Position Integration
+    private List<PositionDefinition> _positions = new();
+    private string _selectedPositionId = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _tags = await TagRepository.GetAllAsync();
-            _tags = _tags.OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name).ToList();
+            var tagsTask = TagRepository.GetAllAsync();
+            var positionsTask = PositionService.GetAllAsync();
+
+            await Task.WhenAll(tagsTask, positionsTask);
+
+            _tags = (await tagsTask).OrderBy(t => t.DisplayOrder).ThenBy(t => t.Name).ToList();
+            _positions = (await positionsTask).OrderBy(p => p.Name).ToList();
 
             var defaultTag = _tags.FirstOrDefault(t => t.IsDefault);
             if (defaultTag != null)
@@ -125,7 +148,7 @@
         }
         catch (Exception)
         {
-            // Handle error silently or log? Tags are auxiliary, so maybe just don't crash
+            // Handle error silently or log? Tags/Positions are auxiliary
         }
     }
 
@@ -149,27 +172,80 @@
                 using var fileContent = new StreamContent(item.File.OpenReadStream(maxFileSize));
                 fileContent.Headers.ContentType = new MediaTypeHeaderValue(item.File.ContentType);
 
-                var result = await RosterService.UploadPlayerImage(fileContent, _isGoalkeeper);
+                // Determine IsGoalkeeper based on position
+                var isGoalkeeper = false;
+                if (!string.IsNullOrEmpty(_selectedPositionId))
+                {
+                    var pos = _positions.FirstOrDefault(p => p.Id == _selectedPositionId);
+                    if (pos != null && pos.Code.Equals("GK", StringComparison.OrdinalIgnoreCase))
+                    {
+                        isGoalkeeper = true;
+                    }
+                }
+
+                var result = await RosterService.UploadPlayerImage(fileContent, isGoalkeeper);
 
                 if (result != null)
                 {
+                    var needsUpdate = false;
+
                     // Assign Tag if selected
                     if (!string.IsNullOrEmpty(_selectedTagId))
                     {
                         if (result.TagIds == null) result.TagIds = new List<string>();
                         
-                        // User request: "Action: if (!player.TagIds.Contains(_selectedTagId)) { player.TagIds.Add(_selectedTagId); }"
                         if (!result.TagIds.Contains(_selectedTagId))
                         {
                             result.TagIds.Add(_selectedTagId);
-                            // We must save again to persist the tag
-                            await RosterService.UpsertAsync(result);
+                            needsUpdate = true;
                         }
                     }
 
-                    item.Status = UploadStatus.Success;
+                    // Assign Position if selected
+                    if (!string.IsNullOrEmpty(_selectedPositionId) && result.PositionId != _selectedPositionId)
+                    {
+                         result.PositionId = _selectedPositionId;
+                         needsUpdate = true;
+                    }
+
+                    if (needsUpdate)
+                    {
+                        await RosterService.UpsertAsync(result);
+                    }
+
                     item.ResultPlayerName = result.PlayerName;
-                    item.Message = "Uploaded successfully.";
+                    
+                    // Miro Push Logic
+                    if (_pushToMiro && !string.IsNullOrEmpty(_selectedPositionId))
+                    {
+                         item.Message = "Uploaded. Pushing to Miro...";
+                         StateHasChanged(); // Update UI to show pushing init
+
+                         try 
+                         {
+                             var pushed = await RosterService.PushToMiroAsync(result.PlayerName);
+                             if (pushed)
+                             {
+                                 item.Status = UploadStatus.Success;
+                                 item.Message = "Uploaded & Pushed to Miro successfully.";
+                             }
+                             else 
+                             {
+                                 item.Status = UploadStatus.Success; // Upload still worked
+                                 item.Message = "Uploaded, but Miro push failed.";
+                             }
+                         }
+                         catch (Exception exMiro)
+                         {
+                             item.Status = UploadStatus.Success; // Upload still worked
+                             item.Message = $"Uploaded, but Miro push error: {exMiro.Message}";
+                         }
+                    }
+                    else
+                    {
+                        item.Status = UploadStatus.Success;
+                        item.Message = "Uploaded successfully.";
+                    }
                 }
             }
             catch (Exception ex)

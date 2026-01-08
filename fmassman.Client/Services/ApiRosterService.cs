@@ -103,6 +103,13 @@ namespace fmassman.Client.Services
                  return null;
              }
         }
+
+
+        public async Task<bool> PushToMiroAsync(string playerId)
+        {
+            var response = await _http.PostAsync($"api/miro/push/{playerId}", null);
+            return response.IsSuccessStatusCode;
+        }
     }
 }
 

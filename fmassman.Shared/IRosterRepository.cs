@@ -11,5 +11,6 @@ namespace fmassman.Shared
         Task UpdatePlayerTagsAsync(string playerName, List<string> tagIds);
         Task UpdatePlayerPositionAsync(string playerName, string? positionId);
         Task<PlayerImportData?> GetByIdAsync(string id);
+        Task<bool> PushToMiroAsync(string playerId);
     }
 }

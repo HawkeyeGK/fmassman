@@ -122,6 +122,7 @@ else if (rosterItems != null)
 
             return rosterItems
                 .Where(p => p.TagIds.Intersect(_selectedTagIds).Any())
+                .OrderBy(p => p.SortName)
                 .AsQueryable();
         }
     }

@@ -1,0 +1,203 @@
+@page "/role-analysis"
+
+@using fmassman.Shared
+@using fmassman.Client.Models
+@using fmassman.Client.Services
+@using fmassman.Shared.Models
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject IRosterRepository Repository
+@inject IRoleService RoleService
+
+<PageTitle>Role Pair Analysis</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Role Pair Analysis</h1>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label class="form-label fw-bold">In Possession Role</label>
+            <select class="form-select bg-dark text-white border-secondary" @bind="SelectedInPossessionRoleId">
+                <option value="">-- Select Role --</option>
+                @foreach (var role in _inPossessionRoles)
+                {
+                    <option value="@role.Id">@role.Name (@role.Category)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label fw-bold">Out of Possession Role</label>
+            <select class="form-select bg-dark text-white border-secondary" @bind="SelectedOutPossessionRoleId">
+                <option value="">-- Select Role --</option>
+                @foreach (var role in _outPossessionRoles)
+                {
+                    <option value="@role.Id">@role.Name (@role.Category)</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    @if (_analysisItems != null)
+    {
+        <div class="grid-scroll-container">
+            <QuickGrid Items="@FilteredItems" Class="table table-striped table-hover table-sm" Pagination="@_pagination">
+                <TemplateColumn Title="Name" Sortable="true" SortBy="@_nameSort">
+                    <div class="fw-bold text-white">@context.Name</div>
+                </TemplateColumn>
+                
+                <PropertyColumn Property="@(p => p.Fit1)" Title="@(_selectedInRole?.Name ?? "Role 1")" Sortable="true" Format="F1" />
+                <PropertyColumn Property="@(p => p.Fit2)" Title="@(_selectedOutRole?.Name ?? "Role 2")" Sortable="true" Format="F1" />
+                
+                <PropertyColumn Property="@(p => p.Average)" Title="Average" Sortable="true" Format="F1" InitialSortDirection="SortDirection.Descending" />
+            </QuickGrid>
+        </div>
+        <Paginator State="@_pagination" />
+    }
+    else
+    {
+        <p><em>Loading...</em></p>
+    }
+</div>
+
+@code {
+    private List<RoleDefinition> _inPossessionRoles = new();
+    private List<RoleDefinition> _outPossessionRoles = new();
+    private List<PlayerImportData> _players = new();
+    
+    private string? _selectedInRoleId;
+    private string? SelectedInPossessionRoleId
+    {
+        get => _selectedInRoleId;
+        set
+        {
+            if (_selectedInRoleId != value)
+            {
+                _selectedInRoleId = value;
+                CalculateScores();
+            }
+        }
+    }
+
+    private string? _selectedOutRoleId;
+    private string? SelectedOutPossessionRoleId
+    {
+        get => _selectedOutRoleId;
+        set
+        {
+            if (_selectedOutRoleId != value)
+            {
+                _selectedOutRoleId = value;
+                CalculateScores();
+            }
+        }
+    }
+
+    private RoleDefinition? _selectedInRole => _inPossessionRoles.FirstOrDefault(r => r.Id == _selectedInRoleId);
+    private RoleDefinition? _selectedOutRole => _outPossessionRoles.FirstOrDefault(r => r.Id == _selectedOutRoleId);
+
+    private List<RolePairItem>? _analysisItems;
+    private PaginationState _pagination = new PaginationState { ItemsPerPage = 20 };
+    private string _errorMessage = string.Empty;
+
+    private IQueryable<RolePairItem> FilteredItems => _analysisItems?.AsQueryable() ?? Enumerable.Empty<RolePairItem>().AsQueryable();
+
+    private static readonly GridSort<RolePairItem> _nameSort = GridSort<RolePairItem>.ByAscending(p => p.Name);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load Roles
+            var allRoles = await RoleService.LoadLocalRolesAsync();
+            _inPossessionRoles = allRoles
+                .Where(r => r.Phase == "InPossession")
+                .OrderBy(r => r.Category)
+                .ThenBy(r => r.Name)
+                .ToList();
+
+            _outPossessionRoles = allRoles
+                .Where(r => r.Phase == "OutPossession")
+                .OrderBy(r => r.Category)
+                .ThenBy(r => r.Name)
+                .ToList();
+
+            // Load Players
+            _players = await Repository.LoadAsync();
+            
+            // Initial Calculation (empty selection)
+            CalculateScores();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading data: {ex.Message}";
+        }
+    }
+
+    private void CalculateScores()
+    {
+        if (_players == null) return;
+
+        var results = new List<RolePairItem>();
+
+        // Ensure RoleFitCalculator has the latest roles if needed, 
+        // usually it's static or we might want to manually invoke calculation logic if it's not exposed exactly how we want.
+        // Looking at RoleFitCalculator, it takes a PlayerSnapshot and a Phase string, then returns all fits.
+        // We want specific role scores. 
+        // Optimization: We can just use the calculator's internal logic or call Calculate(p, Phase) and find the specific role score.
+
+        foreach (var p in _players)
+        {
+            if (p.Snapshot == null) continue;
+
+            // Only analyze field players if that's the desired behavior, 
+            // but user didn't strictly say exclude GKs. 
+            // However, usually detailed role analysis is for field players unless GK roles selected.
+            // Let's include everyone and let the scores speak for themselves (0 if invalid).
+            
+            double score1 = 0;
+            double score2 = 0;
+
+            if (_selectedInRole != null)
+            {
+                // We could use RoleFitCalculator.Calculate, but that returns a list. 
+                // Let's trust it's fast enough or optimize later.
+                var fits = RoleFitCalculator.Calculate(p.Snapshot, "InPossession");
+                var fit = fits.FirstOrDefault(f => f.RoleName == _selectedInRole.Name && f.Category == _selectedInRole.Category);
+                if (fit != null) score1 = fit.Score;
+            }
+
+            if (_selectedOutRole != null)
+            {
+                var fits = RoleFitCalculator.Calculate(p.Snapshot, "OutPossession");
+                var fit = fits.FirstOrDefault(f => f.RoleName == _selectedOutRole.Name && f.Category == _selectedOutRole.Category);
+                if (fit != null) score2 = fit.Score;
+            }
+
+            // If neither selected, show 0? Or just list players?
+            // User wants to see players that best fit.
+            
+            results.Add(new RolePairItem
+            {
+                Name = p.PlayerName,
+                Fit1 = score1,
+                Fit2 = score2
+            });
+        }
+
+        _analysisItems = results.OrderByDescending(r => r.Average).ToList();
+    }
+
+    private class RolePairItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public double Fit1 { get; set; }
+        public double Fit2 { get; set; }
+        public double Average => (Fit1 + Fit2) / 2.0;
+    }
+}

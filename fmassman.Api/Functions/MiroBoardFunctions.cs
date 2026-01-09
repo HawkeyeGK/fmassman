@@ -273,7 +273,7 @@ namespace fmassman.Api.Functions
                 var headerCodePayload = new
                 {
                     data = new { content = $"<b>{positionCode}</b>" }, // Bolding code for visibility
-                    style = new { textAlign = "right", fontSize = 36 },
+                    style = new { textAlign = "right", fontSize = 24 },
                     geometry = new { width = 90 },
                     position = new { x = posX + 200, y = posY - 105 }
                 };

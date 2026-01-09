@@ -7,12 +7,38 @@
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject IRosterRepository Repository
 @inject IRoleService RoleService
+@inject IPositionService PositionService
 
 <PageTitle>Role Pair Analysis</PageTitle>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Role Pair Analysis</h1>
+    </div>
+
+    <!-- Optimization Section -->
+    <div class="card bg-dark text-white border-secondary mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Best Fit for Position</h5>
+            <div class="d-flex gap-3 align-items-end">
+                <div class="flex-grow-1">
+                    <label class="form-label">Select Position</label>
+                    <select class="form-select bg-dark text-white border-secondary" @bind="SelectedPositionId">
+                        <option value="">-- Select Position --</option>
+                        @foreach (var pos in _positions)
+                        {
+                            <option value="@pos.Id">@pos.Name (@pos.Code)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                     @if (!string.IsNullOrEmpty(_optimizationMessage))
+                     {
+                         <span class="text-info">@_optimizationMessage</span>
+                     }
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-3 mb-4">
@@ -69,7 +95,22 @@
     private List<RoleDefinition> _inPossessionRoles = new();
     private List<RoleDefinition> _outPossessionRoles = new();
     private List<PlayerImportData> _players = new();
+    private List<PositionDefinition> _positions = new();
     
+    private string? _selectedPositionId;
+    private string? SelectedPositionId
+    {
+        get => _selectedPositionId;
+        set
+        {
+            if (_selectedPositionId != value)
+            {
+                _selectedPositionId = value;
+                SuggestBestRoles();
+            }
+        }
+    }
+
     private string? _selectedInRoleId;
     private string? SelectedInPossessionRoleId
     {
@@ -104,6 +145,7 @@
     private List<RolePairItem>? _analysisItems;
     private PaginationState _pagination = new PaginationState { ItemsPerPage = 20 };
     private string _errorMessage = string.Empty;
+    private string _optimizationMessage = string.Empty;
 
     private IQueryable<RolePairItem> FilteredItems => _analysisItems?.AsQueryable() ?? Enumerable.Empty<RolePairItem>().AsQueryable();
 
@@ -127,8 +169,9 @@
                 .ThenBy(r => r.Name)
                 .ToList();
 
-            // Load Players
+            // Load Players & Positions
             _players = await Repository.LoadAsync();
+            _positions = await PositionService.GetAllAsync();
             
             // Initial Calculation (empty selection)
             CalculateScores();
@@ -139,34 +182,109 @@
         }
     }
 
+    private void SuggestBestRoles()
+    {
+        _optimizationMessage = "Calculating best fit...";
+        if (string.IsNullOrEmpty(_selectedPositionId)) 
+        {
+            _optimizationMessage = "";
+            return;
+        }
+
+        var targetPlayers = _players.Where(p => p.PositionId == _selectedPositionId && p.Snapshot != null).ToList();
+        
+        if (!targetPlayers.Any())
+        {
+            _optimizationMessage = "No players found for this position.";
+            return;
+        }
+
+        // Optimization: Pre-calculate all role scores for the target players
+        // We only calculate for InPossession and OutPossession phases
+        var playerInScores = new Dictionary<string, Dictionary<string, double>>();
+        var playerOutScores = new Dictionary<string, Dictionary<string, double>>();
+
+        // Pre-warm the cache for these players
+        foreach (var p in targetPlayers)
+        {
+            var inFits = RoleFitCalculator.Calculate(p.Snapshot!, "InPossession");
+            var outFits = RoleFitCalculator.Calculate(p.Snapshot!, "OutPossession");
+            
+            // Map Name -> Score (Assuming unique names per phase, checking Category+Name is safer but let's assume Name is unique enough or use ID logic if available, role defs have IDs)
+            // Actually RoleFitResult doesn't have ID, just Name. RoleDefinition has ID.
+            // Let's use RoleDefinition ID for matching if we can, but Calculator returns Name.
+            // We'll map Name -> Score.
+            
+            playerInScores[p.PlayerName] = inFits.ToDictionary(f => f.RoleName, f => f.Score);
+            playerOutScores[p.PlayerName] = outFits.ToDictionary(f => f.RoleName, f => f.Score);
+        }
+
+        double maxAvgScore = -1;
+        RoleDefinition? bestIn = null;
+        RoleDefinition? bestOut = null;
+
+        // Brute force all combinations (approx 400 iterations * 10 players = 4000 ops, very fast)
+        foreach (var inRole in _inPossessionRoles)
+        {
+            foreach (var outRole in _outPossessionRoles)
+            {
+                double currentSum = 0;
+                int count = 0;
+
+                foreach (var p in targetPlayers)
+                {
+                    // Safe lookup
+                    double s1 = 0;
+                    if (playerInScores[p.PlayerName].TryGetValue(inRole.Name, out var v1)) s1 = v1;
+
+                    double s2 = 0;
+                    if (playerOutScores[p.PlayerName].TryGetValue(outRole.Name, out var v2)) s2 = v2;
+
+                    currentSum += (s1 + s2) / 2.0;
+                    count++;
+                }
+
+                if (count > 0)
+                {
+                    double avg = currentSum / count;
+                    if (avg > maxAvgScore)
+                    {
+                        maxAvgScore = avg;
+                        bestIn = inRole;
+                        bestOut = outRole;
+                    }
+                }
+            }
+        }
+
+        if (bestIn != null && bestOut != null)
+        {
+            _selectedInRoleId = bestIn.Id;
+            _selectedOutRoleId = bestOut.Id;
+            _optimizationMessage = $"Found best pair: {maxAvgScore:F1} avg score";
+            CalculateScores();
+        }
+        else
+        {
+            _optimizationMessage = "Could not determine best roles.";
+        }
+    }
+
     private void CalculateScores()
     {
         if (_players == null) return;
 
         var results = new List<RolePairItem>();
 
-        // Ensure RoleFitCalculator has the latest roles if needed, 
-        // usually it's static or we might want to manually invoke calculation logic if it's not exposed exactly how we want.
-        // Looking at RoleFitCalculator, it takes a PlayerSnapshot and a Phase string, then returns all fits.
-        // We want specific role scores. 
-        // Optimization: We can just use the calculator's internal logic or call Calculate(p, Phase) and find the specific role score.
-
         foreach (var p in _players)
         {
             if (p.Snapshot == null) continue;
 
-            // Only analyze field players if that's the desired behavior, 
-            // but user didn't strictly say exclude GKs. 
-            // However, usually detailed role analysis is for field players unless GK roles selected.
-            // Let's include everyone and let the scores speak for themselves (0 if invalid).
-            
             double score1 = 0;
             double score2 = 0;
 
             if (_selectedInRole != null)
             {
-                // We could use RoleFitCalculator.Calculate, but that returns a list. 
-                // Let's trust it's fast enough or optimize later.
                 var fits = RoleFitCalculator.Calculate(p.Snapshot, "InPossession");
                 var fit = fits.FirstOrDefault(f => f.RoleName == _selectedInRole.Name && f.Category == _selectedInRole.Category);
                 if (fit != null) score1 = fit.Score;
@@ -179,9 +297,6 @@
                 if (fit != null) score2 = fit.Score;
             }
 
-            // If neither selected, show 0? Or just list players?
-            // User wants to see players that best fit.
-            
             results.Add(new RolePairItem
             {
                 Name = p.PlayerName,

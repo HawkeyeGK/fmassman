@@ -23,27 +23,16 @@
              </select>
         </div>
 
-       <div class="mb-3">
-             <label class="form-label">Position:</label>
-             <select class="form-select" @bind="_selectedPositionId">
-                 <option value="">-- Select Position --</option>
-                 @foreach (var pos in _positions)
-                 {
-                     <option value="@pos.Id">@pos.Name (@pos.Code)</option>
-                 }
-             </select>
-        </div>
-
         <div class="mb-3">
             <label for="formFile" class="form-label">Select Player Image/Screenshot (.png, .jpg, .jpeg)</label>
             <InputFile OnChange="@LoadFiles" multiple accept=".png,.jpg,.jpeg" class="form-control" id="formFile" />
         </div>
         
         <div class="d-flex gap-2">
-            <button class="btn btn-primary" @onclick="() => ProcessUploads(false)" disabled="@(_isProcessing || !_uploadQueue.Any(x => x.Status == UploadStatus.Pending))">
+            <button class="btn btn-primary" @onclick="() => ProcessUploads(false)" disabled="@(_isProcessing || !_uploadQueue.Any(x => x.Status == UploadStatus.Pending) || _uploadQueue.Any(x => x.Status == UploadStatus.Pending && string.IsNullOrEmpty(x.SelectedPositionId)))">
                 <i class="bi bi-cloud-upload"></i> Upload Only
             </button>
-            <button class="btn btn-success" @onclick="() => ProcessUploads(true)" disabled="@(_isProcessing || !_uploadQueue.Any(x => x.Status == UploadStatus.Pending) || string.IsNullOrEmpty(_selectedPositionId))">
+            <button class="btn btn-success" @onclick="() => ProcessUploads(true)" disabled="@(_isProcessing || !_uploadQueue.Any(x => x.Status == UploadStatus.Pending) || _uploadQueue.Any(x => x.Status == UploadStatus.Pending && string.IsNullOrEmpty(x.SelectedPositionId)))">
                 <i class="bi bi-cloud-bolt"></i> Upload & Push to Miro
             </button>
         </div>
@@ -58,9 +47,10 @@
             <table class="table table-striped table-hover align-middle">
                 <thead>
                     <tr>
-                        <th style="width: 40%">File Name</th>
-                        <th style="width: 15%">Size</th>
-                        <th style="width: 15%">Status</th>
+                        <th style="width: 30%">File Name</th>
+                        <th style="width: 10%">Size</th>
+                        <th style="width: 20%">Position</th>
+                        <th style="width: 10%">Status</th>
                         <th style="width: 30%">Actions/Message</th>
                     </tr>
                 </thead>
@@ -73,6 +63,23 @@
                             </td>
                             <td>
                                 @FormatFileSize(item.Size)
+                            </td>
+                            <td>
+                                @if (item.Status == UploadStatus.Pending || item.Status == UploadStatus.Error)
+                                {
+                                    <select class="form-select form-select-sm" @bind="item.SelectedPositionId">
+                                        <option value="">Select...</option>
+                                        @foreach (var pos in _positions)
+                                        {
+                                            <option value="@pos.Id">@pos.Name (@pos.Code)</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    var posName = _positions.FirstOrDefault(p => p.Id == item.SelectedPositionId)?.Name ?? "-";
+                                    <small>@posName</small>
+                                }
                             </td>
                             <td>
                                 @switch (item.Status)
@@ -126,8 +133,7 @@
 
     // Position Integration
     private List<PositionDefinition> _positions = new();
-    private string _selectedPositionId = string.Empty;
-
+    
     protected override async Task OnInitializedAsync()
     {
         try
@@ -176,6 +182,8 @@
 
             foreach (var item in pendingItems)
             {
+                if (string.IsNullOrEmpty(item.SelectedPositionId)) continue; // Should be guarded by button but safety check
+
                 item.Status = UploadStatus.Processing;
                 item.Message = "Uploading...";
                 StateHasChanged();
@@ -185,17 +193,14 @@
                     using var fileContent = new StreamContent(item.File.OpenReadStream(maxFileSize));
                     fileContent.Headers.ContentType = new MediaTypeHeaderValue(item.File.ContentType);
 
-                    // Determine IsGoalkeeper based on position
+                    // Determine IsGoalkeeper based on item position
                     var isGoalkeeper = false;
-                    if (!string.IsNullOrEmpty(_selectedPositionId))
+                    var pos = _positions.FirstOrDefault(p => p.Id == item.SelectedPositionId);
+                    if (pos != null && pos.Code.Equals("GK", StringComparison.OrdinalIgnoreCase))
                     {
-                        var pos = _positions.FirstOrDefault(p => p.Id == _selectedPositionId);
-                        if (pos != null && pos.Code.Equals("GK", StringComparison.OrdinalIgnoreCase))
-                        {
-                            isGoalkeeper = true;
-                        }
+                        isGoalkeeper = true;
                     }
-
+                    
                     var result = await RosterService.UploadPlayerImage(fileContent, isGoalkeeper);
 
                     if (result != null)
@@ -215,9 +220,9 @@
                         }
 
                         // Assign Position if selected
-                        if (!string.IsNullOrEmpty(_selectedPositionId) && result.PositionId != _selectedPositionId)
+                        if (!string.IsNullOrEmpty(item.SelectedPositionId) && result.PositionId != item.SelectedPositionId)
                         {
-                                result.PositionId = _selectedPositionId;
+                                result.PositionId = item.SelectedPositionId;
                                 needsUpdate = true;
                         }
 
@@ -229,7 +234,7 @@
                         item.ResultPlayerName = result.PlayerName;
                         
                         // Miro Push Logic
-                        if (pushToMiro && !string.IsNullOrEmpty(_selectedPositionId))
+                        if (pushToMiro && !string.IsNullOrEmpty(item.SelectedPositionId))
                         {
                                 item.Message = "Uploaded. Pushing to Miro...";
                                 StateHasChanged();
@@ -291,6 +296,7 @@
         public UploadStatus Status { get; set; } = UploadStatus.Pending;
         public string? ResultPlayerName { get; set; }
         public string? Message { get; set; }
+        public string SelectedPositionId { get; set; } = string.Empty;
     }
 
     public enum UploadStatus

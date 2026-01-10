@@ -170,7 +170,7 @@ h1:focus {
 .grid-scroll-container table tr>*:first-child {
     position: sticky;
     left: 0;
-    z-index: 2;
+    z-index: 10;
     border-right: 2px solid #444;
     /* SOLID Color: Slate Dark Gray */
     background-color: #272b30 !important;
@@ -178,7 +178,7 @@ h1:focus {
 
 /* 2. Header Specifics (Higher Z-Index) */
 .grid-scroll-container table tr>th:first-child {
-    z-index: 3;
+    z-index: 20;
     background-color: #272b30 !important;
 }
 

@@ -162,7 +162,7 @@
         }
     }
 
-    private async Task LoadFiles(InputFileChangeEventArgs e)
+    private void LoadFiles(InputFileChangeEventArgs e)
     {
         // Don't clear queue, just append new files
         foreach (var file in e.GetMultipleFiles(maxAllowedFiles))

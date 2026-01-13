@@ -155,6 +155,16 @@ else
                                         <label class="form-label">Contract Expiry</label>
                                         <InputText @bind-Value="VM.Player.Snapshot!.ContractExpiry" class="form-control" />
                                     </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Playing Time</label>
+                                        <InputSelect @bind-Value="VM.Player.Snapshot!.PlayingTime" class="form-select">
+                                            <option value="">Select...</option>
+                                            @foreach (var pt in ScoutingConstants.AllPlayingTimes)
+                                            {
+                                                <option value="@pt">@pt</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -267,7 +277,7 @@ else
                                      VM.Player.Snapshot.Goalkeeping = new();
                                 }
 
-                                @if (VM.Player.Snapshot?.Goalkeeping != null)
+                                @if (VM.Player?.Snapshot?.Goalkeeping != null)
                                 {
                                     <div class="row row-cols-2 row-cols-md-4 g-3">
                                         <AttributeInput Label="Aerial Reach" @bind-Value="VM.Player.Snapshot.Goalkeeping.AerialReach" />
@@ -296,7 +306,7 @@ else
                     </div>
                 </div>
 
-                @if (_isImagePanelVisible && (!string.IsNullOrEmpty(VM.Player.Snapshot?.RawImageBlobUrl) || !string.IsNullOrEmpty(_signedImageUrl)))
+                @if (_isImagePanelVisible && (!string.IsNullOrEmpty(VM.Player?.Snapshot?.RawImageBlobUrl) || !string.IsNullOrEmpty(_signedImageUrl)))
                 {
                     <div class="col-md-8">
                         <div class="card" style="position: sticky; top: 1rem;">

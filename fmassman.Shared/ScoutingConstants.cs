@@ -79,6 +79,8 @@ namespace fmassman.Shared
             { "Surplus to Requirements", 8 }
         };
 
+        public static IEnumerable<string> AllPlayingTimes => _playingTimeRank.Keys;
+
         public static int GetPersonalityRank(string personality)
         {
             if (string.IsNullOrWhiteSpace(personality)) return 50; // Default

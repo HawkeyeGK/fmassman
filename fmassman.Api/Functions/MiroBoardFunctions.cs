@@ -156,17 +156,9 @@ namespace fmassman.Api.Functions
                 }
 
                 // 0. Prepare Data & Helpers
-                // BUGFIX: Check for missing analysis
-                if (player.Analysis == null || (player.Analysis.InPossessionFits.Count == 0 && player.Analysis.OutPossessionFits.Count == 0))
-                {
-                    _logger.LogInformation("Analysis missing for player {PlayerName}. Calculating now...", player.PlayerName);
-                    player.Analysis = _playerAnalyzer.Analyze(player.Snapshot);
-                    
-                    // Critical: Save it
-                    await _rosterRepository.UpsertAsync(player);
-                }
-
-                var analysis = player.Analysis!; // Should be safe now
+                // 0. Prepare Data & Helpers
+                // Always calculate explicitly from snapshot
+                var analysis = _playerAnalyzer.Analyze(player.Snapshot);
 
                 double posX = 0;
                 double posY = 0;

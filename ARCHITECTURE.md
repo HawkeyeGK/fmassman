@@ -5,7 +5,7 @@ FM26-Helper is a .NET 8 tool suite designed to analyze Football Manager 2026 pla
 
 ## Solution Structure
 
-### 1. FM26-Helper.Shared (Class Library)
+### 1. fmassman.Shared (Class Library)
 **Purpose:** The Core Logic and Data Models.
 * **Models:** `PlayerImportData` (Identity), `PlayerSnapshot` (Attributes).
 * **Services:**
@@ -14,17 +14,23 @@ FM26-Helper is a .NET 8 tool suite designed to analyze Football Manager 2026 pla
     * `RoleFitCalculator`: Reads `roles.json` and calculates 0-100% suitability scores based on weighted attributes (Primary 3x, Secondary 2x).
 * **Data:** `roles.json` (Source of truth for Role definitions).
 
-### 2. FM26-Helper.Extractor (Console App)
-**Purpose:** Data Ingestion.
-* **Workflow:** Reads `.png` screenshots -> Slices Image -> GPT-4o API -> Maps to `PlayerImportData` -> Saves to `roster_data.json`.
-* *Note:* The `roster_data.json` file is a local data store and is ignored by Git.
+### 2. fmassman.Api (Azure Functions)
+**Purpose:** Backend Logic, Data Persistence, and Data Ingestion.
+* **Workflows:**
+    * **API Endpoints:** RESTful endpoints for the Client to access Roster data (`RosterFunctions`), Miro integration (`MiroBoardFunctions`), and more.
+    * **Data Extraction:** Reads `.png` screenshots -> Slices Image -> GPT-4o API -> Maps to `PlayerImportData` -> Saves to DB. (Managed by `ImageProcessor`).
+* **Key Functions:**
+    * `RosterFunctions`: CRUD operations for players.
+    * `MiroBoardFunctions`: Integration with Miro API.
+    * `ImageProcessor`: Orchestrates the image extraction pipeline.
 
-### 3. FM26-Helper.Web (Blazor Web App)
+### 3. fmassman.Client (Blazor Web App)
 **Purpose:** Visualization & Decision Support.
 * **Pattern:** ViewModel.
     * `RosterItemViewModel`: Flattens raw data + analysis for the grid.
 * **Pages:**
     * `Home.razor`: Displays the Roster Grid (Name, Bio, Derived Attributes, Best Roles).
+    * `PlayerUpload.razor`: Interface for uploading screenshots.
 
 ## Key Workflows
 1.  **Analysis:** Raw Stats -> `PlayerAnalyzer` -> `PlayerAnalysis` (Speed, DNA, Role Scores).
@@ -32,6 +38,8 @@ FM26-Helper is a .NET 8 tool suite designed to analyze Football Manager 2026 pla
 
 ## Tech Stack
 * .NET 8 (C#)
-* Blazor Server
+* Blazor WebAssembly
+* Azure Functions
+* Azure Cosmos DB
 * OpenAI GPT-4o (Vision)
 * System.Text.Json

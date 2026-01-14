@@ -14,7 +14,6 @@ namespace fmassman.Shared
         [JsonProperty("positionId")]
         public string? PositionId { get; set; }
         public PlayerSnapshot? Snapshot { get; set; }
-        public PlayerAnalysis? Analysis { get; set; }
         public string? MiroWidgetId { get; set; }
     }
 

@@ -17,7 +17,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">In Possession Analysis</h1>
-    <div class="col-auto">
+    <div class="col-auto d-flex gap-2">
+        <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="selectedPositionId">
+            <option value="">-- All Positions --</option>
+            @foreach (var pos in _positions.OrderBy(p => p.Name))
+            {
+                <option value="@pos.Id">@pos.Name</option>
+            }
+        </select>
         <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="selectedTacticId">
             <option value="">-- All Roles --</option>
             @foreach (var tactic in tactics)
@@ -52,6 +59,8 @@ else if (matrixItems != null)
     private List<Tactic> tactics = new();
     private List<RoleDefinition> allRoles = new();
     private string? selectedTacticId;
+    private string? selectedPositionId;
+
     private string errorMessage = string.Empty;
     
     // Tags
@@ -191,23 +200,36 @@ else if (matrixItems != null)
 
     private IEnumerable<MatrixColumn> GetFilteredColumns()
     {
-        if (string.IsNullOrEmpty(selectedTacticId))
+        var filtered = columns.AsEnumerable();
+
+        // 1. Filter by Tactic
+        if (!string.IsNullOrEmpty(selectedTacticId))
         {
-            return columns;
+            var tactic = tactics.FirstOrDefault(t => t.Id == selectedTacticId);
+            if (tactic != null)
+            {
+                var allowedRoleIds = tactic.InPossessionRoleIds ?? new();
+                var allowedRoleNames = allRoles
+                    .Where(r => allowedRoleIds.Contains(r.Id))
+                    .Select(r => r.Name)
+                    .ToHashSet();
+                
+                filtered = filtered.Where(c => allowedRoleNames.Contains(c.Name));
+            }
         }
 
-        var tactic = tactics.FirstOrDefault(t => t.Id == selectedTacticId);
-        if (tactic == null) return columns;
+        // 2. Filter by Position
+        if (!string.IsNullOrEmpty(selectedPositionId))
+        {
+            var position = _positions.FirstOrDefault(p => p.Id == selectedPositionId);
+            if (position != null)
+            {
+                // Match Role Category with Position Name
+                filtered = filtered.Where(c => string.Equals(c.Category, position.Name, StringComparison.OrdinalIgnoreCase));
+            }
+        }
 
-        var allowedRoleIds = tactic.InPossessionRoleIds ?? new();
-        
-        // Map IDs to Names
-        var allowedRoleNames = allRoles
-            .Where(r => allowedRoleIds.Contains(r.Id))
-            .Select(r => r.Name)
-            .ToHashSet();
-
-        return columns.Where(c => allowedRoleNames.Contains(c.Name));
+        return filtered;
     }
 
     private string GetNameClass(MatrixItem item)

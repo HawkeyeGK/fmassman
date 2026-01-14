@@ -11,18 +11,18 @@
 @inject IRoleService RoleService
 @inject ITacticService TacticService
 @inject ITagRepository TagRepository
-@inject IPositionService PositionService
+
 
 <PageTitle>Out of Possession Analysis</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Out of Possession Analysis</h1>
     <div class="col-auto d-flex gap-2">
-        <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="selectedPositionId">
+        <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="selectedCategory">
             <option value="">-- All Positions --</option>
-            @foreach (var pos in _positions.OrderBy(p => p.Name))
+            @foreach (var cat in _roleCategories)
             {
-                <option value="@pos.Id">@pos.Name</option>
+                <option value="@cat">@cat</option>
             }
         </select>
         <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="selectedTacticId">
@@ -50,7 +50,7 @@
 else if (matrixItems != null)
 {
     <TagFilter AllTags="_allTags" @bind-SelectedTagIds="_selectedTagIds" OnChange="ApplyFilter" />
-    <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@GetFilteredColumns().ToList()" NameClass="@GetNameClass" Positions="@_positions" />
+    <RoleMatrixTable Items="@_filteredMatrixItems" Columns="@GetFilteredColumns().ToList()" NameClass="@GetNameClass" />
 }
 
 @code {
@@ -59,7 +59,7 @@ else if (matrixItems != null)
     private List<Tactic> tactics = new();
     private List<RoleDefinition> allRoles = new();
     private string? selectedTacticId;
-    private string? selectedPositionId;
+    private string? selectedCategory;
 
     private string errorMessage = string.Empty;
 
@@ -67,16 +67,24 @@ else if (matrixItems != null)
     private List<TagDefinition> _allTags = new();
     private List<string> _selectedTagIds = new();
     private List<MatrixItem> _filteredMatrixItems = new();
-    private List<PositionDefinition> _positions = new();
+    private List<string> _roleCategories = new();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             // Load roles first so calculator has data
-            try { allRoles = await RoleService.LoadLocalRolesAsync(); } catch { }
+            try 
+            { 
+                allRoles = await RoleService.LoadLocalRolesAsync(); 
+                _roleCategories = allRoles
+                    .Select(r => r.Category)
+                    .Distinct()
+                    .OrderBy(c => ScoutingConstants.GetCategoryRank(c))
+                    .ToList();
+            } 
+            catch { }
             try { tactics = await TacticService.GetAllAsync(); } catch { }
-            try { _positions = await PositionService.GetAllAsync(); } catch { }
             
             // Load Tags
             _allTags = await TagRepository.GetAllAsync();
@@ -218,15 +226,10 @@ else if (matrixItems != null)
             }
         }
 
-        // 2. Filter by Position
-        if (!string.IsNullOrEmpty(selectedPositionId))
+        // 2. Filter by Position (Category)
+        if (!string.IsNullOrEmpty(selectedCategory))
         {
-            var position = _positions.FirstOrDefault(p => p.Id == selectedPositionId);
-            if (position != null)
-            {
-                // Match Role Category with Position Name
-                filtered = filtered.Where(c => string.Equals(c.Category, position.Name, StringComparison.OrdinalIgnoreCase));
-            }
+             filtered = filtered.Where(c => string.Equals(c.Category, selectedCategory, StringComparison.OrdinalIgnoreCase));
         }
 
         return filtered;

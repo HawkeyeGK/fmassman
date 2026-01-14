@@ -6,8 +6,10 @@ using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fmassman.Shared;
+using fmassman.Shared.Services;
 
-namespace fmassman.Shared.Services
+namespace fmassman.Api.Services
 {
     public class CosmosRoleService : IRoleService
     {

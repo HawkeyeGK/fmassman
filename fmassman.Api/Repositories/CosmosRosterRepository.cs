@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using fmassman.Shared;
 
-namespace fmassman.Shared
+namespace fmassman.Api.Repositories
 {
     public class CosmosRosterRepository : IRosterRepository
     {

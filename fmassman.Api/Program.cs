@@ -70,27 +70,27 @@ var host = new HostBuilder()
         });
 
         // Register Repositories/Services
-        services.AddSingleton<IRosterRepository, CosmosRosterRepository>();
+        // Register Repositories/Services
+        services.AddSingleton<IRosterRepository, fmassman.Api.Repositories.CosmosRosterRepository>();
         services.AddScoped<fmassman.Shared.ITacticRepository, fmassman.Api.Repositories.CosmosTacticRepository>();
         services.AddScoped<ITagRepository, fmassman.Api.Repositories.CosmosTagRepository>();
         services.AddScoped<fmassman.Shared.Interfaces.IPositionRepository, fmassman.Api.Repositories.CosmosPositionRepository>();
         services.AddScoped<fmassman.Shared.Interfaces.ISettingsRepository, fmassman.Api.Repositories.CosmosSettingsRepository>();
-
-        services.AddScoped<fmassman.Shared.Interfaces.ISettingsRepository, fmassman.Api.Repositories.CosmosSettingsRepository>(); // Only one registration
+        
         services.AddScoped<PlayerAnalyzer>(); // Bugfix: Register Analyzer
 
         services.AddSingleton<IRoleService>(sp =>
         {
             var cosmosClient = sp.GetRequiredService<CosmosClient>();
             var settings = sp.GetRequiredService<IOptions<CosmosSettings>>();
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CosmosRoleService>>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<fmassman.Api.Services.CosmosRoleService>>();
             
             // In Azure Functions, the execution root is different.
             // We expect roles.json to be in the same directory as the dlls/output
             var appRoot = context.HostingEnvironment.ContentRootPath;
             var baselinePath = Path.Combine(appRoot, "roles.json");
 
-            return new CosmosRoleService(cosmosClient, settings, baselinePath, logger);
+            return new fmassman.Api.Services.CosmosRoleService(cosmosClient, settings, baselinePath, logger);
         });
     })
     .Build();

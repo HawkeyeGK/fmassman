@@ -26,7 +26,7 @@
             }
         </select>
         <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="selectedTacticId">
-            <option value="">-- All Roles --</option>
+            <option value="">-- All Tactics --</option>
             @foreach (var tactic in tactics)
             {
                 <option value="@tactic.Id">@tactic.Name</option>

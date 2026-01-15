@@ -78,7 +78,13 @@
                         </li>
                         <li class="list-group-item bg-transparent d-flex justify-content-between">
                             <span>Playing Time:</span> 
-                            <span class="@h.PlayingTimeCssClass text-end">@h.PlayingTime</span>
+                            <span class="@h.PlayingTimeCssClass text-end">
+                                @h.PlayingTime
+                                @if (h.OnLoan)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1">L</span>
+                                }
+                            </span>
                         </li>
                     </ul>
                 </div>

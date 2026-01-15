@@ -119,5 +119,16 @@ namespace fmassman.Api.Functions
             public int expires_in { get; set; }
             public string scope { get; set; } = "";
         }
+
+        [Function("GetMiroBoardId")]
+        public IActionResult GetMiroBoardId([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "miro/config/board")] HttpRequest req)
+        {
+            var boardId = Environment.GetEnvironmentVariable("MiroBoardId");
+            if (string.IsNullOrEmpty(boardId))
+            {
+                return new ObjectResult(new { error = "MiroBoardId not configured" }) { StatusCode = 404 };
+            }
+            return new OkObjectResult(new { boardId });
+        }
     }
 }

@@ -1,0 +1,68 @@
+@page "/miro-board"
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Miro Board</PageTitle>
+
+<div class="container-fluid h-100 p-0">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="ms-3">Loading Miro Board...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger m-3" role="alert">
+            @errorMessage
+        </div>
+    }
+    else
+    {
+        <iframe src="https://miro.com/app/live-embed/@boardId/?moveToViewport=-1000,-1000,3000,2000"
+                frameborder="0"
+                scrolling="no"
+                allow="fullscreen; clipboard-read; clipboard-write"
+                allowfullscreen
+                style="width: 100%; height: calc(100vh - 60px); display: block;">
+        </iframe>
+    }
+</div>
+
+@code {
+    private string? boardId;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<BoardConfigResponse>("api/miro/config/board");
+            if (response != null && !string.IsNullOrEmpty(response.BoardId))
+            {
+                boardId = response.BoardId;
+            }
+            else
+            {
+                errorMessage = "Could not retrieve Miro Board ID from server.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading Miro configuration: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class BoardConfigResponse
+    {
+        public string? BoardId { get; set; }
+    }
+}

@@ -62,50 +62,56 @@ else
                     <div class="tab-content">
                         @if (_activeTab == 0)
                         {
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0">Primary Position</h6>
-                                </div>
-                                <div class="card-body">
-                                    @if (_availablePositions == null)
-                                    {
-                                        <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading positions...</div>
-                                    }
-                                    else
-                                    {
-                                        <div class="mb-3">
-                                            <label class="form-label">Position</label>
-                                            <InputSelect @bind-Value="VM.Player.PositionId" class="form-select">
-                                                <option value="">Select Position...</option>
-                                                @foreach (var pos in _availablePositions)
-                                                {
-                                                    <option value="@pos.Id">@pos.Name (@pos.Code)</option>
-                                                }
-                                            </InputSelect>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm mb-4">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">Primary Position</h6>
                                         </div>
-                                    }
-                                </div>
-                            </div>
-
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0">Contract & Status</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Playing Time</label>
-                                        <InputSelect @bind-Value="VM.Player.Snapshot!.PlayingTime" class="form-select">
-                                            <option value="">Select...</option>
-                                            @foreach (var pt in ScoutingConstants.AllPlayingTimes)
+                                        <div class="card-body">
+                                            @if (_availablePositions == null)
                                             {
-                                                <option value="@pt">@pt</option>
+                                                <div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading positions...</div>
                                             }
-                                        </InputSelect>
+                                            else
+                                            {
+                                                <div class="mb-3">
+                                                    <label class="form-label">Position</label>
+                                                    <InputSelect @bind-Value="VM.Player.PositionId" class="form-select">
+                                                        <option value="">Select Position...</option>
+                                                        @foreach (var pos in _availablePositions)
+                                                        {
+                                                            <option value="@pos.Id">@pos.Name (@pos.Code)</option>
+                                                        }
+                                                    </InputSelect>
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
-                                    <div class="mb-3">
-                                         <div class="form-check form-switch">
-                                            <InputCheckbox @bind-Value="VM.Player.Snapshot!.OnLoan" class="form-check-input" id="onLoanSwitch" />
-                                            <label class="form-check-label" for="onLoanSwitch">On Loan</label>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm mb-4">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">Contract & Status</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Playing Time</label>
+                                                <InputSelect @bind-Value="VM.Player.Snapshot!.PlayingTime" class="form-select">
+                                                    <option value="">Select...</option>
+                                                    @foreach (var pt in ScoutingConstants.AllPlayingTimes)
+                                                    {
+                                                        <option value="@pt">@pt</option>
+                                                    }
+                                                </InputSelect>
+                                            </div>
+                                            <div class="mb-3">
+                                                 <div class="form-check form-switch">
+                                                    <InputCheckbox @bind-Value="VM.Player.Snapshot!.OnLoan" class="form-check-input" id="onLoanSwitch" />
+                                                    <label class="form-check-label" for="onLoanSwitch">On Loan</label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

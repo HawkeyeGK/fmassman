@@ -25,6 +25,7 @@ namespace fmassman.Shared
         public string GameDate { get; set; } = string.Empty;
         public string Personality { get; set; } = string.Empty;
         public string PlayingTime { get; set; } = string.Empty;
+        public bool OnLoan { get; set; }
         public int Age { get; set; }
         public int TransferValueLow { get; set; }
         public int TransferValueHigh { get; set; }

@@ -62,10 +62,6 @@ else
                     <div class="tab-content">
                         @if (_activeTab == 0)
                         {
-                            <div class="alert alert-secondary mb-3">
-                                <small>Manage player position and tags (groups).</small>
-                            </div>
-                            
                             <div class="card shadow-sm mb-4">
                                 <div class="card-header">
                                     <h6 class="mb-0">Primary Position</h6>
@@ -88,6 +84,30 @@ else
                                             </InputSelect>
                                         </div>
                                     }
+                                </div>
+                            </div>
+
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Contract & Status</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Playing Time</label>
+                                        <InputSelect @bind-Value="VM.Player.Snapshot!.PlayingTime" class="form-select">
+                                            <option value="">Select...</option>
+                                            @foreach (var pt in ScoutingConstants.AllPlayingTimes)
+                                            {
+                                                <option value="@pt">@pt</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="mb-3">
+                                         <div class="form-check form-switch">
+                                            <InputCheckbox @bind-Value="VM.Player.Snapshot!.OnLoan" class="form-check-input" id="onLoanSwitch" />
+                                            <label class="form-check-label" for="onLoanSwitch">On Loan</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -156,14 +176,8 @@ else
                                         <InputText @bind-Value="VM.Player.Snapshot!.ContractExpiry" class="form-control" />
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Playing Time</label>
-                                        <InputSelect @bind-Value="VM.Player.Snapshot!.PlayingTime" class="form-select">
-                                            <option value="">Select...</option>
-                                            @foreach (var pt in ScoutingConstants.AllPlayingTimes)
-                                            {
-                                                <option value="@pt">@pt</option>
-                                            }
-                                        </InputSelect>
+                                        <label class="form-label">Contract Expiry</label>
+                                        <InputText @bind-Value="VM.Player.Snapshot!.ContractExpiry" class="form-control" />
                                     </div>
                                 </div>
                                 <div class="col-md-6">

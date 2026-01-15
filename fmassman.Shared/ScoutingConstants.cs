@@ -76,7 +76,8 @@ namespace fmassman.Shared
             { "Impact Sub", 5 },
             { "Fringe Player", 6 },
             { "Youngster", 7 },
-            { "Surplus to Requirements", 8 }
+            { "Surplus to Requirements", 8 },
+            { "On Loan", 99 }
         };
 
         public static IEnumerable<string> AllPlayingTimes => _playingTimeRank.Keys;

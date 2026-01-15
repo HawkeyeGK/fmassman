@@ -55,6 +55,10 @@ else if (rosterItems != null)
                 <span class="@context.PlayingTimeCssClass">
                     @context.PlayingTime
                 </span>
+                @if (context.OnLoan)
+                {
+                    <span class="badge bg-warning text-dark ms-1" title="On Loan">L</span>
+                }
             </TemplateColumn>
 
             <PropertyColumn Property="@(p => p.TransferValueLow)" Title="Min Value" Sortable="true" Format="C0" />

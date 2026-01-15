@@ -11,6 +11,7 @@ namespace fmassman.Client.Models
         
         public string Personality { get; set; } = string.Empty;
         public string PlayingTime { get; set; } = string.Empty;
+        public bool OnLoan { get; set; }
         
         public int TransferValueLow { get; set; }
         public int TransferValueHigh { get; set; }
@@ -62,6 +63,7 @@ namespace fmassman.Client.Models
                 PositionId = player.PositionId,
                 Personality = player.Snapshot.Personality ?? "",
                 PlayingTime = player.Snapshot.PlayingTime ?? "",
+                OnLoan = player.Snapshot.OnLoan,
                 TransferValueLow = player.Snapshot.TransferValueLow,
                 TransferValueHigh = player.Snapshot.TransferValueHigh,
                 Wage = ParseCurrency(player.Snapshot.Wage),

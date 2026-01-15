@@ -217,7 +217,8 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
 ### CRITICAL RULES
 - **Temperature 0:** Do not guess. If a number is obscured, return 0.
 - **Alignment:** Ensure the value matches the label. Do not skip rows.
-- **Playing Time:** Look for text describing squad status (e.g., 'Star Player', 'Regular Starter', 'Youngster', 'Squad Player') in the Header image. If a Club Name appears instead, use 'On Loan'.
+- **Playing Time:** Look for text describing squad status (e.g., 'Star Player', 'Regular Starter', 'Youngster', 'Squad Player') in the Header image.
+- **On Loan:** If you see any indication that the player is On Loan (e.g. 'On Loan' text, or a club name in the playing time area), return playing time as 'On Loan'.
 ";
 
             var requestBody = new
@@ -285,6 +286,7 @@ Return ONLY a FLAT JSON object with these keys. Values must be Integers (except 
                     FileCreationDate = fileCreationDate,
                     GameDate = SafeJsonParser.GetSafeString(flatData["GameDate"]) ?? string.Empty,
                     PlayingTime = SafeJsonParser.GetSafeString(flatData["PlayingTime"]) ?? string.Empty,
+                    OnLoan = (SafeJsonParser.GetSafeString(flatData["PlayingTime"]) ?? string.Empty).Equals("On Loan", StringComparison.OrdinalIgnoreCase),
                     Personality = SafeJsonParser.GetSafeString(flatData["Personality"]) ?? string.Empty,
                     Age = SafeJsonParser.GetSafeInt(flatData["Age"]),
                     TransferValueLow = SafeJsonParser.GetSafeInt(flatData["TransferValueLow"]),
@@ -372,6 +374,7 @@ Return ONLY a FLAT JSON object. Values must be Integers (except Name/Dates/Perso
 ### CRITICAL RULES
 - **Temperature 0:** Do not guess. If a number is obscured, return 0.
 - **Playing Time:** Look for text describing squad status (e.g., 'Star Player', 'Youngster') in the Header.
+- **On Loan:** If you see any indication that the player is On Loan, return playing time as 'On Loan'.
 ";
 
             var requestBody = new
@@ -438,6 +441,7 @@ Return ONLY a FLAT JSON object. Values must be Integers (except Name/Dates/Perso
                     FileCreationDate = fileCreationDate,
                     GameDate = SafeJsonParser.GetSafeString(flatData["GameDate"]) ?? string.Empty,
                     PlayingTime = SafeJsonParser.GetSafeString(flatData["PlayingTime"]) ?? string.Empty,
+                    OnLoan = (SafeJsonParser.GetSafeString(flatData["PlayingTime"]) ?? string.Empty).Equals("On Loan", StringComparison.OrdinalIgnoreCase),
                     Personality = SafeJsonParser.GetSafeString(flatData["Personality"]) ?? string.Empty,
                     Age = SafeJsonParser.GetSafeInt(flatData["Age"]),
                     TransferValueLow = SafeJsonParser.GetSafeInt(flatData["TransferValueLow"]),

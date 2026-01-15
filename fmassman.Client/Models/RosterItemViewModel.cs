@@ -21,6 +21,7 @@ namespace fmassman.Client.Models
         // Tactical Analysis
         public double Speed { get; set; }
         public double DNA { get; set; }
+        public int AttributeTotal { get; set; }
         public double Gegenpress { get; set; }
         public double AggressiveDefense { get; set; }
         public double CautiousDefense { get; set; }
@@ -71,6 +72,7 @@ namespace fmassman.Client.Models
 
                 Speed = analysis.Speed,
                 DNA = analysis.DNA,
+                AttributeTotal = CalculateAttributeTotal(player.Snapshot),
                 Gegenpress = analysis.Gegenpress,
                 AggressiveDefense = analysis.AggressiveDefense,
                 CautiousDefense = analysis.CautiousDefense,
@@ -143,6 +145,53 @@ namespace fmassman.Client.Models
             if (string.IsNullOrWhiteSpace(input)) return 0;
             var cleanString = new string(input.Where(c => char.IsDigit(c) || c == '-').ToArray());
             return int.TryParse(cleanString, out var value) ? value : 0;
+        }
+        private static int CalculateAttributeTotal(Shared.PlayerSnapshot snapshot)
+        {
+            if (snapshot == null) return 0;
+            
+            var total = 0;
+
+            if (snapshot.Technical != null)
+            {
+                total += snapshot.Technical.Crossing + snapshot.Technical.Dribbling + snapshot.Technical.Finishing +
+                         snapshot.Technical.FirstTouch + snapshot.Technical.Heading + snapshot.Technical.LongShots +
+                         snapshot.Technical.Marking + snapshot.Technical.Passing + snapshot.Technical.Tackling +
+                         snapshot.Technical.Technique;
+            }
+
+            if (snapshot.Mental != null)
+            {
+                total += snapshot.Mental.Aggression + snapshot.Mental.Anticipation + snapshot.Mental.Bravery +
+                         snapshot.Mental.Composure + snapshot.Mental.Concentration + snapshot.Mental.Decisions +
+                         snapshot.Mental.Determination + snapshot.Mental.Flair + snapshot.Mental.Leadership +
+                         snapshot.Mental.OffTheBall + snapshot.Mental.Positioning + snapshot.Mental.Teamwork +
+                         snapshot.Mental.Vision + snapshot.Mental.WorkRate;
+            }
+
+            if (snapshot.Physical != null)
+            {
+                total += snapshot.Physical.Acceleration + snapshot.Physical.Agility + snapshot.Physical.Balance +
+                         snapshot.Physical.JumpingReach + snapshot.Physical.NaturalFitness + snapshot.Physical.Pace +
+                         snapshot.Physical.Stamina + snapshot.Physical.Strength;
+            }
+
+            if (snapshot.SetPieces != null)
+            {
+                total += snapshot.SetPieces.Corners + snapshot.SetPieces.FreeKickTaking + snapshot.SetPieces.LongThrows +
+                         snapshot.SetPieces.PenaltyTaking;
+            }
+
+            if (snapshot.Goalkeeping != null)
+            {
+                total += snapshot.Goalkeeping.AerialReach + snapshot.Goalkeeping.CommandOfArea + snapshot.Goalkeeping.Communication +
+                         snapshot.Goalkeeping.Eccentricity + snapshot.Goalkeeping.FirstTouch + snapshot.Goalkeeping.Handling +
+                         snapshot.Goalkeeping.Kicking + snapshot.Goalkeeping.OneOnOnes + snapshot.Goalkeeping.Passing +
+                         snapshot.Goalkeeping.Punching + snapshot.Goalkeeping.Reflexes + snapshot.Goalkeeping.RushingOut +
+                         snapshot.Goalkeeping.Throwing;
+            }
+
+            return total;
         }
     }
 }

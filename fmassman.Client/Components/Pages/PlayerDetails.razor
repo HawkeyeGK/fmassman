@@ -4,6 +4,8 @@
 @inject PlayerDetailsViewModel VM
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
+@inject fmassman.Client.Services.ApiRosterService RosterService
+@using System.Net.Http.Headers
 
 <PageTitle>Player Details: @Name</PageTitle>
 
@@ -27,7 +29,11 @@
                 }
             </h3>
             <div class="d-flex gap-2">
+                <button class="btn btn-outline-warning me-2" @onclick="() => showUploadModal = true">
+                    <i class="bi bi-arrow-clockwise"></i> <span>Refresh</span>
+                </button>
                 <button class="btn btn-outline-info me-2" @onclick="PushToMiro" disabled="@isPushing">
+
                     @if (isPushing)
                     {
                         <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -263,12 +269,123 @@ else
      </div>
 }
 
+@if (showUploadModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title">Refresh Profile Attributes</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Upload a new screenshot to update attributes for <strong>@Name</strong>.</p>
+                    <p class="text-muted small">Position, Role, and Tags will be preserved. Attributes captured in the OCR will be replaced.</p>
+                    
+                    @if (!string.IsNullOrEmpty(uploadError))
+                    {
+                        <div class="alert alert-danger">@uploadError</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Select Screenshot (.png, .jpg)</label>
+                        <InputFile OnChange="HandleFileSelected" accept=".png,.jpg,.jpeg" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isRefreshing">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ProcessRefresh" disabled="@(selectedFile == null || isRefreshing)">
+                        @if (isRefreshing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            <span>Refreshing...</span>
+                        }
+                        else
+                        {
+                            <span>Refresh</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public string Name { get; set; } = string.Empty;
 
     private bool IsInPossessionMode = true;
     private bool confirmDelete = false;
+
+    // Refresh Modal State
+    private bool showUploadModal = false;
+    private IBrowserFile? selectedFile;
+    private bool isRefreshing = false;
+    private string? uploadError;
+    private long maxFileSize = 1024 * 1024 * 10; // 10MB
+
+    private void CloseModal()
+    {
+        showUploadModal = false;
+        selectedFile = null;
+        uploadError = null;
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        uploadError = null;
+    }
+
+    private async Task ProcessRefresh()
+    {
+        if (selectedFile == null || VM.Player == null) return;
+
+        isRefreshing = true;
+        uploadError = null;
+
+        try
+        {
+            using var fileContent = new StreamContent(selectedFile.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(selectedFile.ContentType);
+
+            // Determine GK status from Primary Position if available, otherwise fallback to current VM status
+            var isGoalkeeper = VM.PrimaryPosition?.Code.Equals("GK", StringComparison.OrdinalIgnoreCase) 
+                               ?? VM.IsGoalkeeper;
+
+            var ocrResult = await RosterService.UploadPlayerImage(fileContent, isGoalkeeper);
+
+            if (ocrResult != null)
+            {
+                // Preserve existing metadata
+                ocrResult.PlayerName = VM.Player.PlayerName; // Ensure ID matches
+                ocrResult.PositionId = VM.Player.PositionId;
+                ocrResult.TagIds = VM.Player.TagIds;
+                ocrResult.MiroWidgetId = VM.Player.MiroWidgetId;
+
+                // Save changes
+                await RosterService.UpsertAsync(ocrResult);
+
+                // Reload and close
+                await VM.LoadPlayerAsync(Name);
+                
+                notificationMessage = "✅ Profile attributes refreshed successfully!";
+                notificationClass = "alert-success";
+                
+                CloseModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isRefreshing = false;
+            StateHasChanged();
+        }
+    }
 
     private async Task ExecuteDelete()
     {
